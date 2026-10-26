@@ -549,11 +549,13 @@ describe('Ładowanie CWU (kocioł w trybie pompy ciepła)', () => {
     expect(await pending()).toEqual([]);
 
     // przełączenie na Pompę ciepła (minimum kotła 30 w odczycie ustawień): CWU trybu pompy ciepła 35–40 = 40 / 5
+    // i Lato, bo Zima z trybu Pellet bez cyklu Zimy wychładzałaby wodę z pompy ciepła (2026-10-24)
     const ecomax = Buffer.from(today.raw_hex.ecomax_parameters, 'hex');
     ecomax[3 + 3 * 99] = 30;
+    ecomax[3 + 3 * 125] = 0;
     await settingsFrom({ ...today.raw_hex, ecomax_parameters: ecomax.toString('hex') });
     await applySchedule(boilerRoot);
-    expect(await pending()).toEqual(['119=40', '123=5']);
+    expect(await pending()).toEqual(['119=40', '123=5', '125=1']);
     await finishAll();
 
     // „Grzej CWU peletem” przy zatrzymanym harmonogramie: CWU z trybu Pellet od razu; regulator wyłączony — cykl nie rusza

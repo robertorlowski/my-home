@@ -398,18 +398,21 @@ export async function applySchedule(rootId: string, now = new Date(), pump: Heat
   try {
     // harmonogram nie działa („Wyłącz regulator”): nic nie zleca; zapamiętuje przerwę, żeby po wznowieniu
     // zastosować stan od razu. Wyjątek (decyzja użytkownika 2026-10-10): po zmianie trybu (Pompa ciepła / Pellet)
-    // albo znacznika „Grzej CWU peletem” CWU z bieżącego harmonogramu idzie od razu (bez sezonu i bez włączania).
+    // albo znacznika „Grzej CWU peletem” CWU z bieżącego harmonogramu idzie od razu (bez włączania). Sezon tylko
+    // przy przejściu na tryb pompy ciepła: Lato, chyba że harmonogram chce Zimy (2026-10-26: Zima z trybu Pellet
+    // została w kotle i pompy CO wychładzały wodę z pompy ciepła, bo cykl Zimy przy zatrzymanym harmonogramie nie działa).
     if (!settings.enabled) {
       const boiler = await PelletBoilerSettingsModel.findOne({ rootId }).lean<PelletBoilerSettingsEntry>();
       const mode = await effectiveBoilerMode(rootId, boiler);
       if (boiler && mode) {
-        const { season: _season, seasonScheduleId: _seasonId, ...cwu } = await currentState(rootId, settings, mode, now, last);
+        const { season, seasonScheduleId: _seasonId, ...cwu } = await currentState(rootId, settings, mode, now, last);
         if (last?.mode !== mode || !!last?.pelletCwu !== !!cwu.pelletCwu) {
-          const changes = changesFor(cwu, boiler);
+          const summer = last?.mode !== mode && mode === 'heat-pump' && season !== 'winter';
+          const changes = changesFor(summer ? { ...cwu, season: 'summer' } : cwu, boiler);
           if (changes.length) {
             await createCommands(rootId, { changes }, systemMeta(
               'Harmonogram',
-              last?.mode !== mode ? 'Zmiana trybu pracy — CWU z bieżącego harmonogramu (regulator wyłączony).'
+              last?.mode !== mode ? `Zmiana trybu pracy — CWU z bieżącego harmonogramu${summer ? ' i Lato' : ''} (regulator wyłączony).`
                 : 'Zmiana „CWU - grzanie peletem” — CWU z bieżącego harmonogramu (regulator wyłączony).',
               `tryb ${MODE_NAMES[mode]}${cwu.pelletCwu ? ', CWU z peletu (wartości trybu Pellet)' : ''}`,
             ));

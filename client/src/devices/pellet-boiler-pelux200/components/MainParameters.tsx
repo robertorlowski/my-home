@@ -460,8 +460,11 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
     }
     load();
   };
+  // tryb pompy ciepła przy działającym harmonogramie: sezon żądany (PUT /season, cykl Zimy); przy zatrzymanym
+  // harmonogramie, jak w trybie Pellet, zlecenie nr 125 wprost (przełącznik pokazuje wtedy kocioł)
+  const seasonFromSchedule = heatPumpMode && !!current?.enabled;
   const setSeason = async (value: number, label: string) => {
-    if (heatPumpMode) {
+    if (seasonFromSchedule) {
       const message = t(value === 0 ? 'pb.confirmWinterHp' : 'pb.confirmSummer');
       if (!window.confirm(message)) return;
       try {
@@ -478,9 +481,10 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
     setSeasonError(response?.status === 201 ? '' : await errorMessage(response));
     load();
   };
-  // zaznaczony sezon: w trybie pompy ciepła sezon żądany (Zima w cyklu także wtedy, gdy kocioł czeka na Lecie),
-  // inaczej wartość nr 125 z odczytu (Auto = nic)
-  const seasonValue: SeasonKey | null = heatPumpMode ? (wantedWinter ? 'winter' : 'summer')
+  // zaznaczony sezon: w trybie pompy ciepła przy działającym harmonogramie sezon żądany (Zima w cyklu także wtedy,
+  // gdy kocioł czeka na Lecie), inaczej wartość nr 125 z odczytu (Auto = nic). Przy zatrzymanym harmonogramie
+  // nikt sezonu nie prowadzi, więc żądany mógł się różnić od kotła (2026-10-24: aplikacja Lato, kocioł Zima).
+  const seasonValue: SeasonKey | null = seasonFromSchedule ? (wantedWinter ? 'winter' : 'summer')
     : summer?.value === 0 ? 'winter' : summer?.value === 1 ? 'summer' : null;
 
   // Regulator jak na panelu: „Włącz regulator” / „Wyłącz regulator” wysyłają zlecenie control (ramka 0x3B,
@@ -646,7 +650,7 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
           ]}
           onChange={(season) => {
             const value = season === 'winter' ? 0 : 1;
-            if (heatPumpMode ? season !== seasonValue : summer?.value !== value) setSeason(value, t(season === 'winter' ? 'pb.winter' : 'pb.summer'));
+            if (seasonFromSchedule ? season !== seasonValue : summer?.value !== value) setSeason(value, t(season === 'winter' ? 'pb.winter' : 'pb.summer'));
           }} />
         <p className="help">
           {heatPumpLinked && `${t('pb.workModeHelpHp')} `}
