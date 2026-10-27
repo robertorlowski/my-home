@@ -290,13 +290,15 @@ export type TileRelay = {
 export type DeviceTile = {
   level: TileLevel;
   chip: string;
+  /** stan sterownika zamiast Online / Offline: on = zielony „ON”, off = szary „OFF” (pompa, kocioł, hydrofor); brak odpowiedzi w note */
+  power?: 'on' | 'off';
   running?: boolean;
   main?: TileFact;
   main2?: TileFact;
   side?: TileFact[];
   row?: TileFact[];
   relays?: TileRelay[];
-  note?: { level: 'warn' | 'err'; text: string };
+  note?: { level: 'warn' | 'err'; text: string; icon?: 'offline' };
   updatedAt?: string;
   foot?: string;
   /** hydrofor: początek ostatniego uruchomienia (ISO), gdy pompa nie pracuje; kafelek pisze „ostatnie uruchomienie …” */

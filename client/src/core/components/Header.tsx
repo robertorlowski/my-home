@@ -93,25 +93,26 @@ function deviceSubText(device: Device, tile: DeviceTile | undefined, { t, tn }: 
 	}
 }
 
-// Linia pod nazwą (makieta .device-sub): chip Online / Offline (przy pracy pulsująca kropka), przy pracy sprężarki albo
-// paleniu w piecu chip stanu „pracuje” (.state.sub-run; czasu pracy kafelek nie podaje) i opis rodzaju po kropce.
+// Linia pod nazwą (makieta .device-sub): chip stanu ON / OFF jak na kafelku (od 2026-10-27 zamiast Online / Offline;
+// włącznik i PV bez chipu, brak odpowiedzi pokazuje OfflineBanner na stronie), przy pracy sprężarki albo paleniu
+// w piecu chip „pracuje” (.state.sub-run; czasu pracy kafelek nie podaje) i opis rodzaju po kropce.
 function DeviceSub({ device }: { device: Device }) {
 	const tile = useDeviceTile();
 	const lang = useLang();
 	const { t } = lang;
-	const online = tile?.chip === 'Online';
-	const level = online ? 'ok' : tile?.level === 'ok' ? 'off' : tile?.level;
 	const runs = !!tile?.running && (device.deviceType === DeviceType.HP || device.deviceType === DeviceType.PELLET_BOILER_PELUX200);
 	const text = deviceSubText(device, tile, lang);
 	return (
 		<span className="device-sub">
 			{tile && (
 				<>
-					<span className={`chip chip-${level}${tile.running ? ' is-running' : ''}`} title={tile.running ? t('header.running') : undefined}>
-						{(online || tile.running) && <i className="dot" />}{tile.chip === 'Online' ? t('chip.online') : tile.chip === 'Offline' ? t('chip.offline') : tile.chip}
-					</span>
+					{tile.power && (
+						<span className={`chip ${tile.power === 'on' ? 'chip-ok' : 'chip-off'}${tile.running ? ' is-running' : ''}`} title={tile.running ? t('header.running') : undefined}>
+							{tile.running && <i className="dot" />}{t(tile.power === 'on' ? 'chip.on' : 'chip.off')}
+						</span>
+					)}
 					{runs && <span className="state state-on sub-run" title={device.deviceType === DeviceType.HP ? t('header.compressorRuns') : t('header.burning')}><i className="dot" />{t('header.runningShort')}</span>}
-					{text && <span className="sep">·</span>}
+					{text && (tile.power || runs) && <span className="sep">·</span>}
 				</>
 			)}
 			{text && <span className="device-sub-text">{text}</span>}

@@ -81,6 +81,10 @@ const pl: Record<string, string> = {
   'switch.scheduleOff': 'wył. · harmonogram',
   'switch.unknown': 'stan nieznany',
   'switch.notReported': 'Sterownik jeszcze się nie zgłosił',
+  // brak odpowiedzi na kafelku (czerwona linia, jak pasek „Offline od…” na ekranie sterownika)
+  'tile.notResponding': 'Sterownik nie odpowiada od {age}',
+  'tile.chpcNotResponding': 'Pompa (CHPC) nie odpowiada od {age}',
+  'tile.noDtu': 'Brak odczytu z DTU od {age}',
   'switch.blocked': '{name}: tryb „Wyłączony” blokuje harmonogram',
   'switch.unlimitedDay': '{name}: włączony bez limitu czasu od ponad doby',
   // hydrofor
@@ -218,6 +222,9 @@ const en: Record<keyof typeof pl, string> = {
   'switch.scheduleOff': 'off · schedule',
   'switch.unknown': 'state unknown',
   'switch.notReported': 'The controller has not reported yet',
+  'tile.notResponding': 'Controller not responding for {age}',
+  'tile.chpcNotResponding': 'Heat pump (CHPC) not responding for {age}',
+  'tile.noDtu': 'No DTU reading for {age}',
   'switch.blocked': '{name}: “Off” mode blocks the schedule',
   'switch.unlimitedDay': '{name}: on without a time limit for over a day',
   'tank.longRun': 'The pump has been running for over 30 min (leak or dry run?)',

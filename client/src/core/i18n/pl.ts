@@ -66,6 +66,8 @@ export const pl = {
   // ---- chipy stanu
   'chip.online': 'Online',
   'chip.offline': 'Offline',
+  'chip.on': 'Włączony',
+  'chip.off': 'Wyłączony',
 
   // ---- pasek sterownika (opis pod nazwą)
   'header.mode': 'tryb {mode}',
@@ -1532,6 +1534,11 @@ export const pl = {
   'pb.profileChanges': 'Zostaną zlecone zmiany (w tej kolejności):',
   'pb.profileNeedsOff': 'Najpierw zostanie wyłączony regulator; zmiany pójdą do kotła, gdy zgłosi stan „wyłączony” (przy paleniu pelletu po wygaszeniu).',
   'pb.turnOnAfter': 'Po zmianie włączyć regulator',
+  'pb.profileWillSet': 'Do kotła zostaną zlecone nastawy trybu „{mode}” (lista w „Nastawy trybów” w „Głównych parametrach”).',
+  'pb.profilesLink': 'Nastawy trybów',
+  'pb.profilesTitle': 'Nastawy trybów pracy',
+  'pb.profilesHelp': 'Parametry zlecane do kotła przy przełączeniu trybu pracy. Zmienione wartości zapisz przyciskiem pod tabelą; do kotła pójdą przy następnym przełączeniu trybu.',
+  'pb.parameter': 'Parametr',
   'pb.sch.winterMode': 'Tryb Zima',
   'pb.sch.cwuRequired': 'CWU: wpisz temperaturę „od” i „do”.',
   'pb.sch.cwuOrder': 'CWU: „od” musi być mniejsze niż „do”.',

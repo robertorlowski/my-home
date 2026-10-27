@@ -51,6 +51,8 @@ export async function waterPressureTankTile(rootId: string, _device: Device, now
   return {
     level,
     chip: running ? 'Online' : 'Offline',
+    // ON = pompa pracuje (sterownik ma zasilanie tylko wtedy), OFF = postój
+    power: running ? 'on' : 'off',
     running: running && level !== 'err',
     main: { icon: 'drop', value: liters === null ? '---' : formatUnit(liters, 'l', 0, lang), label: t(lang, 'tank.today') },
     main2: { icon: 'drop', value: monthLiters === null ? '---' : formatUnit(monthLiters, 'l', 0, lang), label: t(lang, 'tank.month') },

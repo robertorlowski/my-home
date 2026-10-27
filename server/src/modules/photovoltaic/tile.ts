@@ -5,7 +5,7 @@
 // niczego nie zgłasza.
 import { DEFAULT_LANG, Lang, t } from '../../core/i18n';
 import { Device, DeviceTile, TileFact } from '../../core/types';
-import { formatTemperature, formatUnit, offlineLevel } from '../../core/services/tile-format';
+import { formatAge, formatTemperature, formatUnit, offlineLevel } from '../../core/services/tile-format';
 import { TIME_ZONE, warsawDayBoundsUTC } from '../../core/time';
 import { getCurrentView } from './services/photovoltaic.service';
 
@@ -42,7 +42,7 @@ export async function photovoltaicTile(rootId: string, _device: Device, now = ne
   if (view.stale && isDaytime(now)) {
     const silent = silenceAge(readAt, now);
     level = offlineLevel(silent); // do godziny uwaga, potem błąd
-    note = { level, text: t(lang, 'pv.noDtu') };
+    note = { level: 'err', icon: 'offline', text: t(lang, 'tile.noDtu', { age: formatAge(silent, lang) }) };
   } else if (alarmed.length > 0) {
     level = 'err';
     note = { level: 'err', text: alarmed.length === 1 ? t(lang, 'pv.panelAlarm', { key: alarmed[0].key, code: alarmed[0].alarm_code ?? '' }) : t(lang, 'pv.panelsAlarm', { n: alarmed.length }) };

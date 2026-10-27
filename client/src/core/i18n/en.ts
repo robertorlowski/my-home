@@ -66,6 +66,8 @@ export const en: Record<keyof typeof pl, string> = {
   // ---- status chips
   'chip.online': 'Online',
   'chip.offline': 'Offline',
+  'chip.on': 'On',
+  'chip.off': 'Off',
 
   // ---- controller header (line under the name)
   'header.mode': 'mode {mode}',
@@ -1532,6 +1534,11 @@ export const en: Record<keyof typeof pl, string> = {
   'pb.profileChanges': 'These changes will be requested (in this order):',
   'pb.profileNeedsOff': 'The regulator is turned off first; the changes go to the boiler when it reports the “off” state (after burning off when pellet is burning).',
   'pb.turnOnAfter': 'Turn the regulator on after the change',
+  'pb.profileWillSet': 'The “{mode}” mode settings will be requested on the boiler (list under “Mode settings” in “Main parameters”).',
+  'pb.profilesLink': 'Mode settings',
+  'pb.profilesTitle': 'Work mode settings',
+  'pb.profilesHelp': 'Parameters requested on the boiler when the work mode is switched. Save edited values with the button below the table; they go to the boiler on the next mode switch.',
+  'pb.parameter': 'Parameter',
   'pb.sch.winterMode': 'Winter mode',
   'pb.sch.cwuRequired': 'DHW: enter the “from” and “to” temperatures.',
   'pb.sch.cwuOrder': 'DHW: “from” must be lower than “to”.',

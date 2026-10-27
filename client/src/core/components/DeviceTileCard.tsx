@@ -13,6 +13,7 @@ import { DeviceTile, DeviceType, TileFact, Weather, WeatherTile } from '../types
 import { precipitationText, weatherDescription, WeatherIcon } from './WeatherIcon';
 import { currentPlaceProblem, useCurrentPlace } from '../currentPlace';
 import { useLang } from '../i18n';
+import { OfflineIcon } from './OfflineBanner';
 import { ageLabel, number, number1, warsawTime, whenLabel } from '../i18n/format';
 
 export { ageLabel } from '../i18n/format';
@@ -68,9 +69,8 @@ export const TILE_KINDS: Record<DeviceType, TileKind> = {
 };
 const KIND_ICONS: Record<TileKind, ListIconName> = { hp: 'hp', pv: 'pv', tank: 'drop', switch: 'switch', boiler: 'fire', weather: 'sun' };
 
-// Kolor chipu: „Online” zielony, „Offline” czerwony (decyzja użytkownika 2026-10-20: offline czerwony, wyłączony szary;
-// wyjątek hydrofor, którego sterownik ma zasilanie tylko przy pracy pompy — tam brak łączności jest normalny, szary);
-// inne napisy („Brak danych”) według poziomu.
+// Kolor chipu bez pola power („Brak danych”, „Brak uruchomień”): według poziomu; Online / Offline nie są już rysowane
+// (od 2026-10-27 stan ON / OFF, a brak odpowiedzi w czerwonej linii), funkcja zostaje dla pozostałych napisów.
 function chipClass(tile: DeviceTile, deviceType: DeviceType): string {
   if (tile.chip === 'Online') return 'ok';
   if (tile.chip === 'Offline') return deviceType === DeviceType.WATER_PRESSURE_TANK ? 'off' : 'err';
@@ -167,8 +167,9 @@ function shapeTile(kind: TileKind, tile: DeviceTile, now: number, t: T): Shape {
 }
 
 // Pasek błędu albo ostrzeżenia (.warn-line z makiety; błąd w kolorach błędu, Devices/style.css)
+// icon 'offline' = brak odpowiedzi sterownika: mała ikona przekreślonego sygnału jak w pasku „Offline od…” (2026-10-27)
 const WarnLine = ({ note }: { note: NonNullable<DeviceTile['note']> }) => (
-  <div className="tile-row"><span className={`warn-line${note.level === 'err' ? ' is-err' : ''}`}>{note.text}</span></div>
+  <div className="tile-row"><span className={`warn-line${note.level === 'err' ? ' is-err' : ''}`}>{note.icon === 'offline' && <OfflineIcon />}{note.text}</span></div>
 );
 
 const Facts = ({ facts }: { facts: Fact[] }) => (
@@ -205,12 +206,16 @@ export function DeviceTileCard({ deviceType, name, tile, now, loading, hidden, t
     <div className="tile-head">
       <span className="tile-icon"><ListIcon name={KIND_ICONS[kind]} /></span>
       <h2 className="tile-name">{name}</h2>
-      {hidden ? <span className="chip chip-off">{t('tile.hidden')}</span> : tile && (
-        <span className={`chip chip-${chipClass(tile, deviceType)}${tile.running ? ' is-running' : ''}`}
+      {/* chip stanu ON / OFF zamiast Online / Offline (makieta 2026-10-27; pompa, kocioł, hydrofor; włącznik i PV bez chipu);
+          brak odpowiedzi to czerwona linia note; „Brak danych” / „Brak uruchomień” zostają jako szary chip */}
+      {hidden ? <span className="chip chip-off">{t('tile.hidden')}</span> : tile && (tile.power ? (
+        <span className={`chip ${tile.power === 'on' ? 'chip-ok' : 'chip-off'}${tile.running ? ' is-running' : ''}`}
           title={tile.running ? t('header.running') : undefined}>
-          {(tile.chip === 'Online' || tile.running) && <i className="dot" />}{chipText(tile.chip, t)}
+          {tile.running && <i className="dot" />}{t(tile.power === 'on' ? 'chip.on' : 'chip.off')}
         </span>
-      )}
+      ) : tile.chip !== 'Online' && tile.chip !== 'Offline' ? (
+        <span className={`chip chip-${chipClass(tile, deviceType)}`}>{chipText(tile.chip, t)}</span>
+      ) : null)}
       {tools && <span className="tile-tools">{tools}</span>}
     </div>
   );

@@ -7,10 +7,10 @@
 import { DEFAULT_LANG, Lang, t } from '../../core/i18n';
 import { Device, DeviceTile } from '../../core/types';
 import {
-  formatNumber, formatTemperature, formatUnit, formatWhen, offlineLevel, toNumber,
+  formatAge, formatNumber, formatTemperature, formatUnit, formatWhen, offlineLevel, toNumber,
 } from '../../core/services/tile-format';
 import { errorDescription } from './error-codes';
-import { ERROR_LOCK_LIMIT, getHpLastData, getHpLastError } from './services/hp.service';
+import { ERROR_LOCK_LIMIT, getHpContactAt, getHpLastData, getHpLastError } from './services/hp.service';
 import { HpEntry } from './types';
 import { pumpTemperatures } from './services/pump-mode.service';
 
@@ -48,6 +48,11 @@ export async function heatPumpTile(rootId: string, device: Device, now = new Dat
   if (age > OFFLINE_AFTER_MS) {
     level = offlineLevel(age); // do godziny uwaga, potem błąd
     chip = 'Offline';
+    // czerwona linia jak pasek „Offline od…” na ekranie pompy: gdy co dalej się zgłasza (ostatni POST /hp/add
+    // w ciągu 5 min), nie odpowiada sama pompa (CHPC); inaczej brak łączności ze sterownikiem
+    const contact = getHpContactAt(rootId);
+    const chpcOnly = !!contact && now.getTime() - contact.getTime() <= OFFLINE_AFTER_MS;
+    note = { level: 'err', icon: 'offline', text: t(lang, chpcOnly ? 'tile.chpcNotResponding' : 'tile.notResponding', { age: formatAge(age, lang) }) };
   } else if (locked) {
     level = 'err';
     note = { level: 'err', text: `${t(lang, 'hp.locked', { n: ERROR_LOCK_LIMIT })}${code ? t(lang, 'hp.lockedLast', { code, text: errorDescription(code) }) : ''}` };
@@ -80,9 +85,14 @@ export async function heatPumpTile(rootId: string, device: Device, now = new Dat
   side.push({ icon: 'thermo' as const, value: live ? formatTemperature(toNumber(hp.Tsump), lang) : '---', label: t(lang, 'hp.tCompressor') });
   side.push({ icon: 'thermo' as const, value: live ? formatTemperature(toNumber(hp.Tho), lang) : '---', label: t(lang, 'hp.tOut') });
 
+  // ON = tryb inny niż OFF (work_mode z telemetrii, czyli tryb, który sterownik stosuje) i zgoda na start sprężarki
+  // na pompie (HP.CO; 0 = CO wyłączone na samym CHPC); bez pola CO liczy się sam tryb
+  const co = toNumber(hp.CO);
+  const power: DeviceTile['power'] = last.work_mode && last.work_mode !== 'OFF' && co !== 0 ? 'on' : 'off';
   return {
     level,
     chip,
+    power,
     running: running && level !== 'err',
     main: { icon: 'thermo', value: live ? formatTemperature(toNumber(hp.Ttarget), lang) : '---', label: t(lang, 'hp.tank') },
     side,

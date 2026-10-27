@@ -6,7 +6,8 @@ import { ReactNode } from 'react';
 import { useLang } from '../i18n';
 import { ageLabel } from '../i18n/format';
 
-const OfflineIcon = () => (
+// ikona używana też w linii „nie odpowiada od…” na kafelku listy (DeviceTileCard WarnLine)
+export const OfflineIcon = () => (
   <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M2 8a16 16 0 0 1 20 0M5 12a11 11 0 0 1 14 0M8.5 15.5a6 6 0 0 1 7 0M12 19h.01M3 3l18 18" />
   </svg>

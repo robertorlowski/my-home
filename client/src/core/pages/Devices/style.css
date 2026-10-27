@@ -81,6 +81,9 @@ body .app-main:has(.device-selection) { padding-bottom: 0; margin-bottom: 0; }
 .tile-icon .weather-icon { width: 22px; height: 22px; }
 /* przełączniki na kafelku włącznika tylko pokazują stan (zmiana na ekranie włącznika) */
 .tile .switch { pointer-events: none; }
+/* linia braku odpowiedzi z ikoną (OfflineIcon z OfflineBanner, mniejsza niż w pasku) */
+.warn-line { display: flex; align-items: center; gap: 8px; }
+.warn-line .ic { width: 16px; height: 16px; flex: none; }
 /* błąd (blokada, alarm, brak odczytów): .warn-line w kolorach błędu */
 .warn-line.is-err { background: var(--err-bg); color: var(--err-fg); border-left-color: var(--err-fg); }
 /* nazwa kafelka z globalnych nagłówków: bez marginesów i wyśrodkowania */

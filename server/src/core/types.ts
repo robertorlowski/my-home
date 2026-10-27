@@ -204,8 +204,12 @@ export interface TileRelay {
 export interface DeviceTile {
   /** kolor paska kafelka: ok (zielony), warn (pomarańczowy), err (czerwony, z ramką), off (szary) */
   level: TileLevel;
-  /** tekst w prawym górnym rogu; running = niebieski chip z pulsującą kropką („teraz pracuje”) */
+  /** Online / Offline / „Brak danych” / „Brak uruchomień”: od 2026-10-27 kafelek nie rysuje Online / Offline (zostaje dla
+   *  wartownika push i pamięci kafelków), tylko „Brak …”; brak odpowiedzi idzie w note (czerwona linia z czasem) */
   chip: string;
+  /** stan sterownika zamiast chipu Online / Offline (2026-10-27): on = zielony „ON”, off = szary „OFF”; pompa: tryb inny
+   *  niż OFF i zgoda CO na sterowniku, kocioł: regulator (stan ≠ 0), hydrofor: pompa pracuje; włącznik i PV bez tego pola */
+  power?: 'on' | 'off';
   running?: boolean;
   /** wartość główna (duża, po lewej) i pozostałe w prawej kolumnie, wyrównane do prawej */
   main?: TileFact;
@@ -216,8 +220,9 @@ export interface DeviceTile {
   row?: TileFact[];
   /** włącznik: przekaźniki zamiast wartości */
   relays?: TileRelay[];
-  /** jedna linia o błędzie albo ostrzeżeniu */
-  note?: { level: 'warn' | 'err'; text: string };
+  /** jedna linia o błędzie albo ostrzeżeniu; icon: 'offline' = brak odpowiedzi sterownika (klient rysuje przekreślony
+   *  sygnał jak w pasku „Offline od…” na ekranie sterownika, tylko mniejszy) */
+  note?: { level: 'warn' | 'err'; text: string; icon?: 'offline' };
   /** czas ostatnich danych (ISO): klient pisze „dane sprzed …” */
   updatedAt?: string;
   /** własny tekst stopki zamiast „dane sprzed …” */

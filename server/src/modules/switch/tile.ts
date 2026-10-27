@@ -7,7 +7,7 @@
 // czasu „Włącz” (onMinutes), żeby ułożyć zdania „Bojler uruchomi się teraz na 30 min” itp.
 import { DEFAULT_LANG, Lang, t } from '../../core/i18n';
 import { Device, DeviceTile, TileRelay } from '../../core/types';
-import { formatWhen, offlineLevel, warsawTime } from '../../core/services/tile-format';
+import { formatAge, formatWhen, offlineLevel, warsawTime } from '../../core/services/tile-format';
 import { SwitchScheduleModel } from './models/switch-schedule.model';
 import { listRelays } from './services/switch.service';
 import { nextScheduleStart } from './services/switch-schedule.service';
@@ -72,7 +72,9 @@ export async function switchTile(rootId: string, device: Device, now = new Date(
     // do godziny uwaga (płytka zwykle wraca sama), potem błąd; brak jakiegokolwiek zgłoszenia to od razu błąd
     level = lastSeen ? offlineLevel(now.getTime() - lastSeen.getTime()) : 'err';
     offlineChip = 'Offline';
-    if (!lastSeen) note = { level, text: t(lang, 'switch.notReported') };
+    note = lastSeen
+      ? { level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(now.getTime() - lastSeen.getTime(), lang) }) }
+      : { level, text: t(lang, 'switch.notReported') };
   } else {
     const blockedRelay = relays.find((relay) => relay.mode === 'off' && schedules.some((schedule) => schedule.relay === relay.relay));
     const unlimited = relays.find((relay) => relay.mode === 'on' && relay.modeChangedAt

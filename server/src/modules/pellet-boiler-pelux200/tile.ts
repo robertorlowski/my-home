@@ -5,7 +5,7 @@
 // zlecenie zmiany parametru zakończone błędem w ciągu doby.
 import { DEFAULT_LANG, Lang, t } from '../../core/i18n';
 import { Device, DeviceTile } from '../../core/types';
-import { formatTemperature, formatUnit, formatWhen, offlineLevel } from '../../core/services/tile-format';
+import { formatAge, formatTemperature, formatUnit, formatWhen, offlineLevel } from '../../core/services/tile-format';
 import { PelletBoilerCommandModel } from './models/pellet-boiler-pelux200-command.model';
 import { PelletBoilerPelux200Model } from './models/pellet-boiler-pelux200.model';
 import { listAlerts } from './services/pellet-boiler-pelux200-alert.service';
@@ -59,6 +59,7 @@ export async function pelletBoilerTile(rootId: string, _device: Device, now = ne
     const age = now.getTime() - at.getTime();
     level = offlineLevel(age); // do godziny uwaga, potem błąd
     chip = 'Offline';
+    note = { level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(age, lang) }) };
   } else if (alarm) {
     level = 'err';
     const code = activeAlerts[0]?.code;
@@ -85,6 +86,8 @@ export async function pelletBoilerTile(rootId: string, _device: Device, now = ne
   return {
     level,
     chip,
+    // ON = regulator włączony (stan ≠ 0, jak w karcie „Regulator”); bez stanu w odczycie bez chipu
+    ...(typeof last.state === 'number' ? { power: last.state !== 0 ? 'on' as const : 'off' as const } : {}),
     running,
     ...(running ? { since: (await burnStart(rootId, at)).toISOString() } : {}),
     ...(pumps.length ? { pumps } : {}),
