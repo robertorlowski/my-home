@@ -66,23 +66,14 @@ const withProgress =<T extends { lastSeenAt?: Date; compressorRunning?: boolean 
   return { ...run, inProgress, compressorRunning: inProgress && run.compressorRunning === true };
 };
 
-// ?from=YYYY-MM-DD&to=YYYY-MM-DD (dni czasu warszawskiego, to włącznie)
-// albo ?fromTime=ISO&toTime=ISO (okres między odczytami wodomierza).
+// ?from=YYYY-MM-DD&to=YYYY-MM-DD (dni czasu warszawskiego, to włącznie).
 // Uruchomienie należy do zakresu według pumpStart. Każde ma pumpSeconds (efektywny czas
 // pompy, bez ręcznej pracy kompresora) i waterLiters (null, dopóki nie ma przepływu).
 export async function getWaterPressureTankRunList(req: Request, res: Response) {
-  const { from, to, fromTime, toTime } = req.query;
-  let start: Date;
-  let end: Date;
-  if (typeof fromTime === 'string' && typeof toTime === 'string') {
-    start = new Date(fromTime);
-    end = new Date(toTime);
-  } else if (typeof from === 'string' && typeof to === 'string') {
-    start = warsawDayBoundsUTC(from).startUTC;
-    end = warsawDayBoundsUTC(to).endUTC;
-  } else {
-    return res.status(400).json({ message: 'Podaj from i to albo fromTime i toTime.' });
-  }
+  const { from, to } = req.query;
+  if (typeof from !== 'string' || typeof to !== 'string') return res.status(400).json({ message: 'Podaj from i to.' });
+  const start = warsawDayBoundsUTC(from).startUTC;
+  const end = warsawDayBoundsUTC(to).endUTC;
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return res.status(400).json({ message: 'Nieprawidłowy zakres dat.' });
   }

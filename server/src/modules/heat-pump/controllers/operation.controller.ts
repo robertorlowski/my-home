@@ -2,7 +2,7 @@
 // (/operation/set) i akcje jednorazowe (/operation/action). Stan operacji jest
 // tylko w pamięci (services/operation.service.ts); do sterownika trafia przez /hp/add.
 import { Request, Response } from 'express'
-import { addOperationAction, getOperationData, OPERATION_ACTIONS, OperationAction, setManualOperationData } from '../services/operation.service';
+import { addOperationAction, OPERATION_ACTIONS, OperationAction, setManualOperationData } from '../services/operation.service';
 import { OperationEntry, PumpWorkMode } from '../types';
 import { getHpLastData } from '../services/hp.service';
 import { PUMP_WORK_MODES, pumpWorkMode, temperatureError, temperatureFields } from '../services/pump-mode.service';
@@ -46,15 +46,6 @@ export async function prepareOperation(req: Request, res: Response) {
     op.eev_setpoint = optionalText(data?.HP?.EEV);
 
     return res.status(200).send(op);
-  } catch (error) {
-    return res.status(500).send({ error: error })
-  }
-}
-
-export async function getOperation(req: Request, res: Response) {
-  try { 
-    console.log("Get operation");
-    return res.status(200).send(getOperationData(req.deviceRootId as string));
   } catch (error) {
     return res.status(500).send({ error: error })
   }

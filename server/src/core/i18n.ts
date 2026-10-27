@@ -60,7 +60,6 @@ const pl: Record<string, string> = {
   'boiler.cwu': 'CWU',
   'boiler.boiler': 'kocioł',
   // fotowoltaika
-  'pv.noDtu': 'Brak odczytów z DTU (sprawdź sterownik co)',
   'pv.panelAlarm': 'Alarm panelu {key} (kod {code})',
   'pv.panelsAlarm': 'Alarm na {n} panelach',
   'pv.panelOffline': 'Panel {key} nie odpowiada',
@@ -157,7 +156,6 @@ const pl: Record<string, string> = {
   'field.country': 'Kraj',
   // powiadomienia push
   'push.testBody': 'Powiadomienia działają na tym urządzeniu.',
-  'push.device': 'Sterownik',
   'push.compressorOn': 'Sprężarka ruszyła{tank}',
   'push.compressorOff': 'Sprężarka stanęła{minutes}{tank}',
   'push.afterMinutes': ' po {n} min',
@@ -202,7 +200,6 @@ const en: Record<keyof typeof pl, string> = {
   'boiler.co': 'CH',
   'boiler.cwu': 'DHW',
   'boiler.boiler': 'boiler',
-  'pv.noDtu': 'No readings from the DTU (check the co controller)',
   'pv.panelAlarm': 'Panel {key} alarm (code {code})',
   'pv.panelsAlarm': 'Alarm on {n} panels',
   'pv.panelOffline': 'Panel {key} does not respond',
@@ -293,7 +290,6 @@ const en: Record<keyof typeof pl, string> = {
   'field.city': 'City',
   'field.country': 'Country',
   'push.testBody': 'Notifications work on this device.',
-  'push.device': 'Controller',
   'push.compressorOn': 'Compressor started{tank}',
   'push.compressorOff': 'Compressor stopped{minutes}{tank}',
   'push.afterMinutes': ' after {n} min',

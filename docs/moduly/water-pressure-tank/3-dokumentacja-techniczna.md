@@ -37,7 +37,6 @@
 | `POST /water-pressure-tank/add` | sterownik | `{runId, pumpRunS, compressorStartS?, compressorEndS?, restarts, manualCompressorS?, queued?}`; sam `deviceId` wystarcza; 404/409 jak w core; odpowiedź `{}` (201); złe dane 400 |
 | `PUT /water-pressure-tank/settings` | sterownik | `{compressor_seconds}` (pełne sekundy 1–3600, inaczej 400); zmienia tylko to pole; 404 dla innego rodzaju urządzenia |
 | `GET /water-pressure-tank/runs?from=YYYY-MM-DD&to=YYYY-MM-DD` | aplikacja | uruchomienia z dni (Warszawa, `to` włącznie), z polami `inProgress`, `compressorRunning`, `pumpSeconds` (czas pompy bez ręcznej pracy kompresora) i `waterLiters` (`null` bez przepływu) |
-| `GET /water-pressure-tank/runs?fromTime=ISO&toTime=ISO` | — | uruchomienia z okresu (obecnie nieużywane przez aplikację) |
 | `GET /water-pressure-tank/summary?period=day\|month\|year&date=YYYY-MM-DD` | aplikacja | `{period, date, buckets, flow}`; kubełki `{key, pumpSeconds, waterLiters \| null, runs}` w godzinach (24), dniach miesiąca albo miesiącach (12); puste przedziały z zerami |
 | `GET /water-pressure-tank/flow` | aplikacja | przepływ pompy `{litersPerMinute \| null, periods, meterLiters, pumpSeconds}`: liczba użytych okresów, suma litrów z wodomierza i czasu pompy |
 | `GET /water-pressure-tank/meter` | aplikacja | odczyty od najstarszego |
@@ -94,7 +93,6 @@ node scripts/seed-local.mjs       # dane demo: kilka miesięcy uruchomień i odc
 ## Znane problemy
 
 - **Sterownik wysyła uruchomienia dopiero po udanym zgłoszeniu** (w odróżnieniu od `co`) — bez chmury uruchomienie czeka w NVS i trafia do kolejki przy następnym starcie.
-- **`GET /runs?fromTime=&toTime=`** i `getRunsBetween` w kliencie są nieużywane (po usunięciu filtra „między odczytami”).
 - **Hydrofor dostaje w `properties` `work_mode: CWU`** z wartości domyślnej schematu — pole jest nieużywane.
 - **`PUT /device/properties` podmienia całe `properties`** — aplikacja wysyła komplet pól hydroforu; inny klient API musi zrobić to samo.
 - **Woda zależy od stałego przepływu pompy.** Przepływ jest jeden dla całej historii; zmiana pompy albo zatkany filtr zmieniają go dopiero w średniej z kolejnych odczytów.

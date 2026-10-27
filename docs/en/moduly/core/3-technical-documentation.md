@@ -14,7 +14,6 @@
 | `core/time.ts` | `TIME_ZONE = Europe/Warsaw`, Warsaw day boundaries as a UTC range |
 | `core/websocket.ts` | WebSocket server (`/ws?rootId=`), `sendMessage(type, rootId)` with a 1 s delay |
 | `core/middleware/device-context.ts` | resolves the device from `rootId` or (for controller paths in the `controllerPaths` map) from the pair `{deviceId, deviceType}`; 400/404/409 |
-| `core/middleware/auth.ts` | `verifyApiKey` — **unused** (disabled in `app.ts`) |
 | `core/models/device.model.ts` | Mongoose model `devices`: device schema, `properties`, embedded schedules and legacy `settings` |
 | `core/controllers/device.controller.ts` | device routes; the registration reply includes `settings` from the registry; firmware update request and its cancellation |
 | `core/controllers/meteo.controller.ts` | `GET /temperature` |
@@ -180,7 +179,6 @@ The device document is shared by all kinds, so `core/models/device.model.ts` imp
 |---|---|
 | `MONGODB_URI` | MongoDB connection; required, the server stops without it |
 | `PORT` | HTTP and WebSocket port (default 3001) |
-| `API_KEY` | key for `verifyApiKey` (currently unused) |
 | `MAIL_RELAY=1` | the controllers send the mail (mail relay) instead of the server; mandatory on Render, whose free plan blocks SMTP (ports 25, 465, 587) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push notifications; disabled without the keys (pair: `npx web-push generate-vapid-keys` in `server/`) |
 | `DEMO_OWNER_EMAIL` | e-mail of the account shown read-only in demo mode; without a value there is no "Zobacz wersję demo" button |
@@ -222,7 +220,7 @@ The server and the client are deployed together from the `main` branch to Render
 
 ## Known issues
 
-- **No API protection.** `app.use(verifyApiKey)` is commented out; the `x-api-key` key is compiled into the client (`core/http.ts`), so it would be public anyway. `verifyApiKey` checks `/api/operation/set` and `/hp/clear` — inconsistently (one with the prefix, one without).
+- **Controller endpoints without authorisation.** There is no API key (the inactive `verifyApiKey` and the `x-api-key` header were removed on 2026-10-27); the application is protected by account sessions, and the `controllerPaths` endpoints accept the bare SN.
 - **Data in server memory** (`device-info.service.ts`, latest telemetry, manual operations) is lost on restart; after changing `deviceId` in the database the server has to be restarted.
 - **The IMGW station** is hard-coded (`meteo.service.ts`, Zakopane).
 - **Mail and weather depend on the controllers at home.** Without the switch (and `co` with an approved key) login by code gets 503 and the tile weather is not refreshed (the forecast remains). The `/mail/*` endpoints accept the bare SN; without key approval in the application someone who knows the SN could plant their own key — hence a new key waits for the system user.

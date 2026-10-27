@@ -14,7 +14,6 @@
 | `core/time.ts` | `TIME_ZONE = Europe/Warsaw`, granice doby w Warszawie jako zakres UTC |
 | `core/websocket.ts` | serwer WebSocket (`/ws?rootId=`), `sendMessage(typ, rootId)` z opóźnieniem 1 s |
 | `core/middleware/device-context.ts` | ustala urządzenie z `rootId` albo (dla ścieżek sterownika z mapy `controllerPaths`) z pary `{deviceId, deviceType}`; 400/404/409 |
-| `core/middleware/auth.ts` | `verifyApiKey` — **nieużywane** (wyłączone w `app.ts`) |
 | `core/models/device.model.ts` | model Mongoose `devices`: schemat urządzenia, `properties`, osadzone harmonogramy i starsze `settings` |
 | `core/controllers/device.controller.ts` | obsługa tras urządzeń; odpowiedź zgłoszenia z `settings` z rejestru; zlecenie i odwołanie aktualizacji firmware |
 | `core/controllers/meteo.controller.ts` | `GET /temperature` |
@@ -180,7 +179,6 @@ Dokument urządzenia jest wspólny dla wszystkich rodzajów, dlatego `core/model
 |---|---|
 | `MONGODB_URI` | połączenie z MongoDB; wymagane, bez niego serwer kończy start błędem |
 | `PORT` | port HTTP i WebSocket (domyślnie 3001) |
-| `API_KEY` | klucz dla `verifyApiKey` (obecnie nieużywany) |
 | `MAIL_RELAY=1` | maile wysyłają sterowniki (przekaźnik poczty) zamiast serwera; na Render obowiązkowe, bo darmowy plan blokuje SMTP (porty 25, 465, 587) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | powiadomienia Web Push; bez kluczy wyłączone (para: `npx web-push generate-vapid-keys` w `server/`) |
 | `DEMO_OWNER_EMAIL` | e-mail konta pokazywanego w wersji demo tylko do odczytu; bez wartości przycisku „Zobacz wersję demo” nie ma |
@@ -222,7 +220,7 @@ Serwer i klient wdraża się razem z gałęzi `main` na Render (build uruchamian
 
 ## Znane problemy
 
-- **Brak ochrony API.** `app.use(verifyApiKey)` jest zakomentowane; klucz `x-api-key` jest wkompilowany w klienta (`core/http.ts`), więc i tak byłby jawny. `verifyApiKey` sprawdza ścieżki `/api/operation/set` i `/hp/clear` — niespójnie (jedna z przedrostkiem, druga bez).
+- **Endpointy sterownika bez autoryzacji.** Klucza API nie ma (nieaktywny `verifyApiKey` i nagłówek `x-api-key` usunięte 2026-10-27); aplikację chronią sesje kont, a endpointy z `controllerPaths` przyjmują sam SN.
 - **Dane w pamięci serwera** (`device-info.service.ts`, ostatnia telemetria, operacje ręczne) giną przy restarcie; po zmianie `deviceId` w bazie trzeba zrestartować serwer.
 - **Stacja IMGW** jest wpisana w kod (`meteo.service.ts`, Zakopane).
 - **Poczta i pogoda zależą od sterowników w domu.** Bez włącznika (i `co` z zatwierdzonym kluczem) logowanie kodem dostaje 503, a pogoda kafelków nie odświeża się (zostaje prognoza). Endpointy `/mail/*` przyjmują sam SN; bez zatwierdzenia klucza w aplikacji ktoś znający SN mógłby podstawić własny klucz — dlatego nowy klucz czeka na użytkownika systemowego.

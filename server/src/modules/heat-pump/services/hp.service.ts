@@ -8,7 +8,7 @@ import { HpEntryModel } from '../models/hp.model';
 import { getTemperature } from '../../../core/services/meteo.service';
 import { formatInTimeZone } from 'date-fns-tz';
 import { TIME_ZONE, warsawDayBoundsUTC } from '../../../core/time';
-import { forgetDeviceInfo, getDeviceInfo } from '../../../core/services/device-info.service';
+import { getDeviceInfo } from '../../../core/services/device-info.service';
 import { notify } from '../../../core/services/push.service';
 import { both, Lang, t } from '../../../core/i18n';
 
@@ -142,14 +142,6 @@ export function getHpDiagnostics(rootId: string) {
 }
 // Dni z danymi (YYYY.MM.DD, Warszawa); addHpData dopisuje dzień tylko do już wczytanego zbioru.
 const availableDatesByRoot = new Map<string, Set<string>>();
-
-// Usuwa telemetrię urządzenia (kolekcja pv zostaje) i czyści pamięć podręczną.
-export const clearData = async (rootId: string) => {
-  await HpEntryModel.deleteMany({ rootId });
-  lastDataByRoot.delete(rootId);
-  availableDatesByRoot.delete(rootId);
-  forgetDeviceInfo(rootId);
-}
 
 export const getHpAvailableDates = async (rootId: string): Promise<string[]> => {
   const cachedDates = availableDatesByRoot.get(rootId);

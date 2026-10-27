@@ -93,4 +93,4 @@ pio test -d devices/water-pressure-tank -e native
 pio test -d devices/switch -e native
 ```
 
-Production server: `https://chpc-web.onrender.com`. Server environment variables (`MONGODB_URI`, `PORT`, `API_KEY`) are described in the [core module](moduly/core/3-technical-documentation.md).
+Production server: `https://chpc-web.onrender.com`. Server environment variables (`MONGODB_URI`, `PORT` and others) are described in the [core module](moduly/core/3-technical-documentation.md).

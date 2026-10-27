@@ -53,11 +53,9 @@
 | `GET /hp/4day?date=` or `?startDate=&endDate=` | application | records of a day / a range of days (Warsaw time) |
 | `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day` | application | energy, PV, grid use, cost |
 | `GET /hp/last-error` | application | latest record with `error_code` (24 h, no limit while locked) |
-| `POST /hp/clear` | manual | delete the device telemetry (not `pv`) |
 | `POST /pv/add` | `co` | PV reading; `total_power` required; reply `{}` (201) |
 | `GET /pv`, `GET /pv/range?date=` / `?startDate=&endDate=` | application | latest reading with panels / readings in a range |
 | `GET /operation` | application | values for the Settings form |
-| `GET /operation/get` | diagnostics | current operation from memory |
 | `POST /operation/set` | application | save a manual operation |
 | `POST /operation/action` | application | `{action: "error_reset" \| "restart"}` |
 | `GET /schedules`, `POST /schedules`, `PUT /schedules/:id`, `DELETE /schedules/:id` | application | schedules |

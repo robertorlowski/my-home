@@ -189,11 +189,6 @@ const lastSent = new Map<string, number>();
 /** co zostało wysłane (testy i log); ostatnie 200 */
 export const pushLog: { at: Date; userId: string; rootId: string; event: string; body: string }[] = [];
 
-const deviceTitle = async (rootId: string) => {
-  const device = await DeviceModel.findById(rootId).select('name deviceId').lean<{ name?: string; deviceId: string }>();
-  return device?.name || device?.deviceId || t('pl', 'push.device');
-};
-
 /**
  * Zdarzenie sterownika: powiadomienie do każdego, kto je zaznaczył dla tego sterownika. Nie rzuca wyjątków
  * (zapis stanu ze sterownika nie może się wywrócić przez powiadomienia). Zwraca liczbę osób, do których poszło.

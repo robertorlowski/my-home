@@ -75,8 +75,6 @@ export class ApiError extends Error {
   }
 }
 
-// x-api-key jest wkompilowany w klienta, więc jawny dla każdego; kontrola klucza na serwerze
-// (verifyApiKey) jest obecnie wyłączona.
 export class Requests {
   // JSON w obie strony, bez kontekstu urządzenia (chyba że includeDevice); rzuca ApiError z komunikatem serwera
   static async json<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, data?: unknown, includeDevice = false): Promise<T> {
@@ -96,13 +94,11 @@ export class Requests {
   }
 
   static async get(path: string, includeDevice = true) {
-    // console.log(prefixMocks(path));
     try {
       const response = await apiFetch(prefixMocks(withDeviceContext(path, includeDevice)), {
         method: "GET",
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
-          'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
           ...authHeader()
         }
       });
@@ -124,15 +120,10 @@ export class Requests {
         Object.assign(
           {
             method: "POST",
-            // mode: "no-cors",
-            // cache: "no-cache",
             headers: {
               'Content-Type': 'application/json; charset=utf-8',
-              'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
           ...authHeader()
             },
-            // redirect: "follow",
-            // referrer: "no-referrer",
             body: JSON.stringify(data)
           }
         )
@@ -154,7 +145,6 @@ export class Requests {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
           ...authHeader(),
       },
     });
@@ -171,7 +161,6 @@ export class Requests {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/octet-stream',
-        'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
           ...authHeader(),
       },
       body: file,
@@ -185,8 +174,7 @@ export class Requests {
   static async postJson(path: string) {
     const response = await apiFetch(prefixMocks(path), {
       method: 'POST',
-      headers: { 'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
-          ...authHeader() },
+      headers: { ...authHeader() },
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body?.message ?? `HTTP error! status: ${response.status}`);
@@ -197,8 +185,7 @@ export class Requests {
   static async deleteJson(path: string) {
     const response = await apiFetch(prefixMocks(path), {
       method: 'DELETE',
-      headers: { 'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
-          ...authHeader() },
+      headers: { ...authHeader() },
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body?.message ?? `HTTP error! status: ${response.status}`);
@@ -211,7 +198,6 @@ export class Requests {
       method,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
-        'x-api-key': 'f3c87b02-4d0d-4e0a-9d5c-30a91ec77510',
           ...authHeader(),
       },
       body: JSON.stringify(data),

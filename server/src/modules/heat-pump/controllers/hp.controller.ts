@@ -2,7 +2,7 @@
 // oraz odczyty dla klienta: bieżący stan, dni z danymi, dane dnia, podsumowanie
 // energii i kosztów G12w, ostatni błąd. Dane w kolekcji hp (models/hp.model.ts).
 import { Request, Response } from 'express'
-import { addHpData, getHpContactAt, getHpDiagnostics, getHpDiagRequest, HpDiagRequest, markHpContact, noteHpDiagnostics, setHpDiagRequest, getHpLastData, getHpAllData, clearData, getHpAvailableDates as getCachedHpAvailableDates, getHpLastError } from '../services/hp.service'
+import { addHpData, getHpContactAt, getHpDiagnostics, getHpDiagRequest, HpDiagRequest, markHpContact, noteHpDiagnostics, setHpDiagRequest, getHpLastData, getHpAllData, getHpAvailableDates as getCachedHpAvailableDates, getHpLastError } from '../services/hp.service'
 import { HpEntry, OperationEntry } from '../types'
 import { clearOperation, consumeManualForceOnStart, getOperationData, takeOperationActions } from '../services/operation.service'
 import { HpEntryModel } from '../models/hp.model'
@@ -19,31 +19,6 @@ import { toControllerOperation } from '../services/controller-contract.service'
 import { pumpWorkMode } from '../services/pump-mode.service'
 import { getBoilerCoPump } from '../services/cwu-loading.service'
 import { sendMessage } from '../../../core/websocket'
-
-interface THpClear {
-  clear?: Boolean
-}
-
-
-
-// POST /hp/clear {clear: true}: usuwa całą telemetrię urządzenia (bez pv).
-// Endpoint jest otwarty (kontrola klucza API wyłączona).
-export const clearHp = async (req: Request<{}, {}, {}>, res: Response) => {
-  try {
-    console.log("Clear HP data");
-    const data: THpClear | null = req.body;
-    if (data?.clear == true) {
-      await clearData(req.deviceRootId as string);
-      return res.status(200).send({ message: 'OK' });
-    } else {
-      return res.status(500).send({ message: 'Bad params' });
-    }
-  } catch (error) {
-    console.log()
-    return res.status(500).send({ message: error })
-  }
-}
-
 
 // GET /hp: ostatnia telemetria z pamięci podręcznej (surowa, także z polami,
 // których schemat nie zapisuje, do restartu serwera) + bieżące PV i pv_power.

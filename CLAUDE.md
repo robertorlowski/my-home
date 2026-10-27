@@ -92,14 +92,11 @@ Wartości konfiguracyjne:
 
 - `MONGODB_URI` — połączenie z MongoDB; wymagane, bez niego serwer kończy start błędem;
 - `PORT` — port HTTP;
-- `API_KEY` — klucz używany przez middleware autoryzacji; bez niego chronione ścieżki dostają 403;
 - `MAIL_RELAY=1` — maile wysyłają sterowniki zamiast serwera (punkt 5f); na Render obowiązkowe, bo darmowy plan blokuje SMTP. `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN`, `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL` — konta użytkowników i poczta (`server/.env.example`);
 - `DEMO_OWNER_EMAIL` — e-mail konta pokazywanego w wersji demo tylko do odczytu (punkt 5i); bez wartości przycisku demo nie ma;
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — powiadomienia Web Push (punkt 5g); bez kluczy powiadomienia są wyłączone (ostrzeżenie przy starcie, karta „Powiadomienia” to pokazuje). Para kluczy: `npx web-push generate-vapid-keys` w `server/`.
 
 Wartości są tylko w zmiennych środowiskowych: na Render w Environment usługi, lokalnie w `server/.env` (poza gitem, wzór w [`server/.env.example`](server/.env.example)). W kodzie nie ma wartości domyślnych. Do 2026-09-27 adres z hasłem użytkownika `hp` był wpisany w `server.ts` i jest w historii publicznego repozytorium; ten użytkownik został usunięty w Atlasie (2026-09-27), produkcja łączy się jako `driver`.
-
-Middleware `verifyApiKey` jest obecnie zaimportowany, ale `app.use(verifyApiKey)` w [`server/src/core/app.ts`](server/src/core/app.ts) jest zakomentowane. Oznacza to, że w aktualnym stanie aplikacji kontrola klucza API nie jest globalnie aktywna.
 
 **Środowisko lokalne bez bazy produkcyjnej:** `npm run local` ([`scripts/local-dev.mjs`](scripts/local-dev.mjs)) uruchamia trwałą bazę MongoDB w `.local-db/` (port 27027, poza gitem), serwer na porcie 4001 i klienta Vite na 5173. `npm run local -- --db` uruchamia samą bazę. Pierwsze uruchomienie pobiera binarkę MongoDB (ok. 100 MB). Lokalną bazę kasuje się, usuwając `.local-db/`.
 
@@ -562,12 +559,10 @@ Trasy składa [`server/src/core/routes.ts`](server/src/core/routes.ts): urządze
 | `GET /api/hp/monthly-summary` | podsumowania energii |
 | `GET /api/hp/last-error` | ostatni błąd sterownika z 24 h (przy blokadzie bez limitu czasu) |
 | `POST /api/hp/add` | zapis telemetrii i zwrot operacji |
-| `POST /api/hp/clear` | usunięcie telemetrii HP urządzenia (bez `pv`) |
 | `GET /api/pv` | ostatni odczyt PV z panelami |
 | `GET /api/pv/range?date=...` lub `?startDate=...&endDate=...` | odczyty PV z zakresu dni |
 | `POST /api/pv/add` | zapis odczytu PV (sterownik) |
 | `GET /api/operation` | przygotowany zestaw wartości do widoku ustawień |
-| `GET /api/operation/get` | bieżąca operacja z pamięci |
 | `POST /api/operation/set` | zapis operacji ręcznej |
 | `POST /api/operation/action` | akcja jednorazowa `error_reset` albo `restart` |
 | `GET /api/schedules` | lista harmonogramów |
@@ -597,7 +592,7 @@ Trasy składa [`server/src/core/routes.ts`](server/src/core/routes.ts): urządze
 | `GET` / `POST /api/pellet-boiler-pelux200/schedules`, `PUT` / `DELETE …/schedules/:id` | wpisy harmonogramu kotła `{type: cwu | work, mode, dayOfWeek | date, startTime, endTime, cwuFrom, cwuTo | on, enabled?}` |
 | `GET /api/pellet-boiler-pelux200/settings` | ostatni odczyt ustawień rozkodowany: `{readAt, groups: [{key, label, parameters}], mixers}` albo `{}` |
 | `PUT /api/water-pressure-tank/settings` | czas kompresora ustawiony na stronie sterownika `{compressor_seconds}` (tylko to pole; sam `deviceId` wystarcza, 404/409 jak w `/hp/add`) |
-| `GET /api/water-pressure-tank/runs?from=&to=` lub `?fromTime=&toTime=` | uruchomienia z dni (Warszawa) albo okresu między odczytami; każde z `pumpSeconds` (bez ręcznej pracy kompresora) i `waterLiters` (`null` bez przepływu) |
+| `GET /api/water-pressure-tank/runs?from=&to=` | uruchomienia z dni (Warszawa); każde z `pumpSeconds` (bez ręcznej pracy kompresora) i `waterLiters` (`null` bez przepływu) |
 | `GET /api/water-pressure-tank/summary?period=day\|month\|year&date=` | kubełki `{key, pumpSeconds, waterLiters \| null, runs}` w godzinach, dniach albo miesiącach oraz `flow` |
 | `GET /api/water-pressure-tank/flow` | przepływ pompy z wodomierza `{litersPerMinute \| null, periods, meterLiters, pumpSeconds}` |
 | `GET` / `POST /api/water-pressure-tank/meter`, `DELETE /api/water-pressure-tank/meter/:id` | odczyty wodomierza |
@@ -875,7 +870,7 @@ Fork [gonzho000/chpc](https://github.com/gonzho000/chpc) (GPLv3) na Arduino Pro 
 
 ## 15. Znane niezgodności i otwarte kwestie
 
-- Kontrola klucza API (`verifyApiKey`) jest wyłączona; `POST /api/operation/set` jest otwarte i bez walidacji.
+- Klucza API nie ma (nieaktywny `verifyApiKey` usunięty 2026-10-27): aplikację chronią konta użytkowników, a endpointy sterownika przyjmują sam SN bez autoryzacji; `POST /api/operation/set` nie sprawdza zakresów.
 - Zwykłe ustawienia z `/operation/set` czekają na kolejny cykliczny POST `co` (10–30 s); natychmiast (WebSocket) docierają tylko akcje jednorazowe.
 - `0x04` powyżej `T_SETPOINT_MAX` i `0x05` powyżej `T_DELTA_MAX` CHPC po cichu ignoruje.
 - Liczniki diagnostyczne `co` i `controller_mode` nie są zapisywane w bazie (ścisły schemat); widać je tylko w `GET /api/hp` do restartu serwera i na stronie `/` sterownika.

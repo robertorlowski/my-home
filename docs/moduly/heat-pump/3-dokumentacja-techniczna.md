@@ -53,11 +53,9 @@
 | `GET /hp/4day?date=` albo `?startDate=&endDate=` | aplikacja | rekordy dnia / zakresu dni (czas warszawski) |
 | `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day` | aplikacja | energia, PV, zużycie z sieci, koszt |
 | `GET /hp/last-error` | aplikacja | ostatni rekord z `error_code` (24 h, przy blokadzie bez limitu) |
-| `POST /hp/clear` | ręcznie | usunięcie telemetrii urządzenia (bez `pv`) |
 | `POST /pv/add` | `co` | odczyt PV; wymagane `total_power`; odpowiedź `{}` (201) |
 | `GET /pv`, `GET /pv/range?date=` / `?startDate=&endDate=` | aplikacja | ostatni odczyt z panelami / odczyty z zakresu |
 | `GET /operation` | aplikacja | wartości do formularza Ustawień |
-| `GET /operation/get` | diagnostyka | bieżąca operacja z pamięci |
 | `POST /operation/set` | aplikacja | zapis operacji ręcznej |
 | `POST /operation/action` | aplikacja | `{action: "error_reset" \| "restart"}` |
 | `GET /schedules`, `POST /schedules`, `PUT /schedules/:id`, `DELETE /schedules/:id` | aplikacja | harmonogramy |

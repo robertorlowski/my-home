@@ -99,7 +99,7 @@ Moduł odpowiada za:
 
 ## Ograniczenia i ryzyka
 
-- **Klucz API pozostaje wyłączony.** Aplikacja wymaga zalogowania (konta użytkowników), ale kontrola klucza API na serwerze jest wyłączona, a endpointy sterowników przyjmują sam SN. Root ID nie powinien trafiać do publicznych miejsc (zrzuty w tej dokumentacji mają zmyślone identyfikatory).
+- **Endpointy sterowników bez autoryzacji.** Aplikacja wymaga zalogowania (konta użytkowników), ale endpointy sterowników przyjmują sam SN (klucza API nie ma). Root ID nie powinien trafiać do publicznych miejsc (zrzuty w tej dokumentacji mają zmyślone identyfikatory).
 - **Sterownika nie da się usunąć z aplikacji.** Usunięcie wymaga zmiany w bazie danych.
 - **Część danych jest w pamięci serwera** (ostatnia telemetria, operacje ręczne, dane urządzeń). Restart serwera je czyści; sterownik odtwarza je przy kolejnej wysyłce.
 - **Temperatura zewnętrzna** pochodzi z jednej stacji IMGW (Zakopane) — dla instalacji w innym miejscu trzeba zmienić stację w kodzie.

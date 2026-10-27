@@ -240,19 +240,12 @@ describe('Hydrofor (water-pressure-tank)', () => {
       expect(runs.body[0].compressorRunning).toBe(false);
     });
 
-    it('zwraca uruchomienia z okresu podanego czasami ISO i odrzuca złe zakresy', async () => {
+    it('odrzuca złe zakresy uruchomień i podsumowań', async () => {
       const { body } = await register('C3A1B2C3D41A');
       const rootId = body.rootId;
-      await addWaterPressureTankReport(rootId, { runId: 1, pumpRunS: 10 }, new Date('2026-08-10T10:00:00Z'));
-      await addWaterPressureTankReport(rootId, { runId: 2, pumpRunS: 10 }, new Date('2026-08-20T10:00:00Z'));
-
-      const period = await request(app)
-        .get(`/api/water-pressure-tank/runs?rootId=${rootId}&fromTime=2026-08-09T00:00:00Z&toTime=2026-08-15T00:00:00Z`);
-      expect(period.status).toBe(200);
-      expect(period.body.map((run: { runId: number }) => run.runId)).toEqual([1]);
 
       expect((await request(app).get(`/api/water-pressure-tank/runs?rootId=${rootId}`)).status).toBe(400);
-      expect((await request(app).get(`/api/water-pressure-tank/runs?rootId=${rootId}&fromTime=zle&toTime=zle`)).status).toBe(400);
+      expect((await request(app).get(`/api/water-pressure-tank/runs?rootId=${rootId}&from=zle&to=zle`)).status).toBe(400);
       expect((await request(app).get(`/api/water-pressure-tank/summary?rootId=${rootId}&period=week&date=2026-08-10`)).status).toBe(400);
       expect((await request(app).get(`/api/water-pressure-tank/summary?rootId=${rootId}&period=day&date=10.08.2026`)).status).toBe(400);
     });

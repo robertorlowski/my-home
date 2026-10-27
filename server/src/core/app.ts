@@ -3,7 +3,6 @@
 import express from 'express'
 import cors from 'cors'
 import apiRoute from './routes'
-import { verifyApiKey } from './middleware/auth'
 import { resolveDeviceContext } from './middleware/device-context'
 import { authenticate, authorize } from './middleware/session'
 
@@ -11,13 +10,10 @@ const app = express()
 // Za proxy Render: req.protocol ma być https (adres pliku firmware w ofercie dla sterowników).
 app.set('trust proxy', 1)
 
-// Kontrola klucza API wyłączona: /operation/set i /hp/clear są obecnie otwarte.
-// app.use(verifyApiKey);
-
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); // <- zezwala wszystkim
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,x-api-key,Authorization');
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   next();
 });
 

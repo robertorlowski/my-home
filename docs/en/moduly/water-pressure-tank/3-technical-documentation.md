@@ -37,7 +37,6 @@
 | `POST /water-pressure-tank/add` | controller | `{runId, pumpRunS, compressorStartS?, compressorEndS?, restarts, manualCompressorS?, queued?}`; `deviceId` alone is enough; 404/409 as in core; reply `{}` (201); bad data 400 |
 | `PUT /water-pressure-tank/settings` | controller | `{compressor_seconds}` (whole seconds 1–3600, otherwise 400); changes only that field; 404 for another device kind |
 | `GET /water-pressure-tank/runs?from=YYYY-MM-DD&to=YYYY-MM-DD` | application | runs of the days (Warsaw, `to` inclusive), with `inProgress`, `compressorRunning`, `pumpSeconds` (pump time without manual compressor operation) and `waterLiters` (`null` without a flow) |
-| `GET /water-pressure-tank/runs?fromTime=ISO&toTime=ISO` | — | runs of a period (currently unused by the application) |
 | `GET /water-pressure-tank/summary?period=day\|month\|year&date=YYYY-MM-DD` | application | `{period, date, buckets, flow}`; buckets `{key, pumpSeconds, waterLiters \| null, runs}` per hour (24), per day of the month or per month (12); empty buckets are zero |
 | `GET /water-pressure-tank/flow` | application | pump flow `{litersPerMinute \| null, periods, meterLiters, pumpSeconds}`: number of periods used, total litres from the meter and total pump time |
 | `GET /water-pressure-tank/meter` | application | readings, oldest first |
@@ -94,7 +93,6 @@ node scripts/seed-local.mjs       # demo data: several months of runs and water 
 ## Known issues
 
 - **The controller sends runs only after a successful registration** (unlike `co`) — without the cloud the run waits in NVS and goes to the queue at the next start.
-- **`GET /runs?fromTime=&toTime=`** and `getRunsBetween` in the client are unused (since the "between readings" filter was removed).
 - **A tank gets `work_mode: CWU` in `properties`** from the schema default — the field is unused.
 - **`PUT /device/properties` replaces the whole `properties`** — the application sends the full set of tank fields; any other API client must do the same.
 - **Water depends on a constant pump flow.** There is one flow for the whole history; a pump change or a clogged filter changes it only through the average of later readings.

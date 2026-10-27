@@ -58,10 +58,6 @@ export class HpRequests {
       return Requests.get("/operation");
   }
 
-  static getOperation() : Promise<OperationEntry> {
-      return Requests.get("/operation/get");
-  }
-
   // operacja ręczna (wartości jako napisy); json = false zwraca Response, wywołujący sprawdza status 201.
   // Dotrze do pompy dopiero z odpowiedzią na kolejny POST /hp/add sterownika (10–30 s).
   static setOperation(data: OperationEntry) {

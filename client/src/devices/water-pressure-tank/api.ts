@@ -10,11 +10,6 @@ export class WaterPressureTankRequests {
     return Requests.get(`/water-pressure-tank/runs?from=${from}&to=${to}`);
   }
 
-  // okres między odczytami wodomierza (daty ISO); obecnie nieużywane przez widoki
-  static getRunsBetween(fromTime: string, toTime: string): Promise<WaterPressureTankRun[] | null> {
-    return Requests.get(`/water-pressure-tank/runs?fromTime=${encodeURIComponent(fromTime)}&toTime=${encodeURIComponent(toTime)}`);
-  }
-
   static getSummary(period: WaterSummaryPeriod, date: string): Promise<WaterSummary | null> {
     return Requests.get(`/water-pressure-tank/summary?period=${period}&date=${date}`);
   }

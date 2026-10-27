@@ -236,7 +236,6 @@ Kontroler `water-pressure-tank.controller.ts`, serwis `water-pressure-tank.servi
 | `POST /api/water-pressure-tank/add` | wysyłka ze sterownika, zapis albo aktualizacja po `runId`; sam `deviceId` wystarcza, 404 i 409 jak w `/hp/add`; odpowiedź `{}` |
 | `PUT /api/water-pressure-tank/settings` | czas kompresora ustawiony na stronie sterownika, `{compressor_seconds}` (pełne sekundy 1–3600, inaczej 400). Zmienia tylko `properties.compressor_seconds`, progi i zbiorniki zostają. Sam `deviceId` wystarcza, 404 dla nieznanego urządzenia i dla pompy ciepła, 409 jak w `/hp/add`; odpowiedź `{compressor_seconds}` |
 | `GET /api/water-pressure-tank/runs?from=YYYY-MM-DD&to=YYYY-MM-DD` | uruchomienia z dni czasu warszawskiego (`to` włącznie), z polem `inProgress` |
-| `GET /api/water-pressure-tank/runs?fromTime=ISO&toTime=ISO` | uruchomienia z okresu między odczytami wodomierza |
 | `GET /api/water-pressure-tank/summary?period=day\|month\|year&date=YYYY-MM-DD` | woda w godzinach dnia (24), dniach miesiąca albo miesiącach roku (12); puste przedziały z zerami |
 | `GET` / `POST /api/water-pressure-tank/meter` | lista odczytów (od najstarszego) / nowy odczyt `{readAt, valueM3, note?}` |
 | `DELETE /api/water-pressure-tank/meter/:id` | usunięcie odczytu; 404 dla nieznanego albo cudzego |

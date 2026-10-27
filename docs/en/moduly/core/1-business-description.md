@@ -101,7 +101,7 @@ The user interface is in Polish; the screenshots below show it as is.
 
 ## Limitations and risks
 
-- **The API key stays disabled.** The application requires login (user accounts), but the API key check on the server is disabled and the controller endpoints accept the bare SN. The Root ID should not be published (the screenshots in this documentation use made-up identifiers).
+- **Controller endpoints without authorisation.** The application requires login (user accounts), but the controller endpoints accept the bare SN (there is no API key). The Root ID should not be published (the screenshots in this documentation use made-up identifiers).
 - **A controller cannot be deleted in the application.** Deleting it requires a change in the database.
 - **Some data lives in server memory** (latest telemetry, manual operations, device info). A server restart clears it; the controller restores it with its next report.
 - **The outdoor temperature** comes from a single IMGW station (Zakopane) — for an installation elsewhere the station has to be changed in the code.

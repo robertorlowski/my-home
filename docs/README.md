@@ -94,7 +94,7 @@ pio test -d devices/water-pressure-tank -e native
 pio test -d devices/switch -e native
 ```
 
-Lokalna baza jest w `.local-db/` (poza gitem). Serwer produkcyjny: `https://chpc-web.onrender.com`. Zmienne środowiskowe serwera (`MONGODB_URI`, `PORT`, `API_KEY`) są opisane w [module core](moduly/core/).
+Lokalna baza jest w `.local-db/` (poza gitem). Serwer produkcyjny: `https://chpc-web.onrender.com`. Zmienne środowiskowe serwera (`MONGODB_URI`, `PORT` i pozostałe) są opisane w [module core](moduly/core/).
 
 ## Inne dokumenty
 

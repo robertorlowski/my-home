@@ -236,7 +236,6 @@ describe('Konta użytkowników', () => {
     // Podgląd: przełączniki operacji; bez Harmonogramu: harmonogramy i ustawienia domyślne nie
     expect((await request(app).post(`/api/operation/set?rootId=${pumpRootId}`).set(bearer(annaToken)).send({ co_pomp: '1' })).status).not.toBe(403);
     expect((await request(app).post(`/api/schedules?rootId=${pumpRootId}`).set(bearer(annaToken)).send({})).status).toBe(403);
-    expect((await request(app).post(`/api/hp/clear?rootId=${pumpRootId}`).set(bearer(annaToken))).status).toBe(403);
     expect((await request(app).put(`/api/devices/${pumpRootId}`).set(bearer(annaToken)).send({ name: 'X' })).status).toBe(403);
     expect((await request(app).get(`/api/devices/${pumpRootId}/shares`).set(bearer(annaToken))).status).toBe(403);
     expect((await request(app).get(`/api/hp?rootId=${boilerRootId}`).set(bearer(annaToken))).status).toBe(403);
