@@ -4,7 +4,7 @@ import express from 'express'
 
 import {
   addDevice, addDeviceShare, cancelDeviceFirmwareUpdate, getDeviceShares, getDevices, getProperties, registerDeviceEntry,
-  removeDeviceShare, requestDeviceFirmwareUpdate, updateDefaultDevice, updateDevice, updateDeviceShare, updateDevicesOrder,
+  removeDeviceShare, requestDeviceFirmwareUpdate, updateDevice, updateDeviceShare, updateDevicesOrder,
   updateProperties,
 } from './controllers/device.controller'
 import {
@@ -59,7 +59,6 @@ router.post('/devices/register', registerDeviceEntry)
 // kolejność kafelków na /devices; przed /devices/:rootId, bez rootId
 router.put('/devices/order', updateDevicesOrder)
 router.put('/devices/:rootId', updateDevice)
-router.put('/devices/:rootId/default', updateDefaultDevice)
 // przycisk „Aktualizuj” w Ustawieniach sterownika: zlecenie aktualizacji firmware i jego odwołanie
 router.post('/devices/:rootId/firmware-update', requestDeviceFirmwareUpdate)
 router.delete('/devices/:rootId/firmware-update', cancelDeviceFirmwareUpdate)

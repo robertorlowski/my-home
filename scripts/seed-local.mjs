@@ -77,7 +77,6 @@ if (WITH_PRODUCTION) {
     _id: rootId,
     deviceType: 'heat_pump',
     ...DEMO_HEAT_PUMP,
-    isDefault: true,
     properties,
     schedules: schedules.map((schedule) => ({
       ...toDates(withoutIds(schedule)),
@@ -121,7 +120,6 @@ await db.collection('devices').insertOne({
   _id: tankRootId,
   deviceType: 'water-pressure-tank',
   ...DEMO_TANK,
-  isDefault: !WITH_PRODUCTION,
   properties: TANK_PROPERTIES,
   schedules: [],
   createdAt: new Date('2026-06-01T08:00:00Z'),

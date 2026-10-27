@@ -7,7 +7,7 @@ import { DeviceDocument, DeviceModel } from '../models/device.model';
 import { getDeviceTypeModule } from '../device-types';
 
 // Pola urządzenia widoczne w API (lista, rejestracja, zmiana nazwy).
-export const DEVICE_PUBLIC_FIELDS = 'deviceType deviceId name ownerId isDefault sortOrder hidden firmwareVersion firmwareSeenAt firmwareUpdate ipAddress ipSeenAt pumpConfig boilerConfig mailKey mailKeyPending';
+export const DEVICE_PUBLIC_FIELDS = 'deviceType deviceId name ownerId sortOrder hidden firmwareVersion firmwareSeenAt firmwareUpdate ipAddress ipSeenAt pumpConfig boilerConfig mailKey mailKeyPending';
 
 // Pojemność zbiornika pompy [l], pełne litry.
 const TANK_LITERS_MIN = 20;
@@ -119,16 +119,6 @@ export async function assignDefaultPumpConfigs(): Promise<number> {
     { $set: { pumpConfig: initial } },
   );
   return result.modifiedCount;
-}
-
-// Najwyżej jeden sterownik domyślny: ustawienie zdejmuje znacznik z pozostałych.
-export async function setDefaultDevice(rootId: string, isDefault: boolean): Promise<DeviceDocument> {
-  const device = await DeviceModel.findById(rootId).select('_id');
-  if (!device) throw new Error('Device not found.');
-  if (isDefault) await DeviceModel.updateMany({ _id: { $ne: device._id } }, { $set: { isDefault: false } });
-  const updated = await DeviceModel.findByIdAndUpdate(rootId, { $set: { isDefault } }, { new: true })
-    .select(DEVICE_PUBLIC_FIELDS).lean<DeviceDocument>();
-  return updated as DeviceDocument;
 }
 
 // Okno „Dane sterownika”: nazwa i (tylko pompa ciepła) definicja pompy.

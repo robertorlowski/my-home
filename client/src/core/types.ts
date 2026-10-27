@@ -67,7 +67,6 @@ export type Device = {
   deviceType: DeviceType;
   deviceId: string;
   name: string;
-  isDefault?: boolean;
   // miejsce na liście sterowników ustawione w trybie „Zmień kolejność” (0 = pierwszy, wspólne z kafelkami pogody);
   // lista z serwera jest już posortowana
   sortOrder?: number;

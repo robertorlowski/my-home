@@ -65,7 +65,7 @@ if (!existing) {
 }
 await db.collection('devices').deleteMany({ deviceType: 'photovoltaic', deviceId: DEMO_SN });
 await db.collection('devices').insertOne(
-  { _id: pvRoot, deviceType: 'photovoltaic', deviceId: DEMO_SN, name: 'Fotowoltaika', isDefault: !KEEP, schedules: [], createdAt: now, updatedAt: now });
+  { _id: pvRoot, deviceType: 'photovoltaic', deviceId: DEMO_SN, name: 'Fotowoltaika', schedules: [], createdAt: now, updatedAt: now });
 const identity = { rootId: String(hpRoot), deviceType: 'heat_pump', deviceId: DEMO_SN };
 const daysWithTelemetry = new Set();
 if (KEEP) {

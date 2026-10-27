@@ -8,7 +8,6 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import app from '../src/core/app'
-import { DeviceModel } from '../src/core/models/device.model'
 import { WaterPressureTankRunModel } from '../src/modules/water-pressure-tank/models/water-pressure-tank-run.model'
 import { addWaterPressureTankReport, pumpSeconds } from '../src/modules/water-pressure-tank/services/water-pressure-tank.service'
 
@@ -425,30 +424,6 @@ describe('Hydrofor (water-pressure-tank)', () => {
 
       await request(app).post('/api/devices/register').send({ deviceId: 'A4CF0000AA02', deviceType: 'heat_pump' });
       expect((await put('deviceId=A4CF0000AA02', 30)).status).toBe(404);
-    });
-  });
-
-  describe('sterownik domyślny', () => {
-    it('ustawia najwyżej jeden sterownik domyślny', async () => {
-      const first = await register('C3A1B2C3D430');
-      const second = await register('C3A1B2C3D431');
-      await request(app).put(`/api/devices/${first.body.rootId}/default`).send({}).expect(200);
-      await request(app).put(`/api/devices/${second.body.rootId}/default`).send({ isDefault: true }).expect(200);
-
-      const defaults = await DeviceModel.find({ isDefault: true }).lean();
-      expect(defaults).toHaveLength(1);
-      expect(String(defaults[0]._id)).toBe(second.body.rootId);
-
-      const list = await request(app).get('/api/devices');
-      expect(list.body.find((device: { rootId: string }) => device.rootId === second.body.rootId).isDefault).toBe(true);
-
-      await request(app).put(`/api/devices/${second.body.rootId}/default`).send({ isDefault: false }).expect(200);
-      expect(await DeviceModel.countDocuments({ isDefault: true })).toBe(0);
-    });
-
-    it('odpowiada 404 dla nieznanego urządzenia', async () => {
-      const response = await request(app).put(`/api/devices/${new mongoose.Types.ObjectId()}/default`).send({});
-      expect(response.status).toBe(404);
     });
   });
 });

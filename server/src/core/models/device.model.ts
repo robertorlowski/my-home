@@ -63,7 +63,6 @@ const DeviceSchema = new Schema<DeviceDocument>(
       default: '',
       trim: true,
     },
-    isDefault: { type: Boolean, default: false },
     // miejsce kafelka na liście /devices (0 = pierwszy), ustawiane w trybie „Zmień kolejność”; brak = na końcu, po nazwie
     sortOrder: { type: Number },
     // kafelek ukryty na liście /devices (widoczny tylko w trybie „Zmień kolejność”)

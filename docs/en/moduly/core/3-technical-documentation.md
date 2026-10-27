@@ -100,11 +100,10 @@ Paths outside the map (application, `GET`s, `/device/properties`) require `rootI
 
 | Method and path | Context | Description | Replies |
 |---|---|---|---|
-| `GET /devices` | public | device list: `rootId`, `deviceType`, `deviceId`, `name`, `isDefault` | 200 |
+| `GET /devices` | public | device list: `rootId`, `deviceType`, `deviceId`, `name` | 200 |
 | `POST /devices` | public | manual creation (not used by the client; used by the E2E test) | 201; 400 if the SN exists |
 | `POST /devices/register` | public | controller registration `{deviceId, deviceType?, name?, version?, ip?}`; `deviceType` defaults to `heat_pump`; `ip` IPv4 only (others and `0.0.0.0` are ignored) | 201 new, 200 known (+ `settings` for kinds with `controllerSettings`); 400 missing SN / unknown kind |
 | `PUT /devices/:rootId` | public | rename `{name}` (empty allowed) | 200; 400; 404 |
-| `PUT /devices/:rootId/default` | public | default controller `{isDefault}` (no field: set); clears the flag on the others | 200; 404 |
 | `POST /devices/:rootId/firmware-update` | public | "Aktualizuj": request an update to the offered version, stores `firmwareUpdate {version, requestedAt}`; a WebSocket `operation` wakes the controller | 200 `{version, requestedAt}`; 400 kind without updates (heat pump); 404; 409 no offered version, updates disabled or the controller already has that version |
 | `DELETE /devices/:rootId/firmware-update` | public | "Anuluj aktualizację": remove the request (a download already in progress completes) | 200; 404 |
 | `GET /device/properties` | `rootId` | device settings | 200; 404 |
@@ -127,7 +126,6 @@ WebSocket: `ws(s)://<server>/ws?rootId=<rootId>`. The server sends `{"type":"ope
 | `deviceType` | `heat_pump` \| `water-pressure-tank` \| `pellet-boiler-pelux200` \| `switch` | controller kind (role) |
 | `deviceId` | string | controller SN (ESP32 MAC, 12 hex characters); devices of different kinds may share an SN (roles of one controller), no unique index |
 | `name` | string | user-given name, empty by default |
-| `isDefault` | boolean | default controller, at most one; unused by the client since 2026-10-17 (the application starts from the tile list, there is no star on the tile) |
 | `firmwareVersion`, `firmwareSeenAt` | string, Date | firmware version from the registration `version` field and its time; older controllers do not send them |
 | `firmwareUpdate` | `{version, requestedAt}` | update request from the application ("Aktualizuj"); only with it does the controller get the firmware offer; removed when the controller reports the offered version, or by "Anuluj aktualizację" |
 | `ipAddress`, `ipSeenAt` | string, Date | controller IPv4 address in the local network from the registration `ip` field and its time; without the field the last known one stays; shown in the client as "Adres IP" in Settings (`DeviceAddress`) |
@@ -206,7 +204,7 @@ node scripts/seed-local.mjs      # clears the local database and loads demo data
 ## Tests
 
 - `server/test/app.test.ts` — devices (registration, name, default, unknown rootId) and the heat pump API; `mongodb-memory-server` database.
-- `server/test/water-pressure-tank.test.ts` — among others tank registration with settings, default controller, context 404/409.
+- `server/test/water-pressure-tank.test.ts` — among others tank registration with settings, context 404/409.
 - `server/test/pellet-boiler-pelux200.test.ts` — among others two roles of the same SN (two `rootId`s, routing by endpoint kind, 409 for a `rootId` of the other role), boiler registration with `settings`, `poll_interval_seconds` validation in `PUT /device/properties`.
 - The heat pump's `pv.test.ts` and `scheduler.test.ts` live in the same `server/test/` folder; the server has 218 tests in total (run of 2026-10-21, 17 files, all passing; including the account language, an English mail and error via `Accept-Language`, English push body and tiles).
 - The client has no unit tests; the checks are `tsc` and `vite build`, plus the layout test `node test/e2e/run-layout.mjs` (Playwright Chromium; all kinds × views × 360 / 768 / 1280 px × dark / light theme: horizontal scrolling, elements outside the window, console errors, the bar, side menu / bottom navigation).

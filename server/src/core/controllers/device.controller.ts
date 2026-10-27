@@ -8,7 +8,7 @@ import { Request, Response } from 'express';
 import { DefinitionConflictError, DeviceProperties, DeviceType } from '../types';
 import { DeviceDocument } from '../models/device.model';
 import {
-  createDevice, getDeviceProperties, listDevices, parseBoilerConfig, parsePumpConfig, registerDevice, setDefaultDevice, setDevicesOrder,
+  createDevice, getDeviceProperties, listDevices, parseBoilerConfig, parsePumpConfig, registerDevice, setDevicesOrder,
   updateDeviceData, updateDeviceProperties,
 } from '../services/device.service'
 import { mailConfigFor, mailKeyInfo, recordMailKey } from '../services/mail-relay.service';
@@ -35,7 +35,6 @@ const toPublicDevice = (device: DeviceDocument) => ({
   deviceType: device.deviceType,
   deviceId: device.deviceId,
   name: device.name,
-  isDefault: device.isDefault ?? false,
   hidden: device.hidden ?? false,
   sortOrder: device.sortOrder,
   firmwareVersion: device.firmwareVersion,
@@ -299,21 +298,6 @@ export async function updateDevice(
     return res.status(200).json(toPublicDevice(device));
   } catch (error) {
     if (error instanceof DefinitionConflictError) return res.status(409).json({ message: error.message });
-    return res.status(String(error).includes('not found') ? 404 : 400).json({ message: String(error) });
-  }
-}
-
-// PUT /devices/:rootId/default {isDefault?: boolean} — domyślnie ustawia (dawna gwiazdka; klient już jej nie ma,
-// z kontami tylko użytkownik systemowy).
-export async function updateDefaultDevice(
-  req: Request<{ rootId: string }, {}, { isDefault?: boolean }>,
-  res: Response,
-) {
-  try {
-    if (req.user && !req.user.isSystem) return res.status(403).json({ message: 'Tylko użytkownik systemowy.' });
-    const device = await setDefaultDevice(req.params.rootId, req.body?.isDefault !== false);
-    return res.status(200).json(toPublicDevice(device));
-  } catch (error) {
     return res.status(String(error).includes('not found') ? 404 : 400).json({ message: String(error) });
   }
 }

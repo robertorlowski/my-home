@@ -52,9 +52,6 @@ export class DeviceRequests {
   }
 
   // sterownik otwierany po starcie aplikacji; w bazie najwyżej jeden
-  static setDefaultDevice(rootId: string, isDefault: boolean): Promise<Device> {
-    return Requests.put(`/devices/${encodeURIComponent(rootId)}/default`, { isDefault }, false) as Promise<Device>;
-  }
 
   // przycisk „Aktualizuj”: zlecenie aktualizacji firmware do oferowanej wersji (i jego odwołanie);
   // bez zlecenia sterownik niczego nie pobiera. Rzuca wyjątek z komunikatem serwera.

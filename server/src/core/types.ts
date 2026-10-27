@@ -81,8 +81,6 @@ export interface Device {
   name?: string;
   /** właściciel (users._id); brak = bez właściciela */
   ownerId?: string | null;
-  /** sterownik otwierany po starcie aplikacji; najwyżej jeden (od kont użytkowników: users.defaultRootId) */
-  isDefault?: boolean;
   /** miejsce na liście sterowników (0 = pierwszy, wspólne z kafelkami pogody); brak = na końcu */
   sortOrder?: number;
   /** kafelek ukryty na liście (widoczny tylko w trybie „Zmień kolejność”) */

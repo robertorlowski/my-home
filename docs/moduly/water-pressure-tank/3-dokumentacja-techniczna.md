@@ -89,7 +89,7 @@ node scripts/simulate-water-pressure-tank.mjs [--history] [--fast]   # symulator
 node scripts/seed-local.mjs       # dane demo: kilka miesięcy uruchomień i odczyty wodomierza („rzeczywisty” przepływ 1 l/s)
 ```
 
-`server/test/water-pressure-tank.test.ts` sprawdza: czas pompy bez ręcznej pracy kompresora, przepływ z wodomierza i wodę każdego uruchomienia, średnią ważoną czasem z pominięciem okresów bez pompy, brak wody przed dwoma odczytami, zgłoszenie z ustawieniami, ustawienia i ich walidację, czas kompresora ze sterownika (zmiana jednego pola, 404, 409), daty z czasów względnych, kolejkę i czas przybliżony, „w toku”, pracę kompresora (także po ponownym uruchomieniu), zapis `manualCompressorS`, podsumowania, wodomierz, sterownik domyślny.
+`server/test/water-pressure-tank.test.ts` sprawdza: czas pompy bez ręcznej pracy kompresora, przepływ z wodomierza i wodę każdego uruchomienia, średnią ważoną czasem z pominięciem okresów bez pompy, brak wody przed dwoma odczytami, zgłoszenie z ustawieniami, ustawienia i ich walidację, czas kompresora ze sterownika (zmiana jednego pola, 404, 409), daty z czasów względnych, kolejkę i czas przybliżony, „w toku”, pracę kompresora (także po ponownym uruchomieniu), zapis `manualCompressorS`, podsumowania, wodomierz.
 
 ## Znane problemy
 

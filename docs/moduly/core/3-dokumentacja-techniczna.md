@@ -100,11 +100,10 @@ Działanie dla ścieżki z mapy:
 
 | Metoda i ścieżka | Kontekst | Opis | Odpowiedzi |
 |---|---|---|---|
-| `GET /devices` | publiczna | lista urządzeń: `rootId`, `deviceType`, `deviceId`, `name`, `isDefault` | 200 |
+| `GET /devices` | publiczna | lista urządzeń: `rootId`, `deviceType`, `deviceId`, `name` | 200 |
 | `POST /devices` | publiczna | ręczne utworzenie (nieużywane przez klienta; używa go test E2E) | 201; 400 gdy SN istnieje |
 | `POST /devices/register` | publiczna | zgłoszenie sterownika `{deviceId, deviceType?, name?, version?, ip?}`; `deviceType` domyślnie `heat_pump`; `ip` tylko IPv4 (inne i `0.0.0.0` pomijane) | 201 nowe, 200 znane (+ `settings` dla rodzajów z `controllerSettings`); 400 brak SN / nieznany typ |
 | `PUT /devices/:rootId` | publiczna | zmiana nazwy `{name}` (pusta dozwolona) | 200; 400; 404 |
-| `PUT /devices/:rootId/default` | publiczna | sterownik domyślny `{isDefault}` (bez pola: ustawia); zdejmuje znacznik z pozostałych | 200; 404 |
 | `POST /devices/:rootId/firmware-update` | publiczna | „Aktualizuj”: zlecenie aktualizacji do oferowanej wersji, zapis `firmwareUpdate {version, requestedAt}`; WebSocket `operation` budzi sterownik | 200 `{version, requestedAt}`; 400 rodzaj bez aktualizacji (pompa); 404; 409 brak oferowanej wersji, aktualizacje wyłączone albo sterownik ma już tę wersję |
 | `DELETE /devices/:rootId/firmware-update` | publiczna | „Anuluj aktualizację”: usunięcie zlecenia (pobieranie, które już trwa, dokończy się) | 200; 404 |
 | `GET /device/properties` | `rootId` | ustawienia urządzenia | 200; 404 |
@@ -127,7 +126,6 @@ WebSocket: `ws(s)://<serwer>/ws?rootId=<rootId>`. Serwer wysyła `{"type":"opera
 | `deviceType` | `heat_pump` \| `water-pressure-tank` \| `pellet-boiler-pelux200` \| `switch` | rodzaj sterownika (rola) |
 | `deviceId` | string | SN sterownika (MAC ESP32, 12 znaków hex); ten sam SN mogą mieć urządzenia różnych rodzajów (role jednego sterownika), bez indeksu unikalnego |
 | `name` | string | nazwa od użytkownika, domyślnie pusta |
-| `isDefault` | boolean | sterownik domyślny, najwyżej jeden; klient od 2026-10-17 go nie używa (aplikacja zaczyna od listy kafelków, gwiazdki na kafelku nie ma) |
 | `firmwareVersion`, `firmwareSeenAt` | string, Date | wersja firmware z pola `version` zgłoszenia i czas zgłoszenia; starsze sterowniki ich nie wysyłają |
 | `firmwareUpdate` | `{version, requestedAt}` | zlecenie aktualizacji z aplikacji („Aktualizuj”); tylko przy nim sterownik dostaje ofertę firmware; usuwane, gdy sterownik zgłosi oferowaną wersję, albo „Anuluj aktualizację” |
 | `ipAddress`, `ipSeenAt` | string, Date | adres IPv4 sterownika w sieci lokalnej z pola `ip` zgłoszenia i czas zgłoszenia; bez pola zostaje ostatni znany; w kliencie wiersz „Adres IP” w Ustawieniach (`DeviceAddress`) |
@@ -206,7 +204,7 @@ node scripts/seed-local.mjs      # czyści bazę lokalną i wczytuje dane demo
 ## Testy
 
 - `server/test/app.test.ts` — urządzenia (zgłoszenie, nazwa, domyślny, nieznany rootId) i API pompy; baza `mongodb-memory-server`.
-- `server/test/water-pressure-tank.test.ts` — m.in. zgłoszenie hydroforu z ustawieniami, sterownik domyślny, 404/409 kontekstu.
+- `server/test/water-pressure-tank.test.ts` — m.in. zgłoszenie hydroforu z ustawieniami, 404/409 kontekstu.
 - `server/test/pellet-boiler-pelux200.test.ts` — m.in. dwie role tego samego SN (dwa `rootId`, routing po rodzaju endpointu, 409 dla `rootId` innej roli), zgłoszenie kotła z `settings`, walidacja `poll_interval_seconds` w `PUT /device/properties`.
 - Pliki `pv.test.ts` i `scheduler.test.ts` (pompa) leżą w tym samym katalogu `server/test/`; razem serwer ma 218 testów (przebieg 2026-10-21, 17 plików, wszystkie przeszły; w tym język konta, mail i błąd po angielsku z `Accept-Language`, treść push i kafelki po angielsku).
 - Klient nie ma testów jednostkowych; sprawdzenie to `tsc` i `vite build` oraz test układu `node test/e2e/run-layout.mjs` (Chromium Playwright; wszystkie rodzaje × widoki × 360 / 768 / 1280 px × motyw ciemny / jasny: przewijanie w poziomie, elementy poza oknem, błędy konsoli, pasek, boczne menu / dolna nawigacja).

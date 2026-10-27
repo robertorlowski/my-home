@@ -89,7 +89,7 @@ node scripts/simulate-water-pressure-tank.mjs [--history] [--fast]   # controlle
 node scripts/seed-local.mjs       # demo data: several months of runs and water meter readings ("real" flow 1 l/s)
 ```
 
-`server/test/water-pressure-tank.test.ts` checks: pump time without manual compressor operation, the flow from the water meter and the water of each run, the time-weighted average skipping periods without pump runs, no water before two readings, registration with settings, settings and their validation, compressor time from the controller (one field changed, 404, 409), dates from relative times, the queue and approximate time, "in progress", compressor running (also after a restart), saving `manualCompressorS`, summaries, water meter, default controller.
+`server/test/water-pressure-tank.test.ts` checks: pump time without manual compressor operation, the flow from the water meter and the water of each run, the time-weighted average skipping periods without pump runs, no water before two readings, registration with settings, settings and their validation, compressor time from the controller (one field changed, 404, 409), dates from relative times, the queue and approximate time, "in progress", compressor running (also after a restart), saving `manualCompressorS`, summaries, water meter.
 
 ## Known issues
 

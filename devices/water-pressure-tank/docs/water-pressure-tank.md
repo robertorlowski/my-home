@@ -194,7 +194,6 @@ Nie są testowane automatycznie: obsługa Wi-Fi, HTTP i stron, bo zależą od sp
 ### 5.1 Urządzenie (`devices`)
 
 - `deviceType: 'water-pressure-tank'` (`DeviceType.WATER_PRESSURE_TANK`). Scheduler pompy ciepła pomija ten typ.
-- `isDefault`: sterownik domyślny, najwyżej jeden. Zapis przez `PUT /api/devices/:rootId/default`.
 - `properties` hydroforu, edytowane w aplikacji WWW:
   - `compressor_seconds`: czas pracy kompresora,
   - `pressure_low`, `pressure_high`: progi presostatu [bar na manometrze],
@@ -233,7 +232,6 @@ Kontroler `water-pressure-tank.controller.ts`, serwis `water-pressure-tank.servi
 | Endpoint | Znaczenie |
 |---|---|
 | `POST /api/devices/register` | zgłoszenie sterownika (wspólne dla wszystkich typów); zwraca `rootId` i `settings`; nieznany typ daje 400 |
-| `PUT /api/devices/:rootId/default` | sterownik domyślny, `{isDefault}` (bez pola: ustawia); 404 dla nieznanego |
 | `GET` / `PUT /api/device/properties` | ustawienia hydroforu; czas kompresora spoza 1–3600 s albo nieznany rodzaj zbiornika daje 400 |
 | `POST /api/water-pressure-tank/add` | wysyłka ze sterownika, zapis albo aktualizacja po `runId`; sam `deviceId` wystarcza, 404 i 409 jak w `/hp/add`; odpowiedź `{}` |
 | `PUT /api/water-pressure-tank/settings` | czas kompresora ustawiony na stronie sterownika, `{compressor_seconds}` (pełne sekundy 1–3600, inaczej 400). Zmienia tylko `properties.compressor_seconds`, progi i zbiorniki zostają. Sam `deviceId` wystarcza, 404 dla nieznanego urządzenia i dla pompy ciepła, 409 jak w `/hp/add`; odpowiedź `{compressor_seconds}` |
