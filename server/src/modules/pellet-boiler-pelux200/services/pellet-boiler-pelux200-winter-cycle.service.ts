@@ -10,14 +10,10 @@
 //      po osiągnięciu Tmax; telemetria co 10–30 s, kocioł co 60 s): bez tego pompa mogła stanąć przed odczytem
 //      kotła z progiem, a wymuszenie startu CHPC przyjmuje tylko poniżej Tmax − 3 °C, więc Zima by nie przyszła.
 //   2. Zima: pompa CO pracuje, woda stygnie.
-//   3. Kocioł < SUMMER_BELOW (30 °C) i pompa CO kotła stoi: zlecenie Lato (nr 125 = 1), dalej punkt 1.
-// Mieszacz 1 (2026-10-11): razem z Latem zadana mieszacza 1 (nr 0) spada do minimum regulatora (dolna granica
-// zadanej = nr 1), żeby po przejściu na Zimę mieszacz nie wychłodził od razu wody z pompy. Poprzednia zadana
-// wraca na Zimie, gdy woda w pompie (HP.Ttarget) po spadku poniżej minimalnej zadanej pompy (HP.Tmin; bez niej
-// MIXER_RESTORE_FROM 40 °C) wróci do niej LUB utrzyma wartość przez MIXER_RESTORE_MS (15 min) LUB wzrośnie o MIXER_RESTORE_RISE
-// (5 °C) (decyzja 2026-10-11: każdy warunek osobno), i od razu przy wyjściu z cyklu (stopWinterCycle). Ręczna zmiana zadanej wygrywa: gdy odczyt ustawień po
-// ostatnim zleceniu zadanej ma inną wartość niż obniżona, serwer nic nie przywraca. Stan w polu winterMixer
-// (osobno od winterCycle, który znika przy wyjściu z cyklu, a przywrócenie może czekać na kocioł).
+//   3. Kocioł < SUMMER_BELOW (30 °C: poniżej tej temperatury regulator zatrzymuje pompę mieszacza 1) i pompa CO
+//      kotła stoi: zlecenie Lato (nr 125 = 1), dalej punkt 1.
+// Obniżanie zadanej mieszacza 1 razem z Latem (2026-10-11) usunięte 2026-10-27 (decyzja użytkownika): cykl zleca
+// tylko sezon i wymuszenie startu pompy ciepła.
 // Sezon kotła (Lato / Zima) bierze się z ostatniego odczytu ustawień (nr 125); zmiana z panelu jest więc
 // przejmowana dopiero w kroku cyklu (Zima zostaje, dopóki pompa CO pracuje). Zlecenie sezonu w toku (pending,
 // sent) wstrzymuje cykl do wyniku i nowego odczytu ustawień. Bez świeżego odczytu kotła cykl czeka.
@@ -29,11 +25,9 @@ import { TIME_ZONE } from '../../../core/time';
 import { PelletBoilerSettingsEntry, PelletBoilerSettingsModel } from '../models/pellet-boiler-pelux200-settings.model';
 import { PelletBoilerCommandModel } from '../models/pellet-boiler-pelux200-command.model';
 import { PelletBoilerScheduleSettingsModel } from '../models/pellet-boiler-pelux200-schedule.model';
-import { PelletBoilerSeason, PelletBoilerWinterCycle, PelletBoilerWinterMixer } from '../types';
+import { PelletBoilerSeason, PelletBoilerWinterCycle } from '../types';
 import { createCommands } from './pellet-boiler-pelux200-command.service';
 import { operationHeaders, systemMeta } from '../../../core/services/operation-log.service';
-import { OperationMeta } from '../../../core/types';
-import { decodeMixerParameters } from './pellet-boiler-pelux200-settings.service';
 import { getPelletBoilerPelux200Last } from './pellet-boiler-pelux200.service';
 import { effectiveBoilerMode, linkedHeatPumpRootId } from './pellet-boiler-pelux200-heat-pump-link.service';
 import { getPelletCwu, pelletCwuBlocksPump } from './pellet-boiler-pelux200-pellet-cwu.service';
@@ -47,12 +41,6 @@ export const SUMMER_BELOW = 30;
 // powyżej progu Lata; poniżej maks. temperatury pompy ciepła (50 °C; od 52 °C pompa jest blokowana: kocioł gorący)
 const WINTER_FROM_MIN = SUMMER_BELOW + 1;
 const WINTER_FROM_MAX = 49;
-// bez HP.Tmin w telemetrii pompy
-export const MIXER_RESTORE_FROM = 40;
-export const MIXER_RESTORE_MS = 15 * 60 * 1000;
-export const MIXER_RESTORE_RISE = 5;
-// spadek wody w pompie mniejszy niż to = „trzyma wartość” (szum czujnika)
-const MIXER_HOLD_TOLERANCE = 0.5;
 const SEASON_PARAMETER = 125;
 const SEASON_VALUE: Record<PelletBoilerSeason, number> = { winter: 0, summer: 1 };
 // wymuszenie startu sprężarki nie częściej niż co tyle (start trwa, co odpowiada co 10–30 s)
@@ -141,47 +129,9 @@ export const heatPumpControl: HeatPumpControl = {
 const saveCycle = (rootId: string, cycle: PelletBoilerWinterCycle | null) =>
   PelletBoilerScheduleSettingsModel.updateOne({ rootId }, { $set: { winterCycle: cycle } }, { upsert: true });
 
-const saveMixer = (rootId: string, mixer: PelletBoilerWinterMixer | null) =>
-  PelletBoilerScheduleSettingsModel.updateOne({ rootId }, { $set: { winterMixer: mixer } }, { upsert: true });
-
-const loadMixer = async (rootId: string) =>
-  (await PelletBoilerScheduleSettingsModel.findOne({ rootId }).select('winterMixer')
-    .lean<{ winterMixer?: PelletBoilerWinterMixer | null }>())?.winterMixer ?? null;
-
-// Zadana mieszacza 1 z ostatniego odczytu ustawień: wartość, dolna granica i czy odczyt jest po ostatnim zleceniu
-// zadanej (settled; zlecenie w toku albo odczyt sprzed jego wyniku = nie wiadomo, co jest w regulatorze).
-async function mixerTarget(rootId: string) {
-  const settings = await PelletBoilerSettingsModel.findOne({ rootId }).lean<PelletBoilerSettingsEntry>();
-  const target = settings?.mixer_parameters
-    ? decodeMixerParameters(settings.mixer_parameters).find((m) => m.mixer === 1)?.parameters.find((p) => p.index === 0)
-    : undefined;
-  if (!settings || !target || target.unknown) return null;
-  const command = await PelletBoilerCommandModel.findOne({ rootId, kind: 'mixer', mixer: 1, index: 0 }).sort({ createdAt: -1 })
-    .lean<{ status: string; doneAt?: Date }>();
-  const settled = !command || (!['pending', 'sent'].includes(command.status)
-    && (!command.doneAt || new Date(settings.readAt).getTime() > new Date(command.doneAt).getTime()));
-  return { value: target.raw[0], min: target.raw[1], settled };
-}
-
-// Przywrócenie zadanej mieszacza 1; true = stan winterMixer do skasowania (przywrócona albo zmieniona ręcznie).
-async function restoreMixer(rootId: string, mixer: PelletBoilerWinterMixer, meta: OperationMeta): Promise<boolean> {
-  const current = await mixerTarget(rootId);
-  if (!current) return true;
-  if (!current.settled) return false;
-  if (current.value === mixer.lowered) {
-    await createCommands(rootId, { changes: [{ kind: 'mixer', mixer: 1, index: 0, value: mixer.saved }] }, meta);
-    console.log(`[pellet zima] ${rootId} mieszacz 1: zadana wraca ${mixer.lowered} → ${mixer.saved} °C`);
-  }
-  return true;
-}
-
-// Cykl nie działa (kocioł ma być na Lecie albo tryb Pellet): bez stanu; obniżona zadana mieszacza 1 wraca.
+// Cykl nie działa (kocioł ma być na Lecie albo tryb Pellet): bez stanu.
 export async function stopWinterCycle(rootId: string) {
   await PelletBoilerScheduleSettingsModel.updateOne({ rootId, winterCycle: { $ne: null } }, { $set: { winterCycle: null } });
-  const mixer = await loadMixer(rootId);
-  if (mixer && await restoreMixer(rootId, mixer, systemMeta('Cykl Zimy', 'Koniec cyklu Zimy (tryb Pellet albo Lato z harmonogramu): zadana mieszacza 1 wraca od razu.'))) {
-    await saveMixer(rootId, null);
-  }
 }
 
 // Jeden krok cyklu (scheduler kotła co minutę). boilerSeason: sezon z ostatniego odczytu ustawień kotła.
@@ -209,15 +159,6 @@ export async function runWinterCycle(
     cycle.winterFrom = winterFromMax(pumpTemperatures?.max ?? null);
     cycle.pumpTemperature = pumpTemperatures?.water ?? null;
   }
-  let mixer = await loadMixer(rootId);
-  // ręczna zmiana zadanej mieszacza 1 (odczyt po ostatnim zleceniu z inną wartością niż obniżona) wygrywa
-  if (mixer) {
-    const current = await mixerTarget(rootId);
-    if (!current || (current.settled && current.value !== mixer.lowered)) {
-      await saveMixer(rootId, null);
-      mixer = null;
-    }
-  }
   // zlecenie sezonu w toku: najpierw jego wynik i nowy odczyt ustawień
   const pending = await PelletBoilerCommandModel.exists({ rootId, kind: 'ecomax', index: SEASON_PARAMETER, status: { $in: ['pending', 'sent'] } });
   if (!pending && phase === 'waiting') {
@@ -234,55 +175,12 @@ export async function runWinterCycle(
       await forcePumpIfDue(rootId, cycle, now, pump);
     }
   } else if (!pending && temperature !== null && temperature < SUMMER_BELOW && last?.heating_pump === false) {
-    // razem z Latem zadana mieszacza 1 na minimum (opis na górze), jeśli nie jest już obniżona
-    const current = mixer ? null : await mixerTarget(rootId);
-    const lower = current && current.settled && current.value > current.min ? current : null;
-    await createCommands(rootId, { changes: [
-      { kind: 'ecomax', index: SEASON_PARAMETER, value: SEASON_VALUE.summer },
-      ...(lower ? [{ kind: 'mixer', mixer: 1, index: 0, value: lower.min }] : []),
-    ] }, systemMeta(
-      'Cykl Zimy',
-      'Woda w kotle wychłodzona — Lato do ponownego nagrzania przez pompę ciepła'
-        + (lower ? '; mieszacz 1 na minimum, żeby po Zimie nie wychłodził wody z pompy.' : '.'),
+    await createCommands(rootId, { changes: [{ kind: 'ecomax', index: SEASON_PARAMETER, value: SEASON_VALUE.summer }] }, systemMeta(
+      'Cykl Zimy', 'Woda w kotle wychłodzona — Lato do ponownego nagrzania przez pompę ciepła.',
       `kocioł ${tempText(temperature)} < ${SUMMER_BELOW} °C, pompa CO stoi`,
     ));
-    if (lower) {
-      mixer = { saved: lower.value, lowered: lower.min, loweredAt: now, reference: null, referenceAt: null };
-      await saveMixer(rootId, mixer);
-    }
-    const mixerNote = lower ? `, mieszacz 1 ${lower.value} → ${lower.min} °C` : '';
-    console.log(`[pellet zima] ${rootId} kocioł ${temperature} °C < ${SUMMER_BELOW}, pompa CO stoi — Lato${mixerNote}, czekam na ciepły kocioł`);
-  } else if (mixer && phase === 'winter') {
-    // Zima: zadana mieszacza 1 wraca, gdy woda w pompie (opis na górze): ≥ minimalnej zadanej pompy LUB trzyma
-    // wartość odniesienia przez MIXER_RESTORE_MS LUB wzrosła od niej o MIXER_RESTORE_RISE. Spadek o więcej niż
-    // MIXER_HOLD_TOLERANCE ustawia nowe odniesienie (od niego liczy się czas i wzrost).
-    const temperatures = await linkedPumpTemperatures(rootId, pump);
-    const water = temperatures?.water ?? null;
-    const from = temperatures?.min ?? MIXER_RESTORE_FROM;
-    cycle.pumpTemperature = water;
-    mixer.restoreFrom = from;
-    if (water !== null) {
-      if (mixer.reference == null || !mixer.referenceAt || water < mixer.reference - MIXER_HOLD_TOLERANCE) {
-        mixer.reference = water;
-        mixer.referenceAt = now;
-      }
-      // na początku Zimy woda ma ok. Tmax − 3 (> Tmin): warunek Tmin liczy się dopiero po spadku poniżej niej
-      if (water < from) mixer.belowMin = true;
-      const held = now.getTime() - new Date(mixer.referenceAt).getTime() >= MIXER_RESTORE_MS;
-      const backToMin = !!mixer.belowMin && water >= from;
-      if ((backToMin || water >= mixer.reference + MIXER_RESTORE_RISE || held) && await restoreMixer(rootId, mixer, systemMeta(
-      'Cykl Zimy', 'Ciepło z pompy wróciło — zadana mieszacza 1 wraca do wartości sprzed obniżenia.',
-      backToMin ? `woda w pompie ${tempText(water)} wróciła do minimalnej zadanej pompy ${tempText(from)}`
-        : water >= mixer.reference + MIXER_RESTORE_RISE ? `woda w pompie ${tempText(water)} wzrosła o ${MIXER_RESTORE_RISE} °C od ${tempText(mixer.reference)}`
-        : `woda w pompie ${tempText(water)} trzyma się od 15 min`,
-    ))) {
-        console.log(`[pellet zima] ${rootId} pompa ${water} °C (min ${from}, odniesienie ${mixer.reference} °C) — mieszacz 1 wraca`);
-        mixer = null;
-      }
-    }
-    await saveMixer(rootId, mixer);
+    console.log(`[pellet zima] ${rootId} kocioł ${temperature} °C < ${SUMMER_BELOW}, pompa CO stoi — Lato, czekam na ciepły kocioł`);
   }
-  if (mixer) cycle.mixer = mixer;
   await saveCycle(rootId, cycle);
   return cycle;
 }

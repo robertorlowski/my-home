@@ -2,7 +2,8 @@
 // „Regulator” (osobna karta): włącz / wyłącz, stan z ostatniego odczytu; przyciski w rozmiarze segmentów.
 // „Tryb pracy”: przełącznik Pompa ciepła / Pellet (zleca cały zestaw nastaw z kociol-ustawienia.md, punkt 4b,
 // w kolejności, w jakiej regulator go przyjmie: najpierw granice, potem zadane), przełącznik sezonu Zima / Lato
-// (nr 125; w trybie pompy ciepła przez cykl Zimy na serwerze) i znacznik „CWU - grzanie peletem”.
+// (nr 125; w trybie pompy ciepła przez cykl Zimy na serwerze; bez akapitu pomocy ani podpowiedzi — decyzja użytkownika
+// 2026-10-27; pod przełącznikiem tylko stan cyklu w fazie oczekiwania, WinterCycleStatus) i znacznik „CWU - grzanie peletem”.
 // „Główne parametry”: lista nastaw z ostatniego odczytu
 // ustawień (GET /pellet-boiler-pelux200/settings); ołówek otwiera okno całej grupy (kocioł: 98, 99, 17, 101, 105;
 // CWU: 119, 123, 122; mieszacz: 0, 1, 2, 4, 5, 6) z opisem, zakresem i oceną z docs/parametry-kotla.md. Zmiana to
@@ -702,21 +703,6 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
             const value = season === 'winter' ? 0 : 1;
             if (seasonFromSchedule ? season !== seasonValue : summer?.value !== value) setSeason(value, t(season === 'winter' ? 'pb.winter' : 'pb.summer'));
           }} />
-        <p className="help">
-          {heatPumpLinked && `${t('pb.workModeHelpHp')} `}
-          {t('pb.seasonHelp')}
-          {heatPumpMode && (
-            <InfoTip>
-              <TipParagraph>
-                {t('pb.winterTip1', { from: typeof current?.winterCycle?.winterFrom === 'number'
-                  ? t('pb.winterTipFrom', { value: formatNumber(current.winterCycle.winterFrom) })
-                  : t('pb.winterTipFromUnknown') })}
-              </TipParagraph>
-              <TipParagraph>{t('pb.winterTip2')}</TipParagraph>
-              <TipParagraph>{t('pb.winterTip3')}</TipParagraph>
-            </InfoTip>
-          )}
-        </p>
         {summer?.value === 2 && <p className="help">{t('pb.autoNow')}</p>}
         {heatPumpMode && <WinterCycleStatus cycle={current?.winterCycle} />}
         {/* sezon z przełącznika: do kiedy, potem harmonogram (wybór sezonu z harmonogramu wraca do niego) */}

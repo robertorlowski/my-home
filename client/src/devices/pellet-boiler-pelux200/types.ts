@@ -233,8 +233,8 @@ export type PelletBoilerPelletCwu = {
   error?: string | null;
 };
 
-/** Cykl Zimy (tryb pompy ciepła): waiting = Lato, czeka na kocioł ≥ max pompy ciepła − 3 °C (wymuszając start pompy ciepła);
- *  winter = Zima do kotła < 30 °C przy stojącej pompie CO. */
+/** Cykl Zimy (tryb pompy ciepła): waiting = Lato, czeka na kocioł albo wodę w pompie ≥ max pompy ciepła − 3 °C (wymuszając
+ *  start pompy ciepła); winter = Zima do kotła < 30 °C przy stojącej pompie CO. Tylko sezon i wymuszenie, bez mieszacza. */
 export type PelletBoilerWinterCycle = {
   phase: 'waiting' | 'winter';
   since: string;
@@ -244,12 +244,6 @@ export type PelletBoilerWinterCycle = {
   /** HP.Ttarget pompy ciepła w fazie waiting (próg Zimy sprawdzany też na nim) [°C] */
   pumpTemperature?: number | null;
   forcedAt?: string | null;
-  /** zadana mieszacza 1 obniżona przez cykl: na Zimie wraca do saved, gdy woda w pompie osiągnie restoreFrom
-   *  (HP.Tmin), utrzyma wartość reference 15 min albo wzrośnie od niej o 5 °C */
-  mixer?: {
-    saved: number; lowered: number; loweredAt: string;
-    reference?: number | null; referenceAt?: string | null; restoreFrom?: number; belowMin?: boolean;
-  };
 };
 
 /** Ostatni odczyt ustawień regulatora; {} (brak readAt), gdy sterownik jeszcze ich nie wysłał. */

@@ -15,7 +15,7 @@ import { applySchedule, nextSeasonBoundary, scheduleState } from '../src/modules
 import { PelletBoilerPelux200Model } from '../src/modules/pellet-boiler-pelux200/models/pellet-boiler-pelux200.model'
 import { PelletBoilerCommandModel } from '../src/modules/pellet-boiler-pelux200/models/pellet-boiler-pelux200-command.model'
 import { PelletBoilerScheduleSettingsModel } from '../src/modules/pellet-boiler-pelux200/models/pellet-boiler-pelux200-schedule.model'
-import { heatPumpRunningInHeatPumpMode, runWinterCycle, stopWinterCycle, winterFromMax } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-winter-cycle.service'
+import { heatPumpRunningInHeatPumpMode, runWinterCycle, winterFromMax } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-winter-cycle.service'
 import { migrateBoilerDefinitions } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-heat-pump-link.service'
 import { DeviceModel } from '../src/core/models/device.model'
 import { pelletBoilerTile } from '../src/modules/pellet-boiler-pelux200/tile'
@@ -630,88 +630,6 @@ describe('Kocioł pelletowy Pellux 200', () => {
     await boiler(44);
     await runWinterCycle(rootId, 'summer', new Date(), pump(47));
     expect(await seasonCommands()).toHaveLength(1);
-  });
-
-  it('cykl Zimy: mieszacz 1 na minimum z Latem, wraca na Zimie (powrót do Tmin pompy, 15 min, +5 °C), ręczna zmiana wygrywa, wyjście z cyklu przywraca', async () => {
-    const sn = 'AABBCC00001A';
-    const { rootId } = (await registerWithHeatPump(sn, 'AABBCC0000FA')).body;
-    await register('AABBCC0000FA', 'heat_pump');
-    // kopia ustawień: mieszacz 1 zadana 35 °C (30–40); hex: [0, pierwszy, liczba, mieszacze], potem trójki od bajtu 4
-    const withMixer1 = (value: number) => ({
-      ...archiveHeatPump.raw_hex,
-      mixer_parameters: archiveHeatPump.raw_hex.mixer_parameters.slice(0, 8) + value.toString(16).padStart(2, '0')
-        + archiveHeatPump.raw_hex.mixer_parameters.slice(10),
-    });
-    const uploadSettings = (mixer1: number) =>
-      request(app).post(`/api/pellet-boiler-pelux200/settings?deviceId=${sn}`).send(withMixer1(mixer1)).expect(201);
-    // kocioł wykonał zlecenia, potem nowy odczyt ustawień z podaną zadaną mieszacza 1
-    const boilerApplies = async (mixer1: number) => {
-      await PelletBoilerCommandModel.updateMany({ rootId, status: 'pending' }, { $set: { status: 'done', doneAt: new Date(Date.now() - 1000) } });
-      await uploadSettings(mixer1);
-    };
-    const mixerCommands = async () => (await PelletBoilerCommandModel.find({ rootId, kind: 'mixer' }).sort({ _id: 1 }).lean())
-      .map((c) => c.value);
-    const stored = async () => (await PelletBoilerScheduleSettingsModel.findOne({ rootId }).lean<{ winterMixer?: { saved: number } | null }>())?.winterMixer ?? null;
-    const pump = (water: number | null, min: number | null = 35) =>
-      ({ running: async () => true, force: async () => undefined, temperatures: async () => ({ max: 47, min, water }) });
-    const t0 = Date.now();
-    const at = (minutes: number) => new Date(t0 + minutes * 60_000);
-    await uploadSettings(35);
-
-    // Zima, kocioł < 30 °C, pompa CO stoi: Lato i mieszacz 1 35 → 30 w jednym zleceniu
-    await request(app).post(`/api/pellet-boiler-pelux200/add?deviceId=${sn}`).send({ state: 5, heating_temp: 28, heating_pump: false }).expect(201);
-    await runWinterCycle(rootId, 'winter', at(0), pump(30));
-    expect(await mixerCommands()).toEqual([30]);
-    expect(await stored()).toMatchObject({ saved: 35, lowered: 30 });
-    await boilerApplies(30);
-
-    // Lato: bez przywracania; Zima: woda 44 → 40 (nowe odniesienie) → 34 (< Tmin 35) → 35: wraca 35
-    await runWinterCycle(rootId, 'summer', at(1), pump(44));
-    await runWinterCycle(rootId, 'winter', at(2), pump(44));
-    await runWinterCycle(rootId, 'winter', at(6), pump(40));
-    await runWinterCycle(rootId, 'winter', at(10), pump(34));
-    expect(await mixerCommands()).toEqual([30]);
-    expect((await runWinterCycle(rootId, 'winter', at(12), pump(35))).mixer).toBeUndefined();
-    expect(await mixerCommands()).toEqual([30, 35]);
-    expect(await stored()).toBeNull();
-    await boilerApplies(35);
-
-    // utrzymanie wartości 15 min (spadek ≤ 0,5 °C): 38 → 37,6 po 15 min; dalsze kroki po 15 min od odczytu
-    // kotła (nieświeży), więc cykl nie zleca ponownie Lata
-    const lowerAgain = async () => {
-      await request(app).post(`/api/pellet-boiler-pelux200/add?deviceId=${sn}`).send({ state: 5, heating_temp: 28, heating_pump: false }).expect(201);
-      await runWinterCycle(rootId, 'winter', new Date(), pump(30));
-      await boilerApplies(30);
-    };
-    await lowerAgain();
-    await runWinterCycle(rootId, 'winter', at(21), pump(38));
-    await runWinterCycle(rootId, 'winter', at(35), pump(37.6));
-    expect((await mixerCommands()).slice(-1)).toEqual([30]);
-    await runWinterCycle(rootId, 'winter', at(36), pump(37.6));
-    expect((await mixerCommands()).slice(-1)).toEqual([35]);
-    await boilerApplies(35);
-
-    // wzrost o 5 °C (bez Tmin w telemetrii: próg 40 °C): 30 → 35
-    await lowerAgain();
-    await runWinterCycle(rootId, 'winter', at(40), pump(30, null));
-    await runWinterCycle(rootId, 'winter', at(42), pump(35, null));
-    expect((await mixerCommands()).slice(-1)).toEqual([35]);
-    await boilerApplies(35);
-
-    // ręczna zmiana zadanej (odczyt 33 ≠ 30) wygrywa: serwer nic nie przywraca
-    await lowerAgain();
-    await uploadSettings(33);
-    await runWinterCycle(rootId, 'winter', at(50), pump(30));
-    expect(await stored()).toBeNull();
-    await runWinterCycle(rootId, 'winter', at(70), pump(30));
-    expect((await mixerCommands()).slice(-1)).toEqual([30]);
-
-    // wyjście z cyklu (np. tryb Pellet): obniżona zadana wraca od razu
-    await uploadSettings(35);
-    await lowerAgain();
-    await stopWinterCycle(rootId);
-    expect((await mixerCommands()).slice(-1)).toEqual([35]);
-    expect(await stored()).toBeNull();
   });
 
   it('cykl Zimy na prawdziwych odczytach kotła z 2026-10-04 (Lato do 22:27, potem Zima)', async () => {

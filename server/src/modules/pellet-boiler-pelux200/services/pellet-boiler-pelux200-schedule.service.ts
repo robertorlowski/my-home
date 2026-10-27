@@ -609,7 +609,7 @@ export async function plannedScheduleOperations(rootId: string, now: Date, dayEn
   if (mode === 'heat-pump' && cycle?.phase === 'winter') {
     planned.push({
       at: now, conditional: true, actor: { type: 'system' }, source: 'Cykl Zimy', action: 'Sezon: Zima → Lato',
-      reason: 'Woda w kotle się wychłodzi — kocioł wraca na Lato, mieszacz 1 na minimum do powrotu ciepła z pompy.',
+      reason: 'Woda w kotle się wychłodzi — kocioł wraca na Lato do ponownego nagrzania przez pompę ciepła.',
       conditions: `gdy kocioł spadnie poniżej ${SUMMER_BELOW} °C i stanie pompa CO; teraz kocioł ${temp(cycle.temperature)}`,
     });
   }
