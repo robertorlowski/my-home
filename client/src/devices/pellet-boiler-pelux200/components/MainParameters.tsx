@@ -1,8 +1,9 @@
 // Ustawienia pieca, lewa kolumna w układzie „Instrument” (#s-boiler-ustawienia): trzy karty.
+// „Regulator” (osobna karta): włącz / wyłącz, stan z ostatniego odczytu; przyciski w rozmiarze segmentów.
 // „Tryb pracy”: przełącznik Pompa ciepła / Pellet (zleca cały zestaw nastaw z kociol-ustawienia.md, punkt 4b,
 // w kolejności, w jakiej regulator go przyjmie: najpierw granice, potem zadane), przełącznik sezonu Zima / Lato
 // (nr 125; w trybie pompy ciepła przez cykl Zimy na serwerze) i znacznik „CWU - grzanie peletem”.
-// „Główne parametry”: regulator (włącz / wyłącz, stan z ostatniego odczytu) i lista nastaw z ostatniego odczytu
+// „Główne parametry”: lista nastaw z ostatniego odczytu
 // ustawień (GET /pellet-boiler-pelux200/settings); ołówek otwiera okno całej grupy (kocioł: 98, 99, 17, 101, 105;
 // CWU: 119, 123, 122; mieszacz: 0, 1, 2, 4, 5, 6) z opisem, zakresem i oceną z docs/parametry-kotla.md. Zmiana to
 // zlecenie (POST /commands): sterownik pieca odbiera je w ciągu ok. 15 s, wysyła do regulatora (w każdym stanie kotła)
@@ -17,6 +18,8 @@ import {
   PelletBoilerScheduleSettings, PelletBoilerReading, PelletBoilerSettings, PelletBoilerTurnOnCheck,
 } from '../types';
 import { WinterCycleStatus } from './WinterCycleStatus';
+// ModeProfiles importuje stąd PROFILE_ROWS i display; cykl jest bezpieczny, bo oba moduły sięgają po siebie dopiero przy renderze
+import { ModeProfiles } from './ModeProfiles';
 import { IconBtn, Modal, Segmented, hourMinute } from './ui';
 import { formatDateTime, formatNumber, heatPumpDataMissing, readingStateName, stateName, workModeKey } from '../utils/boiler';
 import { notRespondingText, useLastReading } from '../utils/useLastReading';
@@ -365,6 +368,8 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
   const [commands, setCommands] = useState<PelletBoilerCommand[]>([]);
   const [editing, setEditing] = useState<Section | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  // okno „Nastawy trybów” (odnośnik w „Głównych parametrach”): sama lista, bez zleceń
+  const [profilesOpen, setProfilesOpen] = useState(false);
   const [scheduleSettings, setScheduleSettings] = useState<PelletBoilerScheduleSettings | null>(null);
   const [profileError, setProfileError] = useState('');
   // zmiana trybu przy pracującym regulatorze: najpierw wyłączenie, nastawy czekają na stan „wyłączony”
@@ -630,9 +635,54 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
 
   return (
     <>
+      {/* regulator w osobnej karcie nad „Trybem pracy” (2026-10-27: w jednej karcie zlewał się z segmentami);
+          przyciski w rozmiarze segmentów Pompa ciepła / Pellet */}
+      <section className="card">
+        <header className="card-head boiler-regulator-head">
+          <h2>{t('pb.alerts.regulator')}</h2>
+          {scheduleSettings && (regulatorOn === undefined
+            ? <span className="chip chip-off">{t('pb.home.noReading')}</span>
+            : <span className={`chip ${regulatorOn ? 'chip-ok' : 'chip-off'}`}>{t(regulatorOn ? 'sw.sch.enabled' : 'pb.disabledLower')}</span>)}
+          {/* „Kocioł nie przesyła danych.” w jednej linii z nagłówkiem (2026-10-27) */}
+          {offline && <span className="help danger-text">{notRespondingText()}</span>}
+        </header>
+        {scheduleSettings && (
+          <>
+            <div className="form-row">
+              <span className="t-name">
+                <small>
+                  {boilerState !== undefined && <>{t('pb.stateLower')}: {readingStateName(lastReading)}{heatPumpDataMissing(lastReading, heatPumpMode) ? `, ${t('pb.home.noPumpData')}` : ''} · </>}
+                  {controlPending
+                    ? t(controlPending.value ? 'pb.regulatorOnPending' : 'pb.regulatorOffPending')
+                    : t(scheduleSettings.enabled ? 'pb.sch.runs' : 'pb.sch.notRunning')}
+                </small>
+              </span>
+              <span className="boiler-regulator-btns">
+                <button type="button" className="btn btn-ghost" disabled={(regulatorOn === true && scheduleSettings.enabled) || !!controlPending || offline}
+                  onClick={() => setWork(true)}>{t('pb.regulatorOn')}</button>
+                <button type="button" className="btn btn-ghost" disabled={(regulatorOn === false && !scheduleSettings.enabled) || !!controlPending || offline}
+                  onClick={() => setWork(false)}>{t('pb.regulatorOff')}</button>
+              </span>
+            </div>
+            {current?.pendingTurnOn && (
+              <div className="form-row">
+                <span className="t-name">
+                  {t('pb.turnOnWaiting', { temp: current.pendingTurnOn.startBelow ?? '…' })}
+                  <small>
+                    {typeof lastReading?.heating_temp === 'number' && <>{t('pb.nowLower')} {formatNumber(lastReading.heating_temp)} °C</>}
+                    {current.pendingTurnOn.heatPumpStarted && <>; {t('pb.heatPumpStarted')}</>}
+                  </small>
+                </span>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={cancelPendingTurnOn}>{t('pb.cancelTurnOn')}</button>
+              </div>
+            )}
+            {workError && <p className="help danger-text">{workError}</p>}
+          </>
+        )}
+      </section>
+
       <section className="card">
         <header className="card-head"><h2>{t('pb.workMode')}</h2><span className="card-hint">{t(heatPumpLinked ? 'pb.workModeHintProfiles' : 'pb.workModeHintSeason')}</span></header>
-        {offline && <p className="help danger-text">{notRespondingText()}</p>}
         {heatPumpLinked && (
           <>
             <Segmented name="boiler-work-mode" label={t('pb.boilerWorkMode')} value={modeValue} options={MODE_OPTIONS}
@@ -722,48 +772,11 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
       <section className="card">
         <header className="card-head">
           <h2>{t('pb.mainParams')}</h2>
-          {ready && <span className="card-hint">{t('hp.reading')} {hourMinute(settings.readAt)}</span>}
+          {/* czas odczytu jest w podpowiedzi na dole karty; w nagłówku tylko odnośnik do nastaw trybów */}
+          {heatPumpLinked && scheduleSettings && <button type="button" className="link-btn" onClick={() => setProfilesOpen(true)}>{t('pb.profilesLink')}</button>}
         </header>
-        {!heatPumpLinked && offline && <p className="help danger-text">{notRespondingText()}</p>}
         {settings === undefined && <span className="help">{t('common.loading')}</span>}
         {settings !== undefined && !ready && <span className="help">{t('pb.noSettingsReading')}</span>}
-        {scheduleSettings && (
-          <>
-            <div className="form-row">
-              <span className="t-name">
-                {t('pb.alerts.regulator')}{' '}
-                {regulatorOn === undefined
-                  ? <span className="chip chip-off">{t('pb.home.noReading')}</span>
-                  : <span className={`chip ${regulatorOn ? 'chip-ok' : 'chip-off'}`}>{t(regulatorOn ? 'sw.sch.enabled' : 'pb.disabledLower')}</span>}
-                <small>
-                  {boilerState !== undefined && <>{t('pb.stateLower')}: {readingStateName(lastReading)}{heatPumpDataMissing(lastReading, heatPumpMode) ? `, ${t('pb.home.noPumpData')}` : ''} · </>}
-                  {controlPending
-                    ? t(controlPending.value ? 'pb.regulatorOnPending' : 'pb.regulatorOffPending')
-                    : t(scheduleSettings.enabled ? 'pb.sch.runs' : 'pb.sch.notRunning')}
-                </small>
-              </span>
-              <span className="boiler-btn-row">
-                <button type="button" className="btn btn-ghost btn-sm" disabled={(regulatorOn === true && scheduleSettings.enabled) || !!controlPending || offline}
-                  onClick={() => setWork(true)}>{t('pb.regulatorOn')}</button>
-                <button type="button" className="btn btn-ghost btn-sm" disabled={(regulatorOn === false && !scheduleSettings.enabled) || !!controlPending || offline}
-                  onClick={() => setWork(false)}>{t('pb.regulatorOff')}</button>
-              </span>
-            </div>
-            {current?.pendingTurnOn && (
-              <div className="form-row">
-                <span className="t-name">
-                  {t('pb.turnOnWaiting', { temp: current.pendingTurnOn.startBelow ?? '…' })}
-                  <small>
-                    {typeof lastReading?.heating_temp === 'number' && <>{t('pb.nowLower')} {formatNumber(lastReading.heating_temp)} °C</>}
-                    {current.pendingTurnOn.heatPumpStarted && <>; {t('pb.heatPumpStarted')}</>}
-                  </small>
-                </span>
-                <button type="button" className="btn btn-ghost btn-sm" onClick={cancelPendingTurnOn}>{t('pb.cancelTurnOn')}</button>
-              </div>
-            )}
-            {workError && <p className="help danger-text">{workError}</p>}
-          </>
-        )}
         {ready && (
           <ul className="params">
             {SECTIONS.map((section) => {
@@ -878,30 +891,28 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
         </Modal>
       )}
 
+      {profilesOpen && (
+        <Modal title={t('pb.profilesTitle')} onClose={() => setProfilesOpen(false)} wide
+          footer={<>
+            <button type="button" className="btn" onClick={() => setProfilesOpen(false)}>{t('common.close')}</button>
+            {ready && <button type="submit" form="boiler-profiles-form" className="btn btn-primary">{t('pb.profiles.save')}</button>}
+          </>}>
+          <p className="help">{t('pb.profilesHelp')}</p>
+          {/* ta sama edytowalna tabela co w Ustawieniach zaawansowanych (zapis PUT /schedule-settings, odświeża nastawy przez COMMANDS_CHANGED) */}
+          {ready ? <ModeProfiles settings={settings} formId="boiler-profiles-form" /> : <p className="help">{t('pb.noSettingsReading')}</p>}
+        </Modal>
+      )}
+
       {profile && (
         <Modal title={`${t('pb.workMode')}: ${profile.label}`} onClose={() => setProfile(null)}
           footer={<>
             <button type="button" className="btn" onClick={() => setProfile(null)}>{t('common.cancel')}</button>
             <button type="button" className="btn btn-primary" onClick={sendProfile} disabled={pendingChanges(profile.changes).length === 0}>{t('pb.switch')}</button>
           </>}>
+          {/* bez listy nastaw (decyzja użytkownika 2026-10-27): lista jest w oknie „Nastawy trybów” w „Głównych parametrach” */}
           {pendingChanges(profile.changes).length === 0
             ? <p>{t('pb.profileAlready')}</p>
-            : <p>{t('pb.profileChanges')}</p>}
-          <ul className="params">
-            {pendingChanges(profile.changes).map((change) => {
-              const { name, parameter } = labelOf(change);
-              const item: Item = { kind: change.kind === 'mixer' ? 'mixer' : 'ecomax', mixer: change.mixer, index: change.index };
-              return (
-                <li key={`${change.kind}-${change.mixer ?? 0}-${change.index}`}>
-                  <span className="param-name">{name}<small>{t('pb.no')} {change.index}</small></span>
-                  <span className="param-val">
-                    {parameter && <span className="boiler-prev">{display(item, parameter, parameter.value)} → </span>}
-                    {parameter ? display(item, parameter, fromRaw(parameter, change.value)) : change.value}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+            : <p>{t('pb.profileWillSet', { mode: profile.label })}</p>}
           {profileNeedsOff && pendingChanges(profile.changes).length > 0 && (
             <p className="help">{t('pb.profileNeedsOff')}</p>
           )}

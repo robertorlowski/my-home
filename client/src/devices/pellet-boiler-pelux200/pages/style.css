@@ -139,3 +139,18 @@
 .boiler-page .measures-stack dd { text-align: left; max-width: none; }
 .boiler-page .boiler-profiles-table table.data { white-space: normal; }
 .boiler-page .boiler-profiles-table table.data th, .boiler-page .boiler-profiles-table table.data td { padding: 6px 8px; }
+/* karta „Regulator”: chip stanu obok nagłówka (z lewej, nie jak .card-hint z prawej) */
+.boiler-page .boiler-regulator-head { justify-content: flex-start; gap: 10px; }
+/* „Regulator” nad trybem pracy: dwa przyciski na całą szerokość, wysokość i krój jak segmenty Pompa ciepła / Pellet */
+.boiler-page .boiler-regulator-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1 1 100%; }
+.boiler-page .boiler-regulator-btns .btn { padding: 8px 6px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+/* okno „Nastawy trybów” (szersze; tabela ModeProfiles jak w Ustawieniach zaawansowanych, nazwy parametrów zawijane) */
+.modal-wide { width: min(680px, calc(100% - 32px)); }
+.modal-wide .boiler-profiles-table { display: flex; flex-direction: column; gap: 10px; }
+.modal-wide .boiler-profiles-table .table-wrap { margin: 0; padding: 0; }
+.modal-wide .boiler-profiles-table table.data { white-space: normal; }
+.modal-wide .boiler-profiles-table table.data th, .modal-wide .boiler-profiles-table table.data td { padding: 6px 8px; }
+.modal-wide .boiler-profiles-table td input, .modal-wide .boiler-profiles-table td select {
+  width: 72px; padding: 6px 8px; min-height: 0; margin: 0; font: inherit; font-weight: 600; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--input-bg); color: var(--fg);
+}

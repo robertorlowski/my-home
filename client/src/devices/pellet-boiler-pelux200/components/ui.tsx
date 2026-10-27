@@ -42,8 +42,8 @@ export const IconBtn: React.FC<{
 // Zamyka Esc i kliknięcie w przyciemnienie. as="form": całe okno jest formularzem (onSubmit).
 export const Modal: React.FC<{
   title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; onSubmit?: (event: React.FormEvent) => void;
-  labelledBy?: string; small?: boolean;
-}> = ({ title, onClose, children, footer, onSubmit, labelledBy = 'boiler-modal-title', small }) => {
+  labelledBy?: string; small?: boolean; wide?: boolean;
+}> = ({ title, onClose, children, footer, onSubmit, labelledBy = 'boiler-modal-title', small, wide }) => {
   const { t } = useLang();
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -54,7 +54,7 @@ export const Modal: React.FC<{
   return (
     <div className="modal-layer">
       <div className="scrim" onClick={onClose} />
-      <Tag className={`modal${small ? ' modal-sm' : ''}`} role="dialog" aria-modal="true" aria-labelledby={labelledBy} onSubmit={onSubmit}>
+      <Tag className={`modal${small ? ' modal-sm' : ''}${wide ? ' modal-wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={labelledBy} onSubmit={onSubmit}>
         <header className="modal-head">
           <h2 id={labelledBy}>{title}</h2>
           <IconBtn name="close" label={t('common.close')} onClick={onClose} />

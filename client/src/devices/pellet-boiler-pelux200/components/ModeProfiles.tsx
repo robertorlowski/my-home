@@ -23,7 +23,8 @@ const findParameter = (settings: PelletBoilerSettings, key: string): PelletBoile
 const toRaw = (p: PelletBoilerParameter, value: number) => Math.round(value / (p.step ?? 1) + (p.offset ?? 0));
 const fromRaw = (p: PelletBoilerParameter, raw: number) => Math.round((raw - (p.offset ?? 0)) * (p.step ?? 1) * 1e6) / 1e6;
 
-export const ModeProfiles: React.FC<{ settings: PelletBoilerSettings }> = ({ settings }) => {
+// formId: przycisk zapisu poza formularzem (stopka okna „Nastawy trybów”: <button form={formId}>), wtedy bez własnego przycisku
+export const ModeProfiles: React.FC<{ settings: PelletBoilerSettings; formId?: string }> = ({ settings, formId }) => {
   const { t } = useLang();
   const MODES = modes();
   const [schedule, setSchedule] = useState<PelletBoilerScheduleSettings | null>(null);
@@ -77,7 +78,7 @@ export const ModeProfiles: React.FC<{ settings: PelletBoilerSettings }> = ({ set
   if (!values) return <p className="help">{t('common.loading')}</p>;
 
   return (
-    <form className="boiler-profiles-table" onSubmit={save}>
+    <form className="boiler-profiles-table" onSubmit={save} id={formId}>
       <div className="table-wrap">
       <table className="data">
         <thead>
@@ -116,7 +117,7 @@ export const ModeProfiles: React.FC<{ settings: PelletBoilerSettings }> = ({ set
       </div>
       {error && <p className="help danger-text">{error}</p>}
       {notice && <p className="help">{notice}</p>}
-      <div className="actions"><button type="submit" className="btn btn-primary btn-sm" disabled={busy}>{t('pb.profiles.save')}</button></div>
+      {!formId && <div className="actions"><button type="submit" className="btn btn-primary btn-sm" disabled={busy}>{t('pb.profiles.save')}</button></div>}
     </form>
   );
 };
