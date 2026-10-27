@@ -208,6 +208,7 @@ export const Schedules: React.FC = () => {
     setSaving(true);
 
     try {
+      // HEAT = praca (serwer tłumaczy na CO albo CWU według podłączenia pompy), OFF = przerwa
       const payload = {
         type: form.off ? ScheduleType.OFF : ScheduleType.HEAT,
         enabled: form.enabled,
@@ -279,6 +280,8 @@ export const Schedules: React.FC = () => {
   const sortedSchedules = [...schedules].sort((first, second) =>
     Number(Boolean(first.date)) - Number(Boolean(second.date)) || first.startTime.localeCompare(second.startTime));
 
+  // temperatury pokazywane przy wpisach bez własnych (placeholder i opis) = zapisane ustawienie domyślne, a przed
+  // pierwszym zapisem nowych pól para wczytana z dawnych co_* / cwu_*
   const savedMin = text(properties?.temp_min) || tempMin;
   const savedMax = text(properties?.temp_max) || tempMax;
   // „Poza harmonogramem” podświetlone, gdy żaden wpis nie działa; w trybie OFF nic nie jest zaznaczone

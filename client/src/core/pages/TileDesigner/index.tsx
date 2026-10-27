@@ -1,3 +1,5 @@
+// NIEUŻYWANE od 2026-10-17: lista rysuje kafelki w stałym układzie makiety (DeviceTileCard), przycisk „Projekt kafelka”
+// jest ukryty, trasa i API wzoru (PUT /api/devices/tile-template) zostają w kodzie na wypadek powrotu do pomysłu.
 // Strona /tile-designer: projektant kafelka listy sterowników (przycisk „Projekt kafelka” w trybie „Zmień kolejność”
 // na /devices). Jeden kafelek z danymi wybranego sterownika (GET /api/devices i /devices/summary): pole przesuwa się
 // przeciągnięciem, rozmiar zmienia narożnik albo pola liczbowe (px kafelka o rozmiarze ze wzoru), Shift + strzałki

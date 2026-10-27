@@ -36,6 +36,7 @@ function ShareDialog({ device, share, onClose, onSaved }: {
   const views = typeView.views;
   const simpleAvailable = !!typeView.SimpleTile;
   const [email, setEmail] = useState(share?.email ?? '');
+  // nowe udostępnienie: domyślnie zakładki tylko do oglądania (podgląd, dane, wykres), bez ustawień i harmonogramu
   const [tabs, setTabs] = useState<string[]>(share && !isSimpleShare(share.tabs) ? share.tabs : views.filter((view) => ['/', '/data', '/chart'].includes(view.path)).map((view) => view.path));
   // „Pełna aplikacja” (zakładki) albo „Panel prosty” (sam kafelek z dużymi przyciskami)
   const [simple, setSimple] = useState(!!share && isSimpleShare(share.tabs));
@@ -118,6 +119,7 @@ export function DeviceSharing({ device }: { device: Device }) {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<DeviceShare | null | undefined>(undefined);
   const views = getDeviceTypeView(device.deviceType);
+  // zakładka, której rodzaj już nie ma (zmiana w rejestrze po udostępnieniu), pokazuje się jako surowa ścieżka
   const tabLabel = (path: string) => (path === '/' ? t('view.overview') : views.views.find((view) => view.path === path) ? viewLabel(path, device.deviceType, t) : path);
   const tabsText = (share: DeviceShare) => isSimpleShare(share.tabs) ? t('share.simpleText')
     : share.tabs.length === views.views.length ? t('share.allTabs') : share.tabs.map(tabLabel).join(', ');
