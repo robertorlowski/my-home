@@ -13,7 +13,9 @@ app.set('trust proxy', 1)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); // <- zezwala wszystkim
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  // x-api-key: wysyła go jeszcze klient sprzed 2026-10-27 (karta albo PWA bez odświeżenia); bez niego zapytania z takiej
+  // kopii nie przejdą preflight CORS. Do usunięcia, gdy wszystkie urządzenia mają nowy klient.
+  res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-api-key');
   next();
 });
 
