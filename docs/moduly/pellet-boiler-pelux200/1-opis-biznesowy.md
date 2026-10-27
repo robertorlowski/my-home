@@ -54,7 +54,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z odczytami z 12–13.10.2026 (
 
 ![Widok Ustawienia](img/piec-ustawienia.png)
 
-*Ustawienia (dwie kolumny): po lewej karty „Tryb pracy” (Pompa ciepła / Pellet, Zima / Lato), „Główne parametry” (regulator włączony / wyłączony, parametry kotła, CWU i mieszaczy z ołówkiem) i „Ostatnie zmiany” ze statusem; po prawej karta „Odczyt” („Interwał odpytywania pieca” w sekundach, 30–3600), zwinięta karta „Ustawienia zaawansowane”, karta „Sterownik” (nazwa, SN, Root ID, adres IP, firmware ze stanem, „Aktualizuj firmware”) i „Udostępnianie”.*
+*Ustawienia (dwie kolumny): po lewej karty „Regulator” (od 2026-10-27: chip Włączony / Wyłączony, stan, duże przyciski „Włącz regulator” / „Wyłącz regulator”), „Tryb pracy” (Pompa ciepła / Pellet, Zima / Lato; okno przełączenia bez listy nastaw), „Główne parametry” (parametry kotła, CWU i mieszaczy z ołówkiem; odnośnik „Nastawy trybów” otwiera tabelę nastaw obu trybów do edycji) i „Ostatnie zmiany” ze statusem; po prawej karta „Odczyt” („Interwał odpytywania pieca” w sekundach, 30–3600), zwinięta karta „Ustawienia zaawansowane”, karta „Sterownik” (nazwa, SN, Root ID, adres IP, firmware ze stanem, „Aktualizuj firmware”) i „Udostępnianie”.*
 
 ## Pierwsze uruchomienie
 

@@ -53,7 +53,7 @@ The application interface is in Polish; the screenshots show it as is. They come
 
 ![Settings view](../../../moduly/pellet-boiler-pelux200/img/piec-ustawienia.png)
 
-*"Ustawienia" (Settings, two columns): on the left the cards "Tryb pracy" (Pompa ciepła / Pellet, Zima / Lato), "Główne parametry" (regulator on / off, boiler, CWU and mixer parameters with a pencil) and "Ostatnie zmiany" with a status; on the right the "Odczyt" card ("Interwał odpytywania pieca" in seconds, 30–3600), the collapsed "Ustawienia zaawansowane" card, the "Sterownik" card (name, SN, Root ID, IP address, firmware with state, "Aktualizuj firmware") and "Udostępnianie".*
+*"Ustawienia" (Settings, two columns): on the left the cards "Regulator" (since 2026-10-27: a Włączony / Wyłączony chip, the state, large "Włącz regulator" / "Wyłącz regulator" buttons), "Tryb pracy" (Pompa ciepła / Pellet, Zima / Lato; the switch dialog without the settings list), "Główne parametry" (boiler, CWU and mixer parameters with a pencil; the "Nastawy trybów" link opens an editable table of both modes' settings) and "Ostatnie zmiany" with a status; on the right the "Odczyt" card ("Interwał odpytywania pieca" in seconds, 30–3600), the collapsed "Ustawienia zaawansowane" card, the "Sterownik" card (name, SN, Root ID, IP address, firmware with state, "Aktualizuj firmware") and "Udostępnianie".*
 
 ## First start
 
