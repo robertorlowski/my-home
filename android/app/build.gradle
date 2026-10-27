@@ -32,7 +32,7 @@ def twaManifest = [
     navigationColorDark: '#1E2126', // The color used for the dark navbar.
     navigationDividerColor: '#1E2126', // The navbar divider color.
     navigationDividerColorDark: '#1E2126', // The dark navbar divider color.
-    backgroundColor: '#F1F2F4', // The color used for the splash screen background.
+    backgroundColor: '#121417', // The color used for the splash screen background (ciemne tlo aplikacji: ekran startowy i pasek nawigacji Androida).
     enableNotifications: true, // Set to true to enable notification delegation.
     // Every shortcut must include the following fields:
     // - name: String that will show up in the shortcut.
