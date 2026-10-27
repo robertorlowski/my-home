@@ -1,8 +1,7 @@
 /* Style globalne aplikacji (index.tsx), wygląd „Instrument” z makiet/ (2026-10-16): kolory wyłącznie z tokenów theme.css.
    Układ: ciemny pasek u góry (strzałka wstecz, nazwa sterownika z chipem stanu, zakładki, konto), na komputerze (≥ 900 px)
-   zakładki w bocznym menu po lewej, na telefonie dolna nawigacja (4 widoki + „Więcej”). Karty (.resource) na tle strony,
-   rozdzielone kolorem i cienką linią, bez cieni. Reguły z prefiksem body rozciągają karty i tabelę danych od krawędzi do
-   krawędzi ekranu telefonu (≤ 560 px). */
+   zakładki w bocznym menu po lewej, na telefonie dolna nawigacja (4 widoki + „Więcej”). Komponenty stron (.card, .page,
+   tabele, okna) są w makieta.css, ładowanym po tym pliku. */
 :root {
 	font-family: var(--font-body);
 	line-height: 1.45;
