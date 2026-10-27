@@ -440,8 +440,10 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
   // Sezon: Tryb LATO (nr 125), 0 Zima / 1 Lato / 2 Auto (kolejność z PyPlumIO, na kotle niepotwierdzona)
   const summer = findIn(settings ?? null, { kind: 'ecomax', index: 125 });
   const [seasonError, setSeasonError] = useState('');
-  // tryb pompy ciepła: Zimą steruje cykl na serwerze (Zima przy kotle ≥ max pompy ciepła − 3 °C, Lato przy < 30 °C i stojącej
-  // pompie CO); przełącznik zapisuje wybrany sezon (PUT /season), a stan cyklu jest w GET /schedules/current
+  // tryb pompy ciepła: Zimą steruje cykl na serwerze (pellet-boiler-pelux200-winter-cycle.service.ts, tam opis i mapa plików:
+  // Zima przy kotle albo wodzie w pompie ≥ max pompy ciepła − 3 °C, Lato przy kotle < 30 °C i stojącej pompie CO, w Lecie
+  // wymuszanie startu pompy); przełącznik zapisuje wybrany sezon (PUT /season), a stan cyklu jest w GET /schedules/current
+  // (winterCycle) i pod przełącznikiem pokazuje go WinterCycleStatus tylko w fazie oczekiwania; bez tekstów pomocy (2026-10-27)
   // Bez powiązanej pompy ciepła (definicja kotła) kocioł pracuje tylko na pellecie: bez przełącznika trybu
   // i bez cyklu Zimy (serwer też traktuje kocioł jak Pellet).
   const heatPumpLinked = useHeatPumpLinked();

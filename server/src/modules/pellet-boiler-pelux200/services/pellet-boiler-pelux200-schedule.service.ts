@@ -19,8 +19,9 @@
 // coldEnough). Dawny jeden próg coldBelow działa jak winterBelow = coldBelow, summerAbove = coldBelow + 0,5 °C.
 // Bez temperatury wpis z progami nie działa. Bez wpisu i bez sezonu w defaults
 // harmonogram sezonem nie steruje. Zmiany sezonu i CWU idą do kotła jednym zleceniem (createCommands).
-// W trybie pompy ciepła Zimą steruje cykl (pellet-boiler-pelux200-winter-cycle.service.ts): Zima przy kotle ≥ max pompy ciepła − 3 °C,
-// Lato przy kotle < 30 °C i stojącej pompie CO, w Lecie wymuszanie startu pompy ciepła. Przycisk Lato/Zima
+// W trybie pompy ciepła Zimą steruje cykl (pellet-boiler-pelux200-winter-cycle.service.ts, tam mapa plików): Zima przy kotle
+// albo wodzie w pompie ≥ max pompy ciepła − 3 °C, Lato przy kotle < 30 °C i stojącej pompie CO, w Lecie wymuszanie startu
+// pompy ciepła; nic więcej (obniżanie mieszacza 1 usunięte 2026-10-27). Przycisk Lato/Zima
 // w Ustawieniach (tryb pompy ciepła) zapisuje sezon (manualSeason), który wygrywa do najbliższej granicy okien wpisów
 // sezonu (start albo koniec, np. 22:00 / 06:00, niezależnie od progu temperatury) albo wcześniejszej zmiany sezonu
 // z harmonogramu (2026-10-11: Zima z przycisku przy 11 °C trzymała się po 06:00, bo wpis z progiem 10 °C nie działał

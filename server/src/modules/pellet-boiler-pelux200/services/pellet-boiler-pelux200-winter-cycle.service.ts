@@ -19,6 +19,18 @@
 // sent) wstrzymuje cykl do wyniku i nowego odczytu ustawień. Bez świeżego odczytu kotła cykl czeka.
 // Moduły nie importują siebie nawzajem: stan i wymuszenie pompy ciepła idą przez API serwera (GET /hp,
 // POST /operation/set), jak ładowanie CWU (pellet-boiler-pelux200-cwu-loading.service.ts).
+//
+// Gdzie co jest (sezon kotła w trybie „Pompa ciepła”):
+//   - start: scheduler kotła co minutę (startPelletBoilerScheduler w server.ts → applySchedule w
+//     pellet-boiler-pelux200-schedule.service.ts) woła runWinterCycle, gdy harmonogram chce Zimy, inaczej stopWinterCycle;
+//   - przycisk Zima / Lato w Ustawieniach: PUT /pellet-boiler-pelux200/season → setManualSeason (schedule.service.ts),
+//     zapis manualSeason i od razu applySchedule; przy zatrzymanym harmonogramie aplikacja zleca nr 125 wprost;
+//   - stan dla aplikacji: GET /pellet-boiler-pelux200/schedules/current → pole winterCycle (typ PelletBoilerWinterCycle
+//     w types.ts; zapis w pellet_boiler_pelux200_schedule_settings.winterCycle); klient pokazuje go w fazie oczekiwania
+//     (client/src/devices/pellet-boiler-pelux200/components/WinterCycleStatus.tsx, w Ustawieniach i w Harmonogramie);
+//   - zlecenia do kotła: createCommands (pellet-boiler-pelux200-command.service.ts), sterownik pieca odbiera je
+//     z GET …/commands/next; wpisy w dzienniku operacji ze źródłem „Cykl Zimy”;
+//   - test: server/test/pellet-boiler-pelux200.test.ts („cykl Zimy…”), w tym przebieg na nagraniu z kotła z 2026-10-04.
 import { internalHeaders } from '../../../core/internal';
 import { fromZonedTime } from 'date-fns-tz';
 import { TIME_ZONE } from '../../../core/time';
