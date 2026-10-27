@@ -31,7 +31,6 @@ export const pl = {
   'app.demoBlocked': 'W wersji demo nie można niczego zmienić.',
   'app.noTabAccess': 'Brak dostępu do tej zakładki.',
   'app.devices': 'Sterowniki',
-  'app.tileDesigner': 'Projekt kafelka',
 
   // ---- nawigacja (Header.tsx)
   'nav.deviceList': 'Lista sterowników',
@@ -1223,8 +1222,6 @@ export const pl = {
   'pb.state.10': 'Rozszczelnianie',
   'pb.state.11': 'Inny',
   'pb.stateN': 'Stan {n}',
-  'pb.onF': 'włączona',
-  'pb.offF': 'wyłączona',
   'pb.onAbbr': 'wł.',
   'pb.offAbbr': 'wył.',
   'pb.winter': 'Zima',

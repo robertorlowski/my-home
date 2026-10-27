@@ -31,7 +31,6 @@ export const en: Record<keyof typeof pl, string> = {
   'app.demoBlocked': 'Nothing can be changed in the demo version.',
   'app.noTabAccess': 'You have no access to this tab.',
   'app.devices': 'Controllers',
-  'app.tileDesigner': 'Tile design',
 
   // ---- navigation (Header.tsx)
   'nav.deviceList': 'Controller list',
@@ -1223,8 +1222,6 @@ export const en: Record<keyof typeof pl, string> = {
   'pb.state.10': 'Unsealing',
   'pb.state.11': 'Other',
   'pb.stateN': 'State {n}',
-  'pb.onF': 'on',
-  'pb.offF': 'off',
   'pb.onAbbr': 'on',
   'pb.offAbbr': 'off',
   'pb.winter': 'Winter',

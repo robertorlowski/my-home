@@ -44,14 +44,6 @@ export class DeviceRequests {
   }
 
   // wzór kafelka (projektant kafelka): zapisany wzór, null = wbudowany, undefined przy błędzie sieci
-  static async getTileTemplate(): Promise<unknown | null | undefined> {
-    const result = await Requests.get('/devices/tile-template', false) as { template: unknown } | null;
-    return result ? result.template : undefined;
-  }
-
-  static saveTileTemplate(template: unknown): Promise<{ template: unknown }> {
-    return Requests.put('/devices/tile-template', template, false) as Promise<{ template: unknown }>;
-  }
 
   // układ szachownicy (tryb „Zmień układ”): pola po kolei z Root ID sterownika, id kafelka pogody albo null
   // (puste pole); zwraca posortowaną listę sterowników

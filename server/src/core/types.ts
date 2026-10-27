@@ -256,13 +256,3 @@ export interface SimpleBoilerState {
   /** zlecenie w toku: włącz/wyłącz regulator albo zmiana CWU */
   pending: 'control' | 'cwu' | null;
 }
-
-// Wzór kafelka listy sterowników (projektant kafelka, GET/PUT /devices/tile-template; kontrakt z
-// client/src/core/tile-template.ts): rozmiar komórki i odstęp w px, pola w % komórki.
-export const TILE_SLOTS = [
-  'icon', 'name', 'status', 'main', 'mainLabel', 'divider', 'side1', 'side2', 'side3', 'row', 'relays', 'warning',
-  'footer',
-] as const;
-export type TileSlot = typeof TILE_SLOTS[number];
-export interface TileField { x: number; y: number; w: number; h: number; a: 'left' | 'center' | 'right'; v: boolean }
-export interface TileTemplate { w: number; h: number; gap: number; f: Record<TileSlot, TileField> }

@@ -10,7 +10,6 @@ import { DEVICES_HEADER_ACTIONS_ID, Devices } from './pages/Devices';
 import Weather from './pages/Weather';
 import { WeatherBottomNav, WeatherHeader } from './pages/Weather/nav';
 import { Firmware } from './pages/Firmware';
-import { TileDesigner } from './pages/TileDesigner';
 import { useDevice } from './context/DeviceContext';
 import { DEMO_BLOCKED_EVENT } from './auth';
 import { Navigate, useLocation } from 'react-router-dom';
@@ -145,9 +144,9 @@ function DeviceGuard({ children }: { children: React.ReactNode }) {
 
 	if (startOnList && location.pathname === '/') return <Navigate to="/devices" replace />;
 
-	// /firmware/:deviceType wskazuje rodzaj w adresie, /weather/:id kafelek pogody, /account to dane konta,
-	// a /tile-designer dotyczy wszystkich kafelków: bez wyboru sterownika
-	if (!device && location.pathname !== '/devices' && !location.pathname.startsWith('/firmware') && !location.pathname.startsWith('/weather/') && !location.pathname.startsWith('/account') && location.pathname !== '/tile-designer') {
+	// /firmware/:deviceType wskazuje rodzaj w adresie, /weather/:id kafelek pogody, /account to dane konta:
+	// bez wyboru sterownika
+	if (!device && location.pathname !== '/devices' && !location.pathname.startsWith('/firmware') && !location.pathname.startsWith('/weather/') && !location.pathname.startsWith('/account')) {
 		return <Navigate to="/devices" replace />;
 	}
 
@@ -180,10 +179,10 @@ function DeviceRoute({ path }: { path: string }) {
 function AppContent() {
 	const location = useLocation();
 	const { t } = useLang();
-	// bez menu: /devices (lista sterowników), /firmware/:deviceType (firmware rodzaju sterownika), /account i /tile-designer;
+	// bez menu: /devices (lista sterowników), /firmware/:deviceType (firmware rodzaju sterownika) i /account;
 	// /weather/:id (pogoda kafelka) ma od 2026-10-19 własne zakładki w menu jak sterownik (pages/Weather/nav.tsx)
 	const isWeather = location.pathname.startsWith('/weather/');
-	const isDeviceSelection = location.pathname === '/devices' || location.pathname.startsWith('/firmware') || location.pathname.startsWith('/account') || location.pathname === '/tile-designer';
+	const isDeviceSelection = location.pathname === '/devices' || location.pathname.startsWith('/firmware') || location.pathname.startsWith('/account');
 	const isDevice = !isDeviceSelection && !isWeather;
 
 	return (
@@ -203,9 +202,9 @@ function AppContent() {
 					<span id={DEVICES_HEADER_ACTIONS_ID} className="app-header-actions" />
 					<UserMenu />
 				</header>}
-				{(location.pathname.startsWith('/account') || location.pathname.startsWith('/firmware') || location.pathname === '/tile-designer') && <header className="app-header">
+				{(location.pathname.startsWith('/account') || location.pathname.startsWith('/firmware')) && <header className="app-header">
 					<Link to="/devices" className="nav-back" title={t('nav.deviceList')} aria-label={t('nav.backToList')}><BackIcon /></Link>
-					<h1 className="app-header-title">{location.pathname.startsWith('/account') ? t('menu.myData') : location.pathname.startsWith('/firmware') ? 'Firmware' : t('app.tileDesigner')}</h1>
+					<h1 className="app-header-title">{location.pathname.startsWith('/account') ? t('menu.myData') : 'Firmware'}</h1>
 					<UserMenu />
 				</header>}
 
@@ -221,7 +220,6 @@ function AppContent() {
 					<Route path="/login" element={<Navigate to="/devices" replace />} />
 					<Route path="/firmware/:deviceType" element={<Firmware />} />
 					<Route path="/weather/:id" element={<Weather />} />
-					<Route path="/tile-designer" element={<TileDesigner />} />
 					{allDevicePaths().map((path) => (
 						<Route key={path} path={path} element={<DeviceRoute path={path} />} />
 					))}

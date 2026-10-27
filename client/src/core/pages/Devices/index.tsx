@@ -1,8 +1,7 @@
 // Strona /devices w wyglądzie „Instrument” (2026-10-17, makiety/src/makieta.html, ekran #s-lista): pasek pogody domu
 // (.outdoor-strip), w trybie „Zmień układ” pasek .layout-bar, szachownica kafelków .tiles (sterowniki z GET /api/devices
 // i /devices/summary, kafelki pogody z /weather-tiles) i stopka .statusbar z zajętością bazy (GET /api/devices/db-stats).
-// Kafelek ma stały układ z makiety (core/components/DeviceTileCard), a nie wzór z projektanta kafelka (/tile-designer
-// zostaje w kodzie, ale przycisk „Projekt kafelka” jest ukryty, decyzja 2026-10-17).
+// Kafelek ma stały układ z makiety (core/components/DeviceTileCard; projektant kafelka usunięty 2026-10-27).
 // Każdy kafelek ma numer pola (sortOrder); kolumn tyle, ile mieści szerokość (kafelek co najmniej 300 px, 1–4), puste
 // pola na komputerze zostają puste, na telefonie (jedna kolumna) kafelki idą po kolei. Wybór sterownika kliknięciem
 // kafelka, ołówek w nagłówku (po najechaniu): popup „Dane sterownika” albo „Kafelek pogody”, trybik: firmware rodzaju.

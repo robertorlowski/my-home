@@ -72,12 +72,10 @@ function isPublic(req: Request) {
   return req.header(INTERNAL_TOKEN_HEADER) === INTERNAL_TOKEN;
 }
 
-// Ścieżki bez rootId tylko dla użytkownika systemowego: pliki firmware, zajętość bazy, wzór kafelka, ręczne dodanie urządzenia.
+// Ścieżki bez rootId tylko dla użytkownika systemowego: pliki firmware, zajętość bazy, ręczne dodanie urządzenia.
 function systemOnly(req: Request) {
   if (req.path.startsWith('/firmware/') && req.method !== 'GET') return true;
   if (req.path === '/devices/db-stats') return true;
-  // wzór kafelka jest wspólny dla wszystkich kont (decyzja użytkownika 2026-10-16)
-  if (req.path === '/devices/tile-template' && req.method !== 'GET') return true;
   return req.method === 'POST' && req.path === '/devices';
 }
 

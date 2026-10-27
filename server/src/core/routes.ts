@@ -18,7 +18,6 @@ import { getOperations } from './controllers/operation-log.controller'
 import { deletePushSubscription, getPushSettings, postPushSubscription, postPushTest, putPushRules } from './controllers/push.controller'
 import { getDatabaseStatsEntry } from './controllers/database.controller'
 import { getDeviceTilesEntry } from './controllers/device.controller'
-import { deleteTileTemplateEntry, getTileTemplateEntry, putTileTemplateEntry } from './controllers/tile-template.controller'
 import { deleteWeatherTile, getWeatherTiles, postWeatherTile, putWeatherTile } from './controllers/weather-tile.controller'
 import heatPumpRoutes from '../modules/heat-pump/routes'
 import waterPressureTankRoutes from '../modules/water-pressure-tank/routes'
@@ -57,9 +56,6 @@ router.get('/devices/summary', getDeviceTilesEntry)
 router.post('/devices', addDevice)
 router.post('/devices/register', registerDeviceEntry)
 // wzór kafelka (projektant kafelka w aplikacji); przed /devices/:rootId, bez rootId
-router.get('/devices/tile-template', getTileTemplateEntry)
-router.put('/devices/tile-template', putTileTemplateEntry)
-router.delete('/devices/tile-template', deleteTileTemplateEntry)
 // kolejność kafelków na /devices; przed /devices/:rootId, bez rootId
 router.put('/devices/order', updateDevicesOrder)
 router.put('/devices/:rootId', updateDevice)

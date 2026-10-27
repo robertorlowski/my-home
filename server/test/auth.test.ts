@@ -215,8 +215,6 @@ describe('Konta użytkowników', () => {
     await request(app).put('/api/devices/order').set(bearer(robert)).send({ rootIds: [pumpRootId, boilerRootId] }).expect(200);
     await request(app).delete(`/api/weather-tiles/${krakow.id}`).set(bearer(robert)).expect(204);
 
-    expect((await request(app).put('/api/devices/tile-template').set(bearer(robert)).send({})).status).toBe(403);
-    expect((await request(app).put('/api/devices/tile-template').set(bearer(system)).send({})).status).toBe(400);
   });
 
   it('udostępnianie: zaproszenie, zakładki pilnują zapisów, tylko właściciel zmienia nazwę i udostępnia', async () => {
