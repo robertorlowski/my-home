@@ -4,6 +4,12 @@
 // nadpisania (setManualOperationData), a /hp/add odbiera bieżącą i ją czyści.
 // Ręczne pola wygrywają: { ...scheduled, ...manual }. Nad nimi jest jeszcze nadpisanie na czas ładowania
 // CWU w kotle (services/cwu-loading.service.ts): { ...scheduled, ...manual, ...cwuLoading }.
+// Moduł kotła (modules/pellet-boiler-pelux200) nie importuje tego kodu — steruje pompą przez API serwera
+// jak aplikacja, z nagłówkami x-operation-* (kto i dlaczego, do dziennika operacji):
+//   - PUT /hp/cwu-loading: ładowanie CWU w kotle (47–49 °C) i wstrzymanie pompy przy CWU z peletu (OFF),
+//   - POST /operation/set {force: "1"}: cykl Zimy w trybie „Pompa ciepła” (kocioł na Lecie czeka, aż pompa
+//     nagrzeje wodę do Tmax − 3 °C; pellet-boiler-pelux200-winter-cycle.service.ts) — zwykłe ręczne force,
+//     zdejmowane przy starcie sprężarki (consumeManualForceOnStart).
 import { OperationEntry  } from '../types';
 
 // operacja do wysłania w najbliższej odpowiedzi /hp/add
