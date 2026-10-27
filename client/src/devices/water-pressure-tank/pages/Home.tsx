@@ -66,6 +66,7 @@ export const WaterPressureTankHome: React.FC = () => {
 
   const water = sumWater(runs);
   const pumpSeconds = sumPumpSeconds(runs);
+  // suma miesiąca tylko wtedy, gdy serwer ma przepływ (bez dwóch odczytów wodomierza wszystkie kubełki mają null)
   const monthLiters = month?.buckets.some((bucket) => bucket.waterLiters !== null)
     ? month.buckets.reduce((sum, bucket) => sum + (bucket.waterLiters ?? 0), 0)
     : null;
@@ -77,6 +78,7 @@ export const WaterPressureTankHome: React.FC = () => {
     return {
       day: weekDayShort(day),
       date: day,
+      // bez przepływu słupek w minutach z jednym miejscem po przecinku (seconds / 60, zaokrąglone do 0,1)
       value: hasFlow ? Math.round(sumWater(dayRuns) ?? 0) : Math.round(seconds / 6) / 10,
       pumpSeconds: seconds,
       runs: dayRuns.length,
@@ -85,6 +87,7 @@ export const WaterPressureTankHome: React.FC = () => {
 
   return (
     <main className="page page-device tank-page">
+      {/* bez uruchomienia w toku sterownik nie ma zasilania — pasek „Offline od” to czas od końca ostatniego uruchomienia */}
       {weekRuns !== null && !current && (
         <div className="banner banner-off" role="status">
           <OfflineIcon />

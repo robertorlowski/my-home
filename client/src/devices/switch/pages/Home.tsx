@@ -30,6 +30,7 @@ const RelayCard: React.FC<{
   onMode: (mode: RelayMode, minutes?: number) => void;
 }> = ({ relay, now, defaultMinutes, busy, onMode }) => {
   const { t } = useLang();
+  // pola h / min startują z default_on_minutes (ustawienie sterownika) i podążają za jego zmianą w Ustawieniach
   const [hours, setHours] = useState(String(Math.floor(defaultMinutes / 60)));
   const [minutes, setMinutes] = useState(String(defaultMinutes % 60));
   useEffect(() => {
@@ -47,6 +48,8 @@ const RelayCard: React.FC<{
   const manualOn = relay.mode === 'on' || relay.mode === 'timer';
 
   // odliczanie: do końca włączenia (timer albo okno harmonogramu); bez niego następny start z harmonogramu
+  // desiredOn / until / nextStart liczy serwer (relayCommand w switch.service) z trybu i harmonogramu — tu tylko
+  // prezentacja; relay.on to stan faktyczny zgłoszony przez sterownik (może różnić się do następnego zgłoszenia)
   const counting = relay.desiredOn && relay.until;
   const idleLabel = relay.mode === 'on'
     ? t('sw.home.onUnlimited')
@@ -149,6 +152,8 @@ export const SwitchHome: React.FC = () => {
     setBusy(relay);
     setError('');
     try {
+      // odpowiedź to przekaźnik już z nowym trybem; podmiana w stanie bez czekania na odświeżenie (sterownik dostaje
+      // polecenie po WebSocket „operation” w ciągu kilku sekund)
       const updated = await SwitchRequests.setMode(relay, mode, minutes);
       setRelays((current) => current?.map((item) => item.relay === relay ? updated : item) ?? null);
     } catch {
@@ -160,7 +165,9 @@ export const SwitchHome: React.FC = () => {
 
   const names = new Map((relays ?? []).map((relay) => [relay.relay, relayLabel(relay)]));
   const { start, end } = warsawDayBounds(todayWarsaw());
+  // suma „Dziś” liczy tylko część włączenia w dobie warszawskiej (włączenie przez północ) i do teraz, gdy trwa
   const total = (activations ?? []).reduce((sum, activation) => sum + secondsInDay(activation, start, end, now), 0);
+  // serwer zwraca od najstarszego; tabela pokazuje najnowsze na górze
   const sorted = [...(activations ?? [])].reverse();
 
   return (

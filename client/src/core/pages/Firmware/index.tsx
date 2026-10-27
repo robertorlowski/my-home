@@ -107,6 +107,7 @@ export const Firmware: React.FC = () => {
     );
   }
 
+  // w bazie są najwyżej dwa pliki rodzaju: oferowany (active) i poprzedni (firmware.service.ts kasuje starsze)
   const active = summary?.images.find((image) => image.active);
   const previous = summary?.images.filter((image) => !image.active) ?? [];
   const enabled = summary?.enabled ?? false;
@@ -133,6 +134,8 @@ export const Firmware: React.FC = () => {
     }
   };
 
+  // każda zmiana (wgranie, przełącznik, przywrócenie, usunięcie) zwraca nowe podsumowanie rodzaju — jedno miejsce
+  // na podmianę stanu i komunikat
   const run = async (action: () => Promise<FirmwareSummary>, done?: string) => {
     setError('');
     try {

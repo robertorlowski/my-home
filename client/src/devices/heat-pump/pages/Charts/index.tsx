@@ -292,6 +292,8 @@ export const HeatPumpChart: React.FC = () => {
       try {
         const dates = getDates(selectedDate, period);
 
+        // Rok: bilans serwera po miesiącach (GET /hp/monthly-summary); kafelki = sumy, wykres = 12 słupków
+        // (miesiąc bez danych = 0). Klucze punktu są te same co w dniu (Watts, pv, cost), ale w kWh / PLN.
         if (period === 'year') {
           const summaries = await fetchMonthlySummary(
             dates[0],
@@ -331,6 +333,7 @@ export const HeatPumpChart: React.FC = () => {
           return;
         }
 
+        // Miesiąc: ten sam bilans po dniach (group = day), słupek na każdy dzień miesiąca
         if (period === 'month') {
           const summaries = await fetchMonthlySummary(
             dates[0],
@@ -378,6 +381,7 @@ export const HeatPumpChart: React.FC = () => {
 
         if (!active) return;
 
+        // rekordy pogrupowane po dniu (z pola time sterownika), bo koszt G12w liczy się osobno dla każdej doby
         const rowsByDate = new Map<string, THPL[]>();
         data.forEach((row) => {
           // rekord bez czasu ze sterownika (np. z testu lokalnego) pomijany, jak w widoku dnia niżej
@@ -456,6 +460,7 @@ export const HeatPumpChart: React.FC = () => {
   const temps = tempSeries(colors);
   const powers = powerSeries(colors);
   const energies = energySeries(colors);
+  // ukryte serie (legenda); zmiana okresu czyści wybór (changePeriod)
   const toggle = (key: SeriesKey) => setHidden((current) => {
     const next = new Set(current);
     if (next.has(key)) next.delete(key); else next.add(key);

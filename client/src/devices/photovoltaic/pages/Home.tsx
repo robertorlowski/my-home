@@ -53,11 +53,14 @@ export const PhotovoltaicHome: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  // mikrofalowniki = różne numery seryjne z listy portów (serial + port = panel)
   const panels = current?.panels ?? [];
   const inverters = [...new Set(panels.map((panel) => panel.serial))];
   // skala pasków: szczyt paneli w tym dniu (wieczorne 5 W daje wąski pasek, nie pełny)
   const maxPanelPower = Math.max(1, ...panels.map((p) => p.power ?? 0),
     ...(day?.panels ?? []).flatMap((p) => p.points.map((point) => point.power)));
+  // „słabiej”: porównanie produkcji dziś z średnią portów (nie mocy chwilowej, którą zmienia przelotna chmura);
+  // tylko dla paneli pracujących (offline i alarm mają własny chip)
   const withToday = panels.filter((panel) => panel.prod_today !== undefined);
   const averageToday = withToday.length ? withToday.reduce((sum, panel) => sum + (panel.prod_today ?? 0), 0) / withToday.length : 0;
   const rows: PanelRow[] = panels.map((panel) => {

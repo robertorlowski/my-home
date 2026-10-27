@@ -52,6 +52,7 @@ export const PhotovoltaicSettings: React.FC = () => {
     PhotovoltaicRequests.getInverters().then(setInverters);
   }, []);
 
+  // Root ID fotowoltaiki to osobne urządzenie (serwer zakłada je przy pierwszym odczycie PV), inne niż Root ID pompy
   const copyRootId = () => {
     if (!device?.rootId) return;
     navigator.clipboard?.writeText(device.rootId).then(() => {
@@ -92,6 +93,8 @@ export const PhotovoltaicSettings: React.FC = () => {
           {list.map((inverter) => {
             const ports = portsLine(inverter);
             const alarms = alarmsLine(inverter);
+            // link ≠ 1 na którymś porcie = mikrofalownik bez łączności z DTU (kody nieudokumentowane, działająca
+            // instalacja podaje 1)
             const link = inverter.ports.map((port) => port.link);
             const connected = link.length > 0 && link.every((value) => value === 1);
             return (

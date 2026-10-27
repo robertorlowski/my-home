@@ -68,6 +68,8 @@ export const SwitchSchedules: React.FC = () => {
   const loadRelays = () => SwitchRequests.getRelays().then((result) => result && setRelays(result));
   const loadSchedules = () => SwitchRequests.getSchedules().then((result) => setSchedules(result ?? []));
 
+  // przekaźniki co minutę: niosą scheduleId wpisu działającego teraz i nextStart (serwer liczy je z harmonogramu);
+  // same wpisy zmieniają się tylko z tego okna, więc są pobierane po zapisie
   useEffect(() => {
     loadRelays();
     loadSchedules();
@@ -104,6 +106,7 @@ export const SwitchSchedules: React.FC = () => {
     event.preventDefault();
     setSaving(true);
     setError('');
+    // data ma pierwszeństwo przed dniem tygodnia (serwer), więc wysyłane jest tylko jedno z nich
     const payload: SwitchSchedule = {
       relay: Number(form.relay),
       enabled: form.enabled,
@@ -150,6 +153,7 @@ export const SwitchSchedules: React.FC = () => {
     }
   };
 
+  // wpis działający teraz = scheduleId z GET /switch/relays (jeden na przekaźnik); karty po jednej na przekaźnik
   const currentIds = new Set(relays.map((relay) => relay.scheduleId).filter(Boolean));
   const groups = relays.map((relay) => ({
     relay,
@@ -172,6 +176,8 @@ export const SwitchSchedules: React.FC = () => {
             <ul className="entries">
               {items.map((schedule) => {
                 const current = Boolean(schedule._id && currentIds.has(schedule._id));
+                // tryb ręczny on / off blokuje harmonogram (timer i pause same wracają do schedule, więc nie wyszarzają);
+                // start > koniec = okno przez północ, należy do dnia startu (serwer, calendar.service)
                 const blocked = relay.mode === 'off' || relay.mode === 'on';
                 const overnight = schedule.startTime > schedule.endTime;
                 return (

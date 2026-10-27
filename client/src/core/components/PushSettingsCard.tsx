@@ -48,6 +48,8 @@ export function PushSettingsCard() {
     void currentSubscription().then((subscription) => setEndpoint(subscription?.endpoint ?? null));
   }, []);
 
+  // „to urządzenie” = subskrypcja z listy konta o tym samym endpoincie, jaki ma PushManager tej przeglądarki;
+  // brak dopasowania (np. subskrypcja usunięta z innego urządzenia) pokazuje przycisk „Włącz” mimo zgody przeglądarki
   const thisDevice = settings?.subscriptions.find((subscription) => subscription.endpoint === endpoint) ?? null;
 
   const enable = async () => {
@@ -74,6 +76,7 @@ export function PushSettingsCard() {
     setBusy(true);
     setError('');
     try {
+      // najpierw serwer (żeby nie został martwy wpis), potem PushManager przeglądarki
       if (thisDevice) await PushRequests.unsubscribe(thisDevice.id);
       await unsubscribe();
       setEndpoint(null);
@@ -108,6 +111,7 @@ export function PushSettingsCard() {
     }
   };
 
+  // reguły w stanie: jeden wpis na sterownik; sterownik bez zaznaczeń nie ma wpisu (tak samo zapisuje serwer)
   const eventsOf = (rootId: string) => rules.find((rule) => rule.rootId === rootId)?.events ?? [];
   const toggle = (rootId: string, key: string) => setRules((current) => {
     const events = eventsOf(rootId);
@@ -131,6 +135,7 @@ export function PushSettingsCard() {
     }
   });
 
+  // powód braku przycisku „Włącz” w kolejności od najpoważniejszego (serwer → przeglądarka → zgoda)
   const status = (() => {
     if (!settings) return null;
     if (!settings.configured) return t('push.notConfigured');

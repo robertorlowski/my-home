@@ -74,6 +74,8 @@ export const PhotovoltaicChart: React.FC = () => {
   }, [period, date]);
 
   const dayData = (day?.points ?? []).map((p) => ({ label: formatTime(p.t), moc: p.power }));
+  // „Moc paneli”: Recharts chce jednego wiersza na chwilę z kolumną na panel, a serwer daje punkty osobno na panel —
+  // obrót tabeli po czasie (klucz = serial-port)
   const panelsData = (() => {
     if (!day?.panels.length) return [];
     const rows = new Map<string, Record<string, number | string>>();
@@ -86,6 +88,7 @@ export const PhotovoltaicChart: React.FC = () => {
     }
     return [...rows].sort((a, b) => a[0].localeCompare(b[0])).map(([, row]) => row);
   })();
+  // „Produkcja paneli”: energyWh z serwera = największe prod_today portu w dobie; kWh do dwóch miejsc
   const panelEnergy = (day?.panels ?? []).map((panel) => ({
     label: `${panel.serial.slice(-2)}/${panel.port}`,
     name: panelName(panel.serial, panel.port),
@@ -106,6 +109,7 @@ export const PhotovoltaicChart: React.FC = () => {
     });
     return [...groups].sort((a, b) => a[0].localeCompare(b[0])).map(([serial, panels]) => ({ serial, panels }));
   })();
+  // wybór użytkownika ograniczony do paneli obecnych w tym dniu (inny dzień może mieć inne porty)
   const allKeys = new Set(inverters.flatMap((inverter) => inverter.panels.map((panel) => panel.key)));
   const shown = new Set(
     selectedPanels ? [...selectedPanels].filter((key) => allKeys.has(key)) : (inverters[0]?.panels.map((panel) => panel.key) ?? []),

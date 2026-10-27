@@ -29,7 +29,8 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const isSystem = email.trim().toLowerCase() === SYSTEM_LOGIN;
 
-  // link z maila: /login?token=…
+  // link z maila: /login?token=… — token jest jednorazowy, więc od razu znika z adresu (odświeżenie strony
+  // nie próbuje go użyć drugi raz i nie pokazuje błędu „link wykorzystany”)
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token');
     if (!token) return;
@@ -41,6 +42,7 @@ export function Login() {
       .finally(() => setBusy(false));
   }, []);
 
+  // odliczanie do „Wyślij ponownie” (resendAt z serwera), tylko na kroku z kodem
   useEffect(() => {
     if (!sentTo) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -63,6 +65,8 @@ export function Login() {
       setResendAt(Date.now() + result.resendAfterSeconds * 1000);
       setNow(Date.now());
     } catch (caught) {
+      // 429 = kod już wysłany i jeszcze nie minęło 60 s: przejście na krok z kodem z odliczaniem, bo poprzedni kod
+      // nadal działa (serwer go nie unieważnia)
       if (caught instanceof ApiError && caught.status === 429 && caught.retryAfterSeconds && !isSystem) {
         setSentTo(email.trim().toLowerCase());
         setResendAt(Date.now() + caught.retryAfterSeconds * 1000);
@@ -135,7 +139,7 @@ export function Login() {
             <label className="field">
               <span>{t('login.code')}</span>
               <input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} required autoFocus placeholder={t('login.codePlaceholder')}
-                value={code} onChange={(event) => setCode(event.target.value.replace(/[^\d ]/g, ''))} />
+                value={code} onChange={(event) => setCode(event.target.value.replace(/[^\d ]/g, ''))} />{/* maxLength 7 = „123 456” ze spacją */}
             </label>
             {error && <ErrorAlert text={error} />}
             <button type="submit" className="btn btn-primary btn-block" disabled={busy}>{t('login.signIn')}</button>

@@ -70,6 +70,7 @@ export function WeatherTileModal({ tile, canAddCurrent, onClose, onSaved, onRemo
     return () => window.clearTimeout(searchTimer.current);
   }, [query]);
 
+  // wybór podpowiedzi wypełnia nazwę i współrzędne; pole szukania jest czyszczone, żeby lista zniknęła
   const pick = (hit: Hit) => {
     setName(hit.name);
     setLat(String(hit.latitude));
@@ -87,6 +88,7 @@ export function WeatherTileModal({ tile, canAddCurrent, onClose, onSaved, onRemo
     try {
       onSaved(await WeatherTileRequests.create({ current: true }));
     } catch (caught) {
+      // serverMessage: błąd z http.ts z treścią odpowiedzi serwera (np. „jest już kafelek bieżącej lokalizacji”)
       setError((caught as { serverMessage?: string }).serverMessage ?? t('weatherTile.addCurrentFailed'));
       setSaving(false);
     }
@@ -105,6 +107,8 @@ export function WeatherTileModal({ tile, canAddCurrent, onClose, onSaved, onRemo
       }
       return;
     }
+    // zwykły kafelek: współrzędne z podpowiedzi albo wpisane ręcznie (przecinek dziesiętny dozwolony); zakres sprawdzany
+    // tu, serwer sprawdza jeszcze raz
     const data = { name: name.trim(), lat: parseCoordinate(lat), lon: parseCoordinate(lon) };
     if (!data.name) { setError(t('weatherTile.nameRequired')); return; }
     if (!Number.isFinite(data.lat) || !Number.isFinite(data.lon) || Math.abs(data.lat) > 90 || Math.abs(data.lon) > 180) {

@@ -89,6 +89,7 @@ function RunsCard({ runs }: { runs: WaterPressureTankRun[] | null }) {
                 <tr><th>{t('wt.csv.date')}</th><th>{t('wt.col.time')}</th><th className="num">{t('tile.icon.bubbles')}</th><th className="num">{t('tile.icon.timer')}</th><th className="num">{t('tile.icon.drop')}</th><th>{t('wt.col.notes')}</th></tr>
               </thead>
               <tbody>
+                {/* serwer zwraca od najstarszego; tabela od najnowszego. waterLiters null = brak przepływu z wodomierza */}
                 {[...runs].reverse().map((run) => (
                   <tr key={run._id}>
                     <td>{formatDate(run.pumpStart)}</td>
@@ -173,6 +174,7 @@ function MeterCard() {
     }
   };
 
+  // okres z meter/summary kończy się dokładnie w chwili odczytu (period.to = readAt), stąd dopasowanie po czasie
   const periodFor = (reading: WaterMeterReading) =>
     summary?.periods.find((period) => new Date(period.to).getTime() === new Date(reading.readAt).getTime());
 

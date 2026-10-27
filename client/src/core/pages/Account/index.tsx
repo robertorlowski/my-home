@@ -49,6 +49,7 @@ function EmailRow({ email }: { email: string }) {
     setBusy(true);
     setError('');
     try {
+      // serwer zwraca zaktualizowany profil; setUser podmienia go w AuthContext, więc nagłówek i menu od razu mają nowy adres
       const user = await AuthRequests.verifyEmail(code);
       setUser(user);
       setDone(t('account.emailChanged', { email: user.email ?? '' }));
@@ -150,6 +151,7 @@ export function Account() {
   const { user, setUser, logout } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
+  // /account?delete=1 otwiera od razu okno usuwania (pozycja „Usuń konto” w menu konta, UserMenu)
   const [deleting, setDeleting] = useState(() => new URLSearchParams(window.location.search).has('delete'));
   const [saved, setSaved] = useState(false);
   if (!user) return null;
@@ -208,6 +210,7 @@ export function DeleteAccountConfirm() {
     const token = new URLSearchParams(window.location.search).get('token') ?? '';
     AuthRequests.confirmDelete(token)
       .then((result) => {
+        // konto już nie istnieje: wylogowanie czyści token w przeglądarce (bez tego /auth/me dawałoby 401 w kółko)
         setState({ done: result.devices });
         void logout();
       })
