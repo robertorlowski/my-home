@@ -1,7 +1,6 @@
 // Kody błędów sterownika CHPC (HP.ERR, error_code). Źródło: ERRC_* w devices/chpc/src/CHPC_firmware.ino.
 // Zmiana kodu wymaga zmiany w obu miejscach. Używane w widoku głównym (dzwonek), Danych (czerwony
 // wiersz) i Ustawieniach (błąd, licznik, Odblokuj). Blokada: HP.ERRc ≥ 5, zdejmuje ją akcja error_reset.
-export const ERROR_LOCKED = 11;
 export const ERROR_LOCK_LIMIT = 5;
 
 import { getLang, Lang, translate } from '../../../core/i18n';
@@ -42,10 +41,3 @@ export const errorDescription = (code?: number | null, lang: Lang = getLang()) =
   code ? (lang === 'en' ? ERROR_DESCRIPTIONS_EN[code] : ERROR_DESCRIPTIONS[code]) ?? translate(lang, 'hp.unknownError', { code }) : '';
 
 export const isLocked = (errorCount?: number | null) => (errorCount ?? 0) >= ERROR_LOCK_LIMIT;
-
-// Błąd w dwóch liniach: data, a pod nią opis błędu; bez czasu zostaje sam opis.
-export const errorLine = (entry?: { error_code?: number | null; time?: string } | null) => {
-  if (!entry?.error_code) return '';
-  const description = errorDescription(entry.error_code);
-  return entry.time ? `${entry.time}\n${description}` : description;
-};

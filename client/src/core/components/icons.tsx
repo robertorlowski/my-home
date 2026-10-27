@@ -52,6 +52,5 @@ const action = (path: React.ReactNode) => (
 
 export const PlusIcon = () => action(<><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>);
 export const TrashIcon = () => action(<><path d="M4 7h16M10 11v6M14 11v6" /><path d="M6 7l1 13h10l1-13M9 7V4h6v3" /></>);
-export const RestoreIcon = () => action(<><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></>);
 export const BackIcon = () => action(<path d="M19 12H5M11 6l-6 6 6 6" />);
 export const EditIcon = () => action(<><path d="M4 20H8L18.5 9.5C19.3 8.7 19.3 7.3 18.5 6.5L17.5 5.5C16.7 4.7 15.3 4.7 14.5 5.5L4 16V20Z" /><path d="M13 7L17 11" /></>);

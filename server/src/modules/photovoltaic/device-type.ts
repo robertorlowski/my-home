@@ -4,8 +4,6 @@
 import { DeviceType, DeviceTypeModule } from '../../core/types';
 import { photovoltaicTile } from './tile';
 
-export const PHOTOVOLTAIC_DEVICE_NAME = 'Fotowoltaika';
-
 export const photovoltaicDeviceType: DeviceTypeModule = {
   type: DeviceType.PHOTOVOLTAIC,
   tile: photovoltaicTile,

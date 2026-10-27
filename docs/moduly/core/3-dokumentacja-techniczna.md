@@ -15,7 +15,6 @@
 | `core/websocket.ts` | serwer WebSocket (`/ws?rootId=`), `sendMessage(typ, rootId)` z opóźnieniem 1 s |
 | `core/middleware/device-context.ts` | ustala urządzenie z `rootId` albo (dla ścieżek sterownika z mapy `controllerPaths`) z pary `{deviceId, deviceType}`; 400/404/409 |
 | `core/middleware/auth.ts` | `verifyApiKey` — **nieużywane** (wyłączone w `app.ts`) |
-| `core/middleware/mock-response.ts` | pozostałość, nieużywane |
 | `core/models/device.model.ts` | model Mongoose `devices`: schemat urządzenia, `properties`, osadzone harmonogramy i starsze `settings` |
 | `core/controllers/device.controller.ts` | obsługa tras urządzeń; odpowiedź zgłoszenia z `settings` z rejestru; zlecenie i odwołanie aktualizacji firmware |
 | `core/controllers/meteo.controller.ts` | `GET /temperature` |
@@ -76,7 +75,6 @@
 | `public/manifest.webmanifest`, `public/icon-*.png`, `public/.well-known/assetlinks.json`, `index.tsx` (rejestracja `sw.js`) | PWA: manifest z ikonami PNG, Digital Asset Links dla aplikacji Androida, service worker z powłoką z pamięci (patrz `public/sw.js` wyżej) |
 | `android/` (`twa-manifest.json`, `build.ps1`, `README.md`) | pakiet Androida (TWA, Bubblewrap); klucz podpisu i hasła poza gitem |
 | `core/pages/Firmware/` | `/firmware/:deviceType` (trybik na kafelku, użytkownik systemowy): karty „Aktualna wersja” (opis, data, rozmiar, SHA-256, przełącznik „Aktualizacje”; plus otwiera kartę „Dodaj wersję”), „Sterowniki tego rodzaju” (wersja z ostatniego zgłoszenia, chip stanu) i „Poprzednie wersje” (przywrócenie, usunięcie); poza kontekstem urządzenia |
-| `core/pages/_404.tsx` | pozostałość, nieużywane |
 
 ## API
 
@@ -239,4 +237,3 @@ Serwer i klient wdraża się razem z gałęzi `main` na Render (build uruchamian
 - **Obsługa błędów w kliencie (`core/http.ts`)**: `get` zwraca `null`, `post` połyka błąd (z `json = false` zwraca `Response`), `put` i `delete` rzucają wyjątek — różne ekrany różnie więc pokazują błędy zapisu.
 - **Style stron trafiają do jednego pakietu CSS** — reguły bez prefiksu w `pages/style.css` rodzajów działają w całej aplikacji; wspólne komponenty są w `makieta.css`, a kolory tylko z tokenów `theme.css`.
 - **Projektant kafelka** (`/tile-designer`, wzór `tile_template`, `TemplateTile`) został w kodzie, ale lista z niego nie korzysta, a przycisk jest ukryty (2026-10-17).
-- `mock-response.ts` i `_404.tsx` są nieużywane.

@@ -13,10 +13,6 @@ import { UserEntry } from '../models/user.model';
  *  otwiera jego widoków; na razie włącznik */
 export const SIMPLE_TAB = 'simple';
 export const TABS = ['/', '/data', '/chart', '/schedules', '/alarms', '/operations', '/settings', SIMPLE_TAB] as const;
-export const TAB_LABELS: Record<string, string> = {
-  '/': 'Podgląd', '/data': 'Dane', '/chart': 'Wykres', '/schedules': 'Harmonogram', '/alarms': 'Alarmy', '/operations': 'Operacje', '/settings': 'Ustawienia',
-  [SIMPLE_TAB]: 'Panel prosty',
-};
 
 /** demo (2026-10-21): sterowniki właściciela z DEMO_OWNER_EMAIL tylko do odczytu (zapisy blokuje authorize) */
 export type DeviceAccess = { role: 'system' | 'owner' | 'demo' } | { role: 'shared'; tabs: string[] };

@@ -15,7 +15,6 @@
 | `core/websocket.ts` | WebSocket server (`/ws?rootId=`), `sendMessage(type, rootId)` with a 1 s delay |
 | `core/middleware/device-context.ts` | resolves the device from `rootId` or (for controller paths in the `controllerPaths` map) from the pair `{deviceId, deviceType}`; 400/404/409 |
 | `core/middleware/auth.ts` | `verifyApiKey` — **unused** (disabled in `app.ts`) |
-| `core/middleware/mock-response.ts` | leftover, unused |
 | `core/models/device.model.ts` | Mongoose model `devices`: device schema, `properties`, embedded schedules and legacy `settings` |
 | `core/controllers/device.controller.ts` | device routes; the registration reply includes `settings` from the registry; firmware update request and its cancellation |
 | `core/controllers/meteo.controller.ts` | `GET /temperature` |
@@ -76,7 +75,6 @@
 | `core/App.tsx` (`DemoBanner`, `DemoToast`), `core/http.ts`, `core/auth.ts`, `core/types.ts` (`canEditDevice`) | demo mode in the client: the bar, writes stopped with a message, the `chpc.demo` flag, editing only own controllers |
 | `public/manifest.webmanifest`, `public/icon-*.png`, `public/.well-known/assetlinks.json`, `index.tsx` (`sw.js` registration) | PWA: manifest with PNG icons, Digital Asset Links for the Android app, service worker with the cached shell (see `public/sw.js` above) |
 | `android/` (`twa-manifest.json`, `build.ps1`, `README.md`) | the Android package (TWA, Bubblewrap); the signing key and passwords outside git |
-| `core/pages/_404.tsx` | leftover, unused |
 
 ## API
 
@@ -239,4 +237,3 @@ The server and the client are deployed together from the `main` branch to Render
 - **Client error handling (`core/http.ts`)**: `get` returns `null`, `post` swallows the error (with `json = false` it returns the `Response`), `put` and `delete` throw — so screens show save errors differently.
 - **Page styles end up in one CSS bundle** — unprefixed rules in the kinds' `pages/style.css` apply to the whole application; the shared components are in `makieta.css`, and colours come only from the `theme.css` tokens.
 - **The tile designer** (`/tile-designer`, the `tile_template` template, `TemplateTile`) stays in the code, but the list does not use it and the button is hidden (2026-10-17).
-- `mock-response.ts` and `_404.tsx` are unused.

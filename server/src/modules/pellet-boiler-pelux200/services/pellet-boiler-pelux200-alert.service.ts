@@ -9,7 +9,6 @@ import { fromZonedTime } from 'date-fns-tz';
 import { TIME_ZONE } from '../../../core/time';
 import { PelletBoilerAlertEntry, PelletBoilerAlertModel } from '../models/pellet-boiler-pelux200-alert.model';
 
-export const ALERT_ONGOING = null;
 const MAX_ENTRIES = 100;
 const UNCERTAIN_BEFORE_YEAR = 2020;
 

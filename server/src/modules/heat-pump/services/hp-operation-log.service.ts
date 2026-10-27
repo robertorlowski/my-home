@@ -112,9 +112,3 @@ export const plannedOperation = (at: Date, before: OperationEntry, after: Operat
     ? { at, actor: { type: 'system' }, source: 'Harmonogram', action: changes.join(' · '), reason, ...(conditions ? { conditions } : {}) }
     : null;
 };
-
-/** testy: stan w pamięci od nowa */
-export const resetOperationLogState = () => {
-  lastLogged.clear();
-  awaitingDelivery.clear();
-};

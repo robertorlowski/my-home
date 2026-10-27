@@ -131,9 +131,3 @@ export async function plannedSwitchOperations(rootId: string, now: Date, dayEnd:
   }
   return planned.sort((a, b) => a.at.getTime() - b.at.getTime());
 }
-
-/** testy: stan w pamięci od nowa */
-export const resetSwitchLogState = () => {
-  lastDesired.clear();
-  awaiting.clear();
-};

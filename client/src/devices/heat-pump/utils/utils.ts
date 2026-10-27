@@ -10,13 +10,6 @@ export const formatDateYMD = (date: Date): string => {
   return `${y}.${m}.${d}`;
 };
 
-// odwrotność formatDateYMD; obecnie nieużywana
-export const stringToDate = (value: string): Date => {
-    const [y, m, d] = value.split(".").map(Number);
-    const parsed = new Date(y, m - 1, d); 
-    return parsed;
-}
-
 // Rekordy z GET /hp/4day (dzień albo zakres) jako wiersze THPL, od najnowszego. allData = false
 // zostawia tylko pracę sprężarki (HPS === true) i rekordy z błędem. Porównanie ścisłe działa, bo
 // schemat Mongo zapisuje HPS jako Boolean (0/1 z CHPC zamienia na false/true).

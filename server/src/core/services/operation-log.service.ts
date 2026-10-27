@@ -178,6 +178,3 @@ const publicEntry = (entry: OperationLogEntry) => ({
   reason: entry.reason ?? null,
   conditions: entry.conditions ?? null,
 });
-
-/** zlecenia w toku (linia „Zmiany w toku: N” w Ustawieniach) */
-export const countInProgress = (rootId: string) => OperationLogModel.countDocuments({ rootId, status: { $in: IN_PROGRESS } });

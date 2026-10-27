@@ -33,14 +33,11 @@ export const formatNumber = (value: number | undefined, digits = 1) =>
   value === undefined || value === null ? '---' : value.toLocaleString(loc(), { maximumFractionDigits: digits });
 
 export const formatTemp = (value?: number) => value === undefined || value === null ? '---' : `${formatNumber(value)} °C`;
-export const formatPercent = (value?: number) => value === undefined || value === null ? '---' : `${formatNumber(value, 0)} %`;
 
 export const formatTime = (iso?: string) =>
   iso ? new Date(iso).toLocaleTimeString(loc(), { timeZone: TIME_ZONE }) : '---';
 export const formatDateTime = (iso?: string) =>
   iso ? new Date(iso).toLocaleString(loc(), { timeZone: TIME_ZONE }) : '---';
-
-export const onOff = (value?: boolean) => value === undefined || value === null ? '---' : tr(value ? 'pb.onF' : 'pb.offF');
 
 // Dzisiejsza data w Warszawie jako YYYY-MM-DD (format en-CA).
 export const todayWarsaw = () => new Date().toLocaleDateString('en-CA', { timeZone: TIME_ZONE });
@@ -73,7 +70,6 @@ export const workModeKey = (settings: PelletBoilerSettings | null, pelletCwu?: P
   return parameter.value < 50 ? 'heat-pump' : 'pellet';
 };
 export const workModeLabel = (key: WorkModeKey | null) => (key === 'heat-pump' ? tr('type.heat_pump') : key === 'pellet' ? tr('pb.pellet') : '---');
-export const workModeName = (settings: PelletBoilerSettings | null, pelletCwu?: PelletBoilerPelletCwu | null) => workModeLabel(workModeKey(settings, pelletCwu));
 
 // Kocioł się pali: stabilizacja, rozpalanie, praca, nadzór i wygaszanie (płomień na stronie głównej).
 const BURNING_STATES = [1, 2, 3, 4, 7];
