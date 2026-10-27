@@ -123,11 +123,6 @@
 .energy-num { display: flex; flex-direction: column; }
 .energy-num span { font-family: var(--font-num); font-size: 26px; font-weight: 700; line-height: 1.1; }
 .energy-num small { font-size: 12px; color: var(--fg-3); }
-.spark { width: 100%; height: 72px; max-width: 100%; }
-.spark-grid line { stroke: var(--line-soft); stroke-width: 1; }
-.spark-pv { fill: var(--c-sun); opacity: .28; }
-.spark-bars rect { fill: var(--accent); }
-.spark-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-3); }
 
 /* pomiary */
 .measures { margin: 0; display: grid; grid-template-columns: 1fr; gap: 0; }
@@ -173,7 +168,6 @@
 .entry.is-current { border-color: var(--accent); border-left-color: var(--accent); background: var(--row-current-bg); }
 .entry.is-off { border-left-color: var(--muted-fg); }
 .entry.is-default { border-left-color: var(--c-water); border-style: dashed; border-left-style: solid; }
-
 
 /* ===== makieta.css ===== */
 /* ===== Pełna makieta (etap 2): komponenty ponad baza.css. Tokeny wariantu w wariant-b.css. ===== */
@@ -267,15 +261,10 @@ table.data td em { color: var(--run-fg); font-style: normal; font-weight: 600; }
 
 /* ---- wykresy ---- */
 .chart { position: relative; width: 100%; min-width: 0; }
-.chart-svg { width: 100%; height: auto; display: block; overflow: visible; }
 .nowrap { white-space: nowrap; }
 .chart .grid { stroke: var(--line-soft); stroke-width: 1; }
 .chart .tick { fill: var(--fg-3); font-size: 11px; font-family: var(--font-body); }
-.chart .cursor-line { stroke: var(--fg-2); stroke-width: 1; stroke-dasharray: 3 3; }
-.chart .tip { position: absolute; top: 8px; transform: translateX(-50%); background: var(--card); color: var(--fg); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 12px; box-shadow: var(--shadow-hover), 0 6px 20px rgba(0,0,0,.25); pointer-events: none; display: flex; flex-direction: column; gap: 3px; white-space: nowrap; z-index: 2; }
-.chart .tip strong { font-size: 12px; margin-bottom: 2px; }
-.chart .tip i, .lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
-.chart .tip b { font-weight: 700; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.lg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--fg-2); }
 .card-head .legend { justify-content: flex-end; }
 @media (max-width: 560px) { .card-head { flex-wrap: wrap; } .card-head .legend { justify-content: flex-start; flex-basis: 100%; } }
@@ -382,14 +371,12 @@ table.data td em { color: var(--run-fg); font-style: normal; font-weight: 600; }
 .toggle-hero li:first-child { padding-top: 10px; }
 
 /* ---- logowanie ---- */
-.screen-auth { justify-content: center; align-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); background: var(--bg); }
 .auth { width: 100%; max-width: 420px; }
 .auth-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; }
 .auth-card h1 { font-size: 24px; }
 .auth-step { display: flex; flex-direction: column; gap: 12px; }
 .brand-big .brand-mark { width: 12px; height: 28px; }
 .brand-big .brand-name { font-size: 18px; }
-.auth-foot { font-size: 12px; color: var(--fg-3); }
 
 /* ---- pusty stan ---- */
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 40px 20px; color: var(--fg-2); }
@@ -414,21 +401,6 @@ table.data td em { color: var(--run-fg); font-style: normal; font-weight: 600; }
 .choices li:first-child { border-top: 0; }
 .choices li small { color: var(--fg-3); }
 .choices li.is-selected { background: var(--row-current-bg); box-shadow: inset 3px 0 0 var(--accent); }
-.popover { position: absolute; width: 260px; background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 6px; display: flex; flex-direction: column; }
-.popover[hidden] { display: none; }
-.popover-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px 10px; border-bottom: 1px solid var(--line-soft); margin-bottom: 4px; }
-.popover-head div { display: flex; flex-direction: column; min-width: 0; }
-.popover-head strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.popover-head small { color: var(--fg-3); }
-.popover button[role="menuitem"], .sheet button[role="menuitem"] { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; padding: 9px 10px; border-radius: var(--radius-sm); text-align: left; cursor: pointer; font-weight: 500; }
-.popover button[role="menuitem"]:hover, .sheet button[role="menuitem"]:hover { background: var(--hover); }
-.popover .ic, .sheet .ic { width: 18px; height: 18px; color: var(--fg-2); }
-.popover-sep { height: 1px; background: var(--line-soft); margin: 4px 0; }
-.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line-strong); border-radius: var(--radius) var(--radius) 0 0; padding: 8px 10px calc(12px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -12px 40px rgba(0,0,0,.35); }
-.sheet[hidden] { display: none; }
-.sheet-grip { width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 2px auto 10px; }
-.sheet button[role="menuitem"] { font-size: 16px; padding: 12px 10px; }
-@media (min-width: 900px) { .sheet { left: 50%; right: auto; transform: translateX(-50%); width: 360px; } }
 
 /* ---- etap 2b: pozostałe zakładki ---- */
 .field-inline { flex-direction: row; align-items: center; gap: 8px; }
@@ -526,7 +498,6 @@ table.data td em { color: var(--run-fg); font-style: normal; font-weight: 600; }
 .pill-row .state.is-running .dot { animation: puls 1.6s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) { .device-sub .sub-run .dot, .pill-row .state .dot { animation: none !important; } }
 
-
 /* ===== wariant-b.css (bez tokenów) ===== */
 /* akcenty wariantu B: wyraźne linie zamiast cieni, nagłówki kapitalikami, boczne menu na komputerze */
 .card-head h2, .tile-facts dt, .kpi-label, .hero-label { text-transform: uppercase; letter-spacing: .08em; }
@@ -540,7 +511,6 @@ table.data td em { color: var(--run-fg); font-style: normal; font-weight: 600; }
 .tile::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--kind-fg); }
 .brand-mark { background: var(--accent); }
 .card-hero { border-left: 4px solid var(--accent); }
-
 
 /* ===== poprawki pod klienta (reguły globalne style.css, których makieta nie ma) ===== */
 .btn, .icon-btn, .seg span, .link-btn { margin: 0; }

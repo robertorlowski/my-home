@@ -47,16 +47,6 @@
 }
 
 /* ---- dawne okno .device-modal (inne okna aplikacji i pola rodzaju) ---- */
-.device-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.45);
-}
-
 .device-modal {
   width: min(420px, 100%);
   max-height: calc(100dvh - 2rem);
@@ -105,23 +95,6 @@
   color: var(--danger);
   margin: 0;
 }
-
-.device-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.device-modal-actions button {
-  margin: 0;
-}
-
-.device-modal-actions .device-modal-cancel {
-  background-color: var(--fg-3);
-}
-
-.device-modal-actions .device-modal-left { margin-right: auto; }
-.device-modal-actions .device-modal-danger { background-color: var(--danger); }
 
 /* okno kafelka pogody: przycisk bieżącej lokalizacji i rozdzielacz „albo stałe miejsce” (makieta #modal-kafelek-pogody) */
 .wx-locate { align-self: flex-start; gap: 8px; }

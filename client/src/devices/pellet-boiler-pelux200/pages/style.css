@@ -8,7 +8,6 @@
 /* ---- strona: odstęp od krawędzi jak w makiecie (16 px), akapity bez marginesów ---- */
 .boiler-page { padding: 0 16px; box-sizing: border-box; }
 .boiler-page p { margin: 0; }
-.boiler-page .offline-banner { margin: 0; }
 .boiler-page .card-head-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ---- okrągły przycisk-ikona makiety (baza.css: .icon-btn, .icon-btn.sm, .danger) ---- */
@@ -63,11 +62,9 @@
 .boiler-page .entry-what .danger-text { display: inline-block; margin-top: 4px; }
 
 /* ---- ustawienia: wiersz regulatora, lista parametrów, ostatnie zmiany ---- */
-.boiler-page .boiler-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.boiler-page .form-row > .btn, .boiler-page .boiler-btn-row .btn { white-space: nowrap; }
+.boiler-page .form-row > .btn { white-space: nowrap; }
 .boiler-page .t-name .chip { margin-left: 4px; vertical-align: 1px; }
 .boiler-page .param-val .chip { margin-left: 6px; vertical-align: 2px; }
-.boiler-page .boiler-prev { color: var(--fg-3); font-weight: 500; }
 .boiler-page .check.boiler-check-disabled { opacity: .5; }
 .boiler-page .check .info-tip, .boiler-page .param-name .info-tip, .boiler-page .form-grid label .info-tip { margin-left: 4px; }
 .boiler-page .card-hint .link { font-size: 12px; }
@@ -103,7 +100,6 @@
 .boiler-kv > div > span:not(.label), .boiler-kv > div > code { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
 .boiler-kv small { color: var(--fg-3); font-weight: 400; margin-left: 4px; }
 .boiler-kv a { color: var(--accent); }
-.boiler-kv .firmware-pill { margin-right: 4px; }
 .boiler-kv > div.firmware-update-error { display: block; color: var(--danger); font-size: 13px; }
 .boiler-kv > div.boiler-kv-actions { display: flex; justify-content: flex-end; border-top: 0; padding: 6px 0 0; }
 .boiler-kv .boiler-kv-actions button {

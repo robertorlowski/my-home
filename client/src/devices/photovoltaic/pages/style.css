@@ -31,9 +31,6 @@
 /* przełącznik segmentowy w pasku filtrów nie łamie etykiet („Produkcja paneli”) */
 .pv-page .seg span { white-space: nowrap; }
 
-/* pasek „Offline od …” w siatce strony, bez bocznych marginesów z style.css */
-.pv-page .offline-banner { margin: 0; }
-
 /* wykresy Recharts: kontener potrzebuje stałej wysokości (makieta: pv-day 200 px, pv-month 220 px) */
 .pv-page .chart-md { height: 200px; }
 .pv-page .chart-lg { height: 320px; }

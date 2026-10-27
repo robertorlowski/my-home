@@ -30,9 +30,6 @@
 /* .relay-state ustawia kolor później niż .danger-text, więc czerwony opis trybu wymaga mocniejszego selektora */
 .switch-page .relay-state.danger-text { color: var(--danger); }
 
-/* pasek „Offline” w karcie przekaźnika: bez marginesów karty .resource */
-.switch-page .card .offline-banner { margin: 0; }
-
 /* przyciski bez globalnego marginesu i zmiany tła po najechaniu (style.css button) */
 .switch-page .btn { margin: 0; }
 .switch-page .filters .btn { margin-left: auto; }
@@ -83,9 +80,6 @@
 /* nazwy przekaźników: pole na całą kolumnę (w-text z makiety ma stałe 220 px, na telefonie więcej niż pół karty) */
 .switch-page .form-grid .range-inputs { min-width: 0; }
 .switch-page .form-grid input.w-text { width: 220px !important; max-width: 100%; box-sizing: border-box; }
-
-/* udostępnianie (core/components/DeviceSharing) jako karta w kolumnie */
-.switch-page .share-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
 
 /* telefon: wartość główna odliczania mniejsza, przyciski Włącz / Wyłącz / Harmonogram mieszczą się w 3 kolumnach */
 @media (max-width: 560px) {
