@@ -28,9 +28,9 @@ export const switchDeviceType: DeviceTypeView = {
 	SimpleTile: SwitchSimpleTile,
 	views: [
 		{ path: '/', label: 'Włącznik', icon: <SwitchIcon />, element: <SwitchHome /> },
-		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <SwitchData /> },
 		{ path: '/schedules', label: 'Harmonogram', icon: <ScheduleIcon />, element: <SwitchSchedules /> },
-		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 		{ path: '/settings', label: 'Ustawienia', icon: <SettingsIcon />, element: <SwitchSettings /> },
+		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <SwitchData /> },
+		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 	],
 };

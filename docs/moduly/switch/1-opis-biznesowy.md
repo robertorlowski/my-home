@@ -30,7 +30,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej (jeden przekaźnik „Bojler”
 
 | Telefon | Opis |
 |---|---|
-| ![Widok główny na telefonie](img/glowny-telefon.png) | Na telefonie (360 px) karty idą jedna pod drugą, a dolna nawigacja pokazuje Włącznik, Dane, Harmonogram, Operacje i „Więcej” (Ustawienia, lista sterowników). Gdy stan przekaźnika jeszcze nie odpowiada poleceniu, karta pokazuje „Czeka na sterownik…”. |
+| ![Widok główny na telefonie](img/glowny-telefon.png) | Na telefonie (360 px) karty idą jedna pod drugą, a dolna nawigacja pokazuje Włącznik, Harmonogram, Ustawienia, Dane i „Więcej” (Operacje, lista sterowników). Gdy stan przekaźnika jeszcze nie odpowiada poleceniu, karta pokazuje „Czeka na sterownik…”. |
 
 ![Dane](img/dane.png)
 

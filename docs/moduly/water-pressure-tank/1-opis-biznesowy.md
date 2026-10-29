@@ -29,7 +29,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej (dwa uruchomienia z 12–13.10.
 |---|---|
 | ![Widok główny na telefonie](img/glowny-telefon.png) | ![Ustawienia na telefonie](img/ustawienia-telefon.png) |
 
-*Na telefonie (360 px) karty idą jedna pod drugą, a dolna nawigacja pokazuje Hydrofor, Dane, Wykres, Operacje i „Więcej” (Ustawienia, lista sterowników).*
+*Na telefonie (360 px) karty idą jedna pod drugą, a dolna nawigacja pokazuje Hydrofor, Statystyki, Ustawienia, Dane i „Więcej” (Operacje, lista sterowników).*
 
 | Dane — uruchomienia pompy | Dane — odczyty wodomierza |
 |---|---|
@@ -41,7 +41,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej (dwa uruchomienia z 12–13.10.
 |---|---|
 | ![Dzień](img/wykres-dzien.png) | ![Miesiąc](img/wykres-miesiac.png) |
 
-*Wykres: przełącznik Dzień / Miesiąc / Rok z nawigacją po dacie, kafelki woda, pompa, uruchomień i przepływ oraz karta ze słupkami wody w godzinach, dniach albo miesiącach (oś w m³ przy dużych wartościach). Dopóki nie ma przepływu, słupki pokazują czas pracy pompy w minutach, a pod wykresem jest podpowiedź o dwóch odczytach wodomierza.*
+*Statystyki: przełącznik Dzień / Miesiąc / Rok z nawigacją po dacie, kafelki woda, pompa, uruchomień i przepływ oraz karta ze słupkami wody w godzinach, dniach albo miesiącach (oś w m³ przy dużych wartościach). Dopóki nie ma przepływu, słupki pokazują czas pracy pompy w minutach, a pod wykresem jest podpowiedź o dwóch odczytach wodomierza.*
 
 ![Rok z wodomierzem](img/wykres-rok-wodomierz.png)
 

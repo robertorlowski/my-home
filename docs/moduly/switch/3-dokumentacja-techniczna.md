@@ -22,7 +22,7 @@ Zmiany w `core` dla włącznika: `DeviceType.SWITCH`, `WeekDay` przeniesione do 
 
 | Plik | Rola |
 |---|---|
-| `device-type.tsx` | wpis do rejestru: ikona przełącznika, menu Włącznik, Dane, Harmonogram, Operacje, Ustawienia (bez wykresu), `firmwareUpdates: true`, `firmwareUpdateHint` |
+| `device-type.tsx` | wpis do rejestru: ikona przełącznika, menu Włącznik, Harmonogram, Ustawienia, Dane, Operacje (bez wykresu), `firmwareUpdates: true`, `firmwareUpdateHint` |
 | `api.ts` | `SwitchRequests` |
 | `types.ts` | `RelayMode`, `SwitchRelay`, `SwitchSchedule`, `SwitchActivation` |
 | `pages/Home.tsx` | układ „Instrument”: karta na przekaźnik `.card-relay` (przełącznik stanu, opis trybu, pasek Offline, odliczanie albo następny start, Włącz / Wyłącz / Harmonogram, czas włączenia h / min), karta „Dziś”; odświeżanie co 5 s i WebSocket `update` |

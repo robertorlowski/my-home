@@ -29,7 +29,7 @@ The user interface is in Polish; the screenshots show it as is. They come from t
 |---|---|
 | ![Main view on a phone](../../../moduly/water-pressure-tank/img/glowny-telefon.png) | ![Settings on a phone](../../../moduly/water-pressure-tank/img/ustawienia-telefon.png) |
 
-*On a phone (360 px) the cards stack, and the bottom navigation shows Hydrofor, Dane, Wykres, Operacje and "Więcej" (Ustawienia, controller list).*
+*On a phone (360 px) the cards stack, and the bottom navigation shows Hydrofor, Statystyki, Ustawienia, Dane and "Więcej" (Operacje, controller list).*
 
 | Data — pump runs | Data — water meter readings |
 |---|---|

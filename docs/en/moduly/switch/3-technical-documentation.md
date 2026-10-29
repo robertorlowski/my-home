@@ -22,7 +22,7 @@ Changes in `core` for the switch: `DeviceType.SWITCH`, `WeekDay` moved to `core/
 
 | File | Role |
 |---|---|
-| `device-type.tsx` | registry entry: switch icon, menu Włącznik, Dane, Harmonogram, Operacje, Ustawienia (no chart), `firmwareUpdates: true`, `firmwareUpdateHint` |
+| `device-type.tsx` | registry entry: switch icon, menu Włącznik, Harmonogram, Ustawienia, Dane, Operacje (no chart), `firmwareUpdates: true`, `firmwareUpdateHint` |
 | `api.ts` | `SwitchRequests` |
 | `types.ts` | `RelayMode`, `SwitchRelay`, `SwitchSchedule`, `SwitchActivation` |
 | `pages/Home.tsx` | "Instrument" layout: a `.card-relay` card per relay (state switch, mode description, Offline banner, countdown or next start, Włącz / Wyłącz / Harmonogram, on time h / min), the "Dziś" card; refresh every 5 s and WebSocket `update` |

@@ -109,5 +109,5 @@ sequenceDiagram
 | **Operacje** (`/operations`, strona wspólna `core/pages/Operations`) | `GET /operations?date=` (dziennik 5 dni) | dziś co 30 s i po WebSocket `update` |
 | **Dane → Uruchomienia pompy** | `GET /water-pressure-tank/runs?from=&to=` (miesiąc), CSV w przeglądarce | przy zmianie miesiąca |
 | **Dane → Odczyty wodomierza** | `GET/POST /water-pressure-tank/meter`, `DELETE /water-pressure-tank/meter/:id` | po zmianie |
-| **Wykres** | `GET /water-pressure-tank/summary?period=day\|month\|year&date=` (słupki wody, bez przepływu czasu pompy); rok z wodomierzem: `GET /water-pressure-tank/meter/summary?year=` | przy zmianie okresu |
+| **Statystyki** (`/chart`) | `GET /water-pressure-tank/summary?period=day\|month\|year&date=` (słupki wody, bez przepływu czasu pompy); rok z wodomierzem: `GET /water-pressure-tank/meter/summary?year=` | przy zmianie okresu |
 | **Ustawienia** | `GET/PUT /device/properties` (czas kompresora, walidacja w przeglądarce), `GET /water-pressure-tank/flow`; karta „Sterownik”: `GET /devices`, `GET /firmware/water-pressure-tank`, `POST`/`DELETE /devices/:rootId/firmware-update` („Aktualizuj” / „Anuluj aktualizację”) | przy wejściu; karta „Sterownik” co 15 s, gdy czeka zlecenie aktualizacji |

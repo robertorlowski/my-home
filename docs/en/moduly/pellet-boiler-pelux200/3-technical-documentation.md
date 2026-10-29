@@ -19,7 +19,7 @@ No scheduler and no operation service. The module imports only from `core` (`dev
 
 | File | Role |
 |---|---|
-| `device-type.tsx` | registry entry: Kocioł, Dane, Wykres, Harmonogram, Alarmy, Operacje, Ustawienia (flame icon); `firmwareUpdates: true` (firmware cog on the tile, page `/firmware/pellet-boiler-pelux200`) and `firmwareUpdateHint`; "Dane sterownika" dialog fields (`components/BoilerConfigFields.tsx`: linked heat pump) |
+| `device-type.tsx` | registry entry: Kocioł, Statystyki, Harmonogram, Ustawienia, Alarmy, Dane, Operacje (flame icon); `firmwareUpdates: true` (firmware cog on the tile, page `/firmware/pellet-boiler-pelux200`) and `firmwareUpdateHint`; "Dane sterownika" dialog fields (`components/BoilerConfigFields.tsx`: linked heat pump) |
 | `api.ts` | `PelletBoilerRequests` (`getLast`, `getList`, regulator settings, requests, schedule) |
 | `types.ts` | `PelletBoilerReading` and the settings, request and schedule types |
 | `pages/Home.tsx` | "Instrument" layout: Offline banner, hero card (boiler temperature, set point, state with a flame, season and mode chips, KPIs), the CWU and mixer cards, "Urządzenia kotła", "Pozostałe"; refresh every 30 s |

@@ -145,7 +145,7 @@ The `hp` record gets only `PV.total_power` — for the energy balance. **The `hp
 |---|---|---|
 | **Main view** (`/`, `/hp`) | `GET /hp` (latest telemetry + PV summary), `GET /hp/last-error`; today's energy from `GET /hp/4day` | on the WebSocket `update` message and every 30 s; today's energy every 5 min |
 | **Data** (`/data`) | `GET /hp/dates` (day list), `GET /hp/4day?date=` (day); CSV — `GET /hp/all` (whole year) | on day change |
-| **Chart** (`/chart`) | day: `/hp/4day`; month and year: `/hp/monthly-summary` (energy, PV, G12w cost) | on period change |
+| **Statystyki** (`/chart`) | day: `/hp/4day`; month and year: `/hp/monthly-summary` (energy, PV, G12w cost) | on period change |
 | **Schedule** (`/schedules`) | `GET/POST/PUT/DELETE /schedules`, `GET /schedules/current`, `GET/PUT /device/properties` | every minute and after saving (the "działa teraz" marker) |
 | **Operations** (`/operations`, shared page `core/pages/Operations`) | `GET /operations?date=` (5-day log) | today every 30 s and after WebSocket `update` |
 | **Settings** (`/settings`) | `GET /operation` (form values), `POST /operation/set`, `POST /operation/action`, telemetry and error; the "Sterownik" and "Udostępnianie" cards from `core` | on entry |

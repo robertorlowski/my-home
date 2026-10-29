@@ -40,7 +40,7 @@ The user interface is in Polish; the screenshots show it as is. They come from t
 |---|---|
 | ![Main view on a phone](../../../moduly/heat-pump/img/glowny-telefon.png) | ![Schedule on a phone](../../../moduly/heat-pump/img/harmonogramy-telefon.png) |
 
-*On a phone (360 px) the cards stack, and the bottom navigation shows HP, Dane, Wykres, Harmonogram and "Więcej" (Operacje, Ustawienia, controller list).*
+*On a phone (360 px) the cards stack, and the bottom navigation shows HP, Statystyki, Harmonogram, Ustawienia and "Więcej" (Dane, Operacje, controller list).*
 
 ![Data](../../../moduly/heat-pump/img/dane.png)
 

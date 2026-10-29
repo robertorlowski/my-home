@@ -44,7 +44,7 @@ export const pl = {
   'view.overview': 'Podgląd',
   'view.simple': 'Panel prosty',
   'view.data': 'Dane',
-  'view.chart': 'Wykres',
+  'view.chart': 'Statystyki',
   'view.schedules': 'Harmonogram',
   'view.operations': 'Operacje',
   'view.settings': 'Ustawienia',

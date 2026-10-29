@@ -27,9 +27,9 @@ export const waterPressureTankDeviceType: DeviceTypeView = {
 	firmwareUpdates: true,
 	views: [
 		{ path: '/', label: 'Hydrofor', icon: <DropIcon />, element: <WaterPressureTankHome /> },
-		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <WaterPressureTankData /> },
-		{ path: '/chart', label: 'Wykres', icon: <ChartIcon />, element: <WaterPressureTankChart /> },
-		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
+		{ path: '/chart', label: 'Statystyki', icon: <ChartIcon />, element: <WaterPressureTankChart /> },
 		{ path: '/settings', label: 'Ustawienia', icon: <SettingsIcon />, element: <WaterPressureTankSettings /> },
+		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <WaterPressureTankData /> },
+		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 	],
 };

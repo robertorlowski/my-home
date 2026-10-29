@@ -44,7 +44,7 @@ export const en: Record<keyof typeof pl, string> = {
   'view.overview': 'Overview',
   'view.simple': 'Simple panel',
   'view.data': 'Data',
-  'view.chart': 'Chart',
+  'view.chart': 'Statistics',
   'view.schedules': 'Schedule',
   'view.operations': 'Operations',
   'view.settings': 'Settings',

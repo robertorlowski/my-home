@@ -109,5 +109,5 @@ sequenceDiagram
 | **Operacje** (`/operations`, shared page `core/pages/Operations`) | `GET /operations?date=` (5-day log) | today every 30 s and after WebSocket `update` |
 | **Data → pump runs** | `GET /water-pressure-tank/runs?from=&to=` (month), CSV built in the browser | on month change |
 | **Data → water meter readings** | `GET/POST /water-pressure-tank/meter`, `DELETE /water-pressure-tank/meter/:id` | after a change |
-| **Chart** | `GET /water-pressure-tank/summary?period=day\|month\|year&date=` (water bars, pump time without a flow); year with meter: `GET /water-pressure-tank/meter/summary?year=` | on period change |
+| **Statystyki** (`/chart`) | `GET /water-pressure-tank/summary?period=day\|month\|year&date=` (water bars, pump time without a flow); year with meter: `GET /water-pressure-tank/meter/summary?year=` | on period change |
 | **Settings** | `GET/PUT /device/properties` (compressor time, validation in the browser), `GET /water-pressure-tank/flow`; "Sterownik" card: `GET /devices`, `GET /firmware/water-pressure-tank`, `POST`/`DELETE /devices/:rootId/firmware-update` ("Aktualizuj" / "Anuluj aktualizację") | on entry; the "Sterownik" card every 15 s while an update request is pending |

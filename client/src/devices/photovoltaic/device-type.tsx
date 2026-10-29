@@ -30,8 +30,8 @@ export const photovoltaicDeviceType: DeviceTypeView = {
   ),
   views: [
     { path: '/', label: 'Fotowoltaika', icon: <SunIcon />, element: <PhotovoltaicHome /> },
-    { path: '/data', label: 'Dane', icon: <DataIcon />, element: <PhotovoltaicData /> },
-    { path: '/chart', label: 'Wykres', icon: <ChartIcon />, element: <PhotovoltaicChart /> },
+    { path: '/chart', label: 'Statystyki', icon: <ChartIcon />, element: <PhotovoltaicChart /> },
     { path: '/settings', label: 'Ustawienia', icon: <SettingsIcon />, element: <PhotovoltaicSettings /> },
+    { path: '/data', label: 'Dane', icon: <DataIcon />, element: <PhotovoltaicData /> },
   ],
 };

@@ -31,11 +31,11 @@ export const pelletBoilerDeviceType: DeviceTypeView = {
 	SimpleTile: PelletBoilerSimpleTile,
 	views: [
 		{ path: '/', label: 'Kocioł', icon: <FlameIcon />, element: <PelletBoilerHome /> },
-		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <PelletBoilerData /> },
-		{ path: '/chart', label: 'Wykres', icon: <ChartIcon />, element: <PelletBoilerChart /> },
+		{ path: '/chart', label: 'Statystyki', icon: <ChartIcon />, element: <PelletBoilerChart /> },
 		{ path: '/schedules', label: 'Harmonogram', icon: <ScheduleIcon />, element: <PelletBoilerSchedules /> },
-		{ path: '/alarms', label: 'Alarmy', icon: <AlarmIcon />, element: <PelletBoilerAlertsPage /> },
-		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 		{ path: '/settings', label: 'Ustawienia', icon: <SettingsIcon />, element: <PelletBoilerSettings /> },
+		{ path: '/alarms', label: 'Alarmy', icon: <AlarmIcon />, element: <PelletBoilerAlertsPage /> },
+		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <PelletBoilerData /> },
+		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 	],
 };

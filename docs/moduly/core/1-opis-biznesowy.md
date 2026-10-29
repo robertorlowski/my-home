@@ -70,7 +70,7 @@ Moduł odpowiada za:
 |---|---|
 | ![Pasek sterownika na telefonie](img/nawigacja-pompa-telefon.png) | ![Arkusz Więcej](img/nawigacja-wiecej-telefon.png) |
 
-*Pasek sterownika: strzałka wstecz do listy, nazwa, pod nią chip Włączony / Wyłączony (od 2026-10-27, jak na kafelku) i opis zależny od rodzaju (tryb i SN, liczba paneli, ostatnie uruchomienie, przekaźniki i firmware, regulator i interwał odczytu), ikona motywu i awatar konta. Na komputerze (od 900 px) zakładki są w bocznym menu po lewej; na telefonie dolna nawigacja pokazuje cztery pierwsze widoki i „Więcej” — arkusz z resztą widoków i „Listą sterowników”. Zakładki zależą od rodzaju: pompa ma sześć (HP, Dane, Wykres, Harmonogram, Operacje, Ustawienia), hydrofor i włącznik pięć, kocioł siedem (z Alarmami), fotowoltaika cztery.*
+*Pasek sterownika: strzałka wstecz do listy, nazwa, pod nią chip Włączony / Wyłączony (od 2026-10-27, jak na kafelku) i opis zależny od rodzaju (tryb i SN, liczba paneli, ostatnie uruchomienie, przekaźniki i firmware, regulator i interwał odczytu), ikona motywu i awatar konta. Na komputerze (od 900 px) zakładki są w bocznym menu po lewej; na telefonie dolna nawigacja pokazuje cztery pierwsze widoki i „Więcej” — arkusz z resztą widoków i „Listą sterowników”. Zakładki zależą od rodzaju: pompa ma sześć (HP, Statystyki, Harmonogram, Ustawienia, Dane, Operacje), hydrofor i włącznik pięć, kocioł siedem (z Alarmami), fotowoltaika cztery.*
 
 ![Logowanie](img/logowanie.png)
 

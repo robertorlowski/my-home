@@ -18,7 +18,7 @@
 
 | File | Role |
 |---|---|
-| `device-type.tsx` | registry entry: Hydrofor, Dane, Wykres, Operacje, Ustawienia (no schedules) |
+| `device-type.tsx` | registry entry: Hydrofor, Statystyki, Ustawienia, Dane, Operacje (no schedules) |
 | `api.ts` | `WaterPressureTankRequests` |
 | `types.ts` | runs, flow (`WaterFlow`), summaries, water meter |
 | `pages/Home.tsx` | "Instrument" layout: Offline banner, the "Woda dziś" hero with pump and compressor switches and compressor time / flow KPIs, today's runs card (every 5 s) and 7-day consumption bars |

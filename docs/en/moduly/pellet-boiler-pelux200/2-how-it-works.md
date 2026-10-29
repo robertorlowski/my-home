@@ -93,7 +93,7 @@ The application form (the "Odczyt" card in Settings) takes whole seconds (30–3
 |---|---|---|
 | **Kocioł** (`/`) | `GET /pellet-boiler-pelux200/last`, `GET /device/properties` (the interval, to judge freshness), the last settings reading (season, operating mode) | last reading every 30 s |
 | **Dane** (`/data`) | `GET /pellet-boiler-pelux200/list?date=YYYY-MM-DD`, CSV in the browser | on entry and on date change |
-| **Wykres** (`/chart`) | day temperatures from `GET /pellet-boiler-pelux200/list`, burnt pellet | on day and view change |
+| **Statystyki** (`/chart`) | day temperatures from `GET /pellet-boiler-pelux200/list`, burnt pellet | on day and view change |
 | **Harmonogram** (`/schedules`), **Alarmy** (`/alarms`), **Operacje** (`/operations`) | boiler schedule and mode presets, regulator alarms, operations log (shared page `core/pages/Operations`) — described in CLAUDE.md, section 5c | Harmonogram: state every minute; Operacje: today every 30 s |
 | **Ustawienia** (`/settings`) | `GET/PUT /device/properties` (the "Odczyt" card); operating mode, main parameters and last changes (parameter requests); the "Sterownik" and "Udostępnianie" cards from `core` with the firmware state: `GET /devices`, `GET /firmware/pellet-boiler-pelux200`, `POST`/`DELETE /devices/:rootId/firmware-update` ("Aktualizuj firmware" / "Anuluj aktualizację"; from 1.5.0 the controller gets the offer in the `commands/next` reply within about 15 s) | on entry; the "Sterownik" card every 15 s while an update request is pending |
 

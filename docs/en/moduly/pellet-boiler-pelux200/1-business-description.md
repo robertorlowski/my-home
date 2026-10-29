@@ -13,7 +13,7 @@ The module lets you:
 - **see the current boiler state** — from a phone too, without walking up to the panel;
 - **browse the readings of a chosen day** and download them as a CSV file;
 - **set how often the controller reads the boiler** (from half a minute to an hour; every 5 minutes by default);
-- the application also has the tabs Wykres (day temperatures, burnt pellet), Harmonogram (season and CWU in time windows), Alarmy and Operacje, and changing regulator parameters from Settings — described in [CLAUDE.md](../../../../CLAUDE.md), section 5c (Polish); this documentation describes the reading stage and the look of the screens.
+- the application also has the tabs Statystyki (day temperatures, burnt pellet), Harmonogram (season and CWU in time windows), Alarmy and Operacje, and changing regulator parameters from Settings — described in [CLAUDE.md](../../../../CLAUDE.md), section 5c (Polish); this documentation describes the reading stage and the look of the screens.
 
 ## Implementation status
 
@@ -29,7 +29,7 @@ The boiler controller (board, pages, flashing): [devices/pellet-boiler-pelux200/
 
 ## Screens
 
-The application interface is in Polish; the screenshots show it as is. They come from the local demo database with readings from 12–13.10.2026 (the "Instrument" look, light theme); the controller was offline at the time, hence the "Offline od …" banner. The boiler menu has seven tabs: Kocioł, Dane, Wykres, Harmonogram, Alarmy, Operacje, Ustawienia.
+The application interface is in Polish; the screenshots show it as is. They come from the local demo database with readings from 12–13.10.2026 (the "Instrument" look, light theme); the controller was offline at the time, hence the "Offline od …" banner. The boiler menu has seven tabs: Kocioł, Statystyki, Harmonogram, Ustawienia, Alarmy, Dane, Operacje.
 
 ![Boiler view](../../../moduly/pellet-boiler-pelux200/img/piec-kociol.png)
 
@@ -37,7 +37,7 @@ The application interface is in Polish; the screenshots show it as is. They come
 
 ![Boiler view on a phone](../../../moduly/pellet-boiler-pelux200/img/piec-kociol-telefon.png)
 
-*The same view on a phone (360 px): the cards stack, the bottom navigation shows Kocioł, Dane, Wykres, Harmonogram and "Więcej" (Alarmy, Operacje, Ustawienia, controller list).*
+*The same view on a phone (360 px): the cards stack, the bottom navigation shows Kocioł, Statystyki, Harmonogram, Ustawienia and "Więcej" (Alarmy, Dane, Operacje, controller list).*
 
 ![Data view](../../../moduly/pellet-boiler-pelux200/img/piec-dane.png)
 
@@ -45,7 +45,7 @@ The application interface is in Polish; the screenshots show it as is. They come
 
 ![Chart view](../../../moduly/pellet-boiler-pelux200/img/piec-wykres.png)
 
-*"Wykres" (Chart): the Temperatury / Spalony pellet switch, day navigation, series chips (boiler, CWU, CO = mixer 1, mixer 2, outdoor) and the "Temperatury kotła" card with a legend; burning periods are highlighted with a band on the chart.*
+*"Statystyki" (Statistics): the Temperatury / Spalony pellet switch, day navigation, series chips (boiler, CWU, CO = mixer 1, mixer 2, outdoor) and the "Temperatury kotła" card with a legend; burning periods are highlighted with a band on the chart.*
 
 ![Schedule view](../../../moduly/pellet-boiler-pelux200/img/piec-harmonogram.png)
 

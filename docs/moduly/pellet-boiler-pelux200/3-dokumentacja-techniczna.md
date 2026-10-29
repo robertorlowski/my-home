@@ -19,7 +19,7 @@ Bez schedulera i bez serwisu operacji. Moduł importuje tylko z `core` (`device-
 
 | Plik | Rola |
 |---|---|
-| `device-type.tsx` | wpis do rejestru: Kocioł, Dane, Wykres, Harmonogram, Alarmy, Operacje, Ustawienia (ikona płomienia); `firmwareUpdates: true` (trybik firmware na kafelku, strona `/firmware/pellet-boiler-pelux200`) i `firmwareUpdateHint`; pola okna „Dane sterownika” (`components/BoilerConfigFields.tsx`: powiązana pompa ciepła) |
+| `device-type.tsx` | wpis do rejestru: Kocioł, Statystyki, Harmonogram, Ustawienia, Alarmy, Dane, Operacje (ikona płomienia); `firmwareUpdates: true` (trybik firmware na kafelku, strona `/firmware/pellet-boiler-pelux200`) i `firmwareUpdateHint`; pola okna „Dane sterownika” (`components/BoilerConfigFields.tsx`: powiązana pompa ciepła) |
 | `api.ts` | `PelletBoilerRequests` (`getLast`, `getList`, ustawienia regulatora, zlecenia, harmonogram) |
 | `types.ts` | `PelletBoilerReading` i typy ustawień, zleceń i harmonogramu |
 | `pages/Home.tsx` | układ „Instrument”: pasek Offline, karta hero (temperatura kotła, zadana, stan z płomieniem, chipy sezonu i trybu, KPI), karty CWU i mieszaczy, „Urządzenia kotła”, „Pozostałe”; odświeżanie co 30 s |

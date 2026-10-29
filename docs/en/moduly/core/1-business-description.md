@@ -72,7 +72,7 @@ The user interface is in Polish; the screenshots below show it as is.
 |---|---|
 | ![Controller bar on a phone](../../../moduly/core/img/nawigacja-pompa-telefon.png) | !["Więcej" sheet](../../../moduly/core/img/nawigacja-wiecej-telefon.png) |
 
-*The controller bar: a back arrow to the list, the name, below it a Włączony / Wyłączony chip (since 2026-10-27, as on the tile) and a kind-dependent description (mode and SN, number of panels, last run, relays and firmware, regulator and read interval), the theme icon and the account avatar. On a computer (from 900 px) the tabs form a side menu on the left; on a phone the bottom navigation shows the first four views and "Więcej" — a sheet with the remaining views and "Lista sterowników". The tabs depend on the kind: the heat pump has six (HP, Dane, Wykres, Harmonogram, Operacje, Ustawienia), the tank and the switch five, the boiler seven (with Alarmy), photovoltaics four.*
+*The controller bar: a back arrow to the list, the name, below it a Włączony / Wyłączony chip (since 2026-10-27, as on the tile) and a kind-dependent description (mode and SN, number of panels, last run, relays and firmware, regulator and read interval), the theme icon and the account avatar. On a computer (from 900 px) the tabs form a side menu on the left; on a phone the bottom navigation shows the first four views and "Więcej" — a sheet with the remaining views and "Lista sterowników". The tabs depend on the kind: the heat pump has six (HP, Statystyki, Harmonogram, Ustawienia, Dane, Operacje), the tank and the switch five, the boiler seven (with Alarmy), photovoltaics four.*
 
 ![Login](../../../moduly/core/img/logowanie.png)
 

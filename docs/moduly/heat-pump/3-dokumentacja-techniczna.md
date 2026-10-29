@@ -26,7 +26,7 @@
 
 | Plik | Rola |
 |---|---|
-| `device-type.tsx` | wpis do rejestru: menu HP, Dane, Wykres, Harmonogram, Operacje, Ustawienia; `/hp` poza menu; pola okna „Dane sterownika” (podłączenie CWU / CO, pojemność zbiornika, PV) |
+| `device-type.tsx` | wpis do rejestru: menu HP, Statystyki, Harmonogram, Ustawienia, Dane, Operacje; `/hp` poza menu; pola okna „Dane sterownika” (podłączenie CWU / CO, pojemność zbiornika, PV) |
 | `api.ts` | `HpRequests`: telemetria, dni, bilans, operacje, akcje, błąd, harmonogramy |
 | `types.ts` | typy telemetrii, PV, operacji i harmonogramów po stronie klienta; `pumpWorkMode` (A / CWU → Automatyczny, OFF → Wyłączony, reszta → Ręczny) |
 | `pages/Home/` | widok główny w układzie „Instrument”: paski (Offline, pompa wstrzymana, ładowanie CWU), karta hero (temperatura zbiornika na pasku zakresu, sprężarka, KPI), karty „Pomiary”, „Obieg”, „Energia dziś”; WebSocket `update` |

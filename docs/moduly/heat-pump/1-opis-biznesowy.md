@@ -40,7 +40,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z danymi z 13.10.2026 (wygląd 
 |---|---|
 | ![Widok główny na telefonie](img/glowny-telefon.png) | ![Harmonogram na telefonie](img/harmonogramy-telefon.png) |
 
-*Na telefonie (360 px) karty idą jedna pod drugą, a dolna nawigacja pokazuje HP, Dane, Wykres, Harmonogram i „Więcej” (Operacje, Ustawienia, lista sterowników).*
+*Na telefonie (360 px) karty idą jedna pod drugą, a dolna nawigacja pokazuje HP, Statystyki, Harmonogram, Ustawienia i „Więcej” (Dane, Operacje, lista sterowników).*
 
 ![Dane](img/dane.png)
 

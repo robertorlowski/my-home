@@ -93,7 +93,7 @@ Formularz w aplikacji (karta „Odczyt” w Ustawieniach) przyjmuje pełne sekun
 |---|---|---|
 | **Kocioł** (`/`) | `GET /pellet-boiler-pelux200/last`, `GET /device/properties` (interwał do oceny aktualności), ostatni odczyt ustawień (sezon, tryb pracy) | ostatni odczyt co 30 s |
 | **Dane** (`/data`) | `GET /pellet-boiler-pelux200/list?date=YYYY-MM-DD`, CSV w przeglądarce | przy wejściu i zmianie daty |
-| **Wykres** (`/chart`) | temperatury dnia z `GET /pellet-boiler-pelux200/list`, spalony pellet | przy zmianie dnia i widoku |
+| **Statystyki** (`/chart`) | temperatury dnia z `GET /pellet-boiler-pelux200/list`, spalony pellet | przy zmianie dnia i widoku |
 | **Harmonogram** (`/schedules`), **Alarmy** (`/alarms`), **Operacje** (`/operations`) | harmonogram kotła i nastawy trybów, alarmy regulatora, dziennik operacji (strona wspólna `core/pages/Operations`) — opis w CLAUDE.md, punkt 5c | Harmonogram: stan co minutę; Operacje: dziś co 30 s |
 | **Ustawienia** (`/settings`) | `GET/PUT /device/properties` (karta „Odczyt”); tryb pracy, główne parametry i ostatnie zmiany (zlecenia parametrów); karty „Sterownik” i „Udostępnianie” z `core` ze stanem firmware: `GET /devices`, `GET /firmware/pellet-boiler-pelux200`, `POST`/`DELETE /devices/:rootId/firmware-update` („Aktualizuj firmware” / „Anuluj aktualizację”; sterownik od 1.5.0 dostaje ofertę w odpowiedzi `commands/next` w ciągu ok. 15 s) | przy wejściu; karta „Sterownik” co 15 s, gdy czeka zlecenie aktualizacji |
 

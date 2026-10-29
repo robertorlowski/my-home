@@ -26,7 +26,7 @@
 
 | File | Role |
 |---|---|
-| `device-type.tsx` | registry entry: HP, Dane, Wykres, Harmonogram, Operacje, Ustawienia menu; `/hp` outside the menu; "Dane sterownika" dialog fields (CWU / CO connection, tank volume, PV) |
+| `device-type.tsx` | registry entry: HP, Statystyki, Harmonogram, Ustawienia, Dane, Operacje menu; `/hp` outside the menu; "Dane sterownika" dialog fields (CWU / CO connection, tank volume, PV) |
 | `api.ts` | `HpRequests`: telemetry, days, balance, operations, actions, error, schedules |
 | `types.ts` | client-side telemetry, PV, operation and schedule types; `pumpWorkMode` (A / CWU → Automatyczny, OFF → Wyłączony, the rest → Ręczny) |
 | `pages/Home/` | main view in the "Instrument" layout: banners (Offline, pump paused, CWU loading), hero card (tank temperature on a range bar, compressor, KPIs), the "Pomiary", "Obieg" and "Energia dziś" cards; WebSocket `update` |

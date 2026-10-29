@@ -14,7 +14,7 @@ Moduł pozwala:
 - **przejrzeć odczyty z wybranego dnia** i pobrać je jako plik CSV;
 - **ustawić, jak często sterownik odczytuje kocioł** (od pół minuty do godziny; domyślnie co 5 minut);
 - **kafelek prosty** (2026-10-21, dla osoby, która ma tylko włączać i wyłączać piec): na liście sterowników chip „Włączony · Zima / Lato”, „Wyłączony” albo „Offline”, plakietka „Praca” przy paleniu, „Piec włączony / wyłączony” z opisem ogrzewania domu i temperaturą kotła oraz przyciski: „Włącz piec” (włącza regulator, Zimę i CWU, jeśli było wyłączone), „Wyłącz piec”, „Włącz CWU” / „Wyłącz CWU” z linią „CWU teraz X °C, zadana Y °C”; włączany w oknie „Dane sterownika” („Kafelek prosty”) albo udostępniany jako „Panel prosty” — opis mechanizmu w [CLAUDE.md](../../../CLAUDE.md), punkt 5c;
-- w aplikacji są też zakładki Wykres (temperatury dnia, spalony pellet), Harmonogram (sezon i CWU w oknach godzin), Alarmy i Operacje oraz zmiana parametrów regulatora z Ustawień — opis w [CLAUDE.md](../../../CLAUDE.md), punkt 5c; niniejsza dokumentacja opisuje etap odczytu i wygląd ekranów.
+- w aplikacji są też zakładki Statystyki (temperatury dnia, spalony pellet), Harmonogram (sezon i CWU w oknach godzin), Alarmy i Operacje oraz zmiana parametrów regulatora z Ustawień — opis w [CLAUDE.md](../../../CLAUDE.md), punkt 5c; niniejsza dokumentacja opisuje etap odczytu i wygląd ekranów.
 
 ## Stan wdrożenia
 
@@ -30,7 +30,7 @@ Sterownik pieca (płytka, strony, wgrywanie): [devices/pellet-boiler-pelux200/RE
 
 ## Ekrany
 
-Zrzuty pochodzą z lokalnej bazy demonstracyjnej z odczytami z 12–13.10.2026 (wygląd „Instrument”, motyw jasny); sterownik był wtedy offline, stąd pasek „Offline od …”. Menu kotła ma siedem zakładek: Kocioł, Dane, Wykres, Harmonogram, Alarmy, Operacje, Ustawienia.
+Zrzuty pochodzą z lokalnej bazy demonstracyjnej z odczytami z 12–13.10.2026 (wygląd „Instrument”, motyw jasny); sterownik był wtedy offline, stąd pasek „Offline od …”. Menu kotła ma siedem zakładek: Kocioł, Statystyki, Harmonogram, Ustawienia, Alarmy, Dane, Operacje.
 
 ![Widok Kocioł](img/piec-kociol.png)
 
@@ -38,15 +38,15 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z odczytami z 12–13.10.2026 (
 
 ![Widok Kocioł na telefonie](img/piec-kociol-telefon.png)
 
-*Ten sam widok na telefonie (360 px): karty jedna pod drugą, dolna nawigacja Kocioł, Dane, Wykres, Harmonogram i „Więcej” (Alarmy, Operacje, Ustawienia, lista sterowników).*
+*Ten sam widok na telefonie (360 px): karty jedna pod drugą, dolna nawigacja Kocioł, Statystyki, Harmonogram, Ustawienia i „Więcej” (Alarmy, Dane, Operacje, lista sterowników).*
 
 ![Widok Dane](img/piec-dane.png)
 
 *Dane: pasek filtrów (dzień strzałkami ‹ › albo z kalendarza, „Wszystkie parametry” — domyślnie główne kolumny, CSV zawsze pełny) i karta „Odczyty dnia” z liczbą odczytów; wiersze od najnowszego. Tabela przewija się w obu kierunkach we własnym kontenerze z przyklejonym nagłówkiem.*
 
-![Widok Wykres](img/piec-wykres.png)
+![Widok Statystyki](img/piec-wykres.png)
 
-*Wykres: przełącznik Temperatury / Spalony pellet, nawigacja po dniach, chipy serii (kocioł, CWU, CO = mieszacz 1, mieszacz 2, zewnętrzna) i karta „Temperatury kotła” z legendą; okresy palenia są podświetlone pasem na wykresie.*
+*Statystyki: przełącznik Temperatury / Spalony pellet, nawigacja po dniach, chipy serii (kocioł, CWU, CO = mieszacz 1, mieszacz 2, zewnętrzna) i karta „Temperatury kotła” z legendą; okresy palenia są podświetlone pasem na wykresie.*
 
 ![Widok Harmonogram](img/piec-harmonogram.png)
 

@@ -99,7 +99,7 @@ const pl: Record<string, string> = {
   // zakładki udostępnienia
   'tab./': 'Podgląd',
   'tab./data': 'Dane',
-  'tab./chart': 'Wykres',
+  'tab./chart': 'Statystyki',
   'tab./schedules': 'Harmonogram',
   'tab./alarms': 'Alarmy',
   'tab./operations': 'Operacje',
@@ -235,7 +235,7 @@ const en: Record<keyof typeof pl, string> = {
   'tank.compressor': 'compressor',
   'tab./': 'Overview',
   'tab./data': 'Data',
-  'tab./chart': 'Chart',
+  'tab./chart': 'Statistics',
   'tab./schedules': 'Schedule',
   'tab./alarms': 'Alarms',
   'tab./operations': 'Operations',

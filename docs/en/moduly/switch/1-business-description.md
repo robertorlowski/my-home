@@ -32,7 +32,7 @@ The screenshots come from the local demo database (one relay "Bojler", data from
 
 | Phone | Description |
 |---|---|
-| ![Main view on a phone](../../../moduly/switch/img/glowny-telefon.png) | On a phone (360 px) the cards stack, and the bottom navigation shows Włącznik, Dane, Harmonogram, Operacje and "Więcej" (Ustawienia, controller list). When the relay state does not match the command yet, the card shows "Czeka na sterownik…" (waiting for the controller). |
+| ![Main view on a phone](../../../moduly/switch/img/glowny-telefon.png) | On a phone (360 px) the cards stack, and the bottom navigation shows Włącznik, Harmonogram, Ustawienia, Dane and "Więcej" (Operacje, controller list). When the relay state does not match the command yet, the card shows "Czeka na sterownik…" (waiting for the controller). |
 
 ![Data](../../../moduly/switch/img/dane.png)
 

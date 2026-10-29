@@ -34,7 +34,7 @@ const WRITE_RULES: { method: string; path: RegExp; tabs: string[] | 'any' }[] = 
   // pompa ciepła: przełączniki na Podglądzie i panel Ustawień; harmonogramy; ustawienia domyślne w Harmonogramie
   { method: 'POST', path: /^\/operation\/(set|action)$/, tabs: ['/', '/settings'] },
   { method: '*', path: /^\/schedules(\/[^/]+)?$/, tabs: ['/schedules'] },
-  // ustawienia sterownika; Wykres: cena pelletu kotła (koszt ogrzewania)
+  // ustawienia sterownika; Statystyki (/chart): cena pelletu kotła (koszt ogrzewania)
   { method: 'PUT', path: /^\/device\/properties$/, tabs: ['/settings', '/schedules', '/chart'] },
   // kocioł
   { method: 'POST', path: /^\/pellet-boiler-pelux200\/commands$/, tabs: ['/', '/settings'] },

@@ -31,11 +31,11 @@ export const heatPumpDeviceType: DeviceTypeView = {
 	DefinitionFields: PumpConfigFields,
 	views: [
 		{ path: '/', label: 'HP', icon: <HeatPumpIcon />, element: <HP /> },
-		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <HeatPumpTable /> },
-		{ path: '/chart', label: 'Wykres', icon: <ChartIcon />, element: <HeatPumpChart /> },
+		{ path: '/chart', label: 'Statystyki', icon: <ChartIcon />, element: <HeatPumpChart /> },
 		{ path: '/schedules', label: 'Harmonogram', icon: <ScheduleIcon />, element: <Schedules /> },
-		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 		{ path: '/settings', label: 'Ustawienia', icon: <SettingsIcon />, element: <Settings /> },
+		{ path: '/data', label: 'Dane', icon: <DataIcon />, element: <HeatPumpTable /> },
+		{ path: '/operations', label: 'Operacje', icon: <OperationsIcon />, element: <OperationsPage /> },
 	],
 	// /hp: drugi adres widoku głównego, poza menu (starsze linki); hydrofor go nie ma, więc tam prowadzi na /
 	extraRoutes: [{ path: '/hp', element: <HP /> }],

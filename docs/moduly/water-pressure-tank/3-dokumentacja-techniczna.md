@@ -18,7 +18,7 @@
 
 | Plik | Rola |
 |---|---|
-| `device-type.tsx` | wpis do rejestru: Hydrofor, Dane, Wykres, Operacje, Ustawienia (bez harmonogramów) |
+| `device-type.tsx` | wpis do rejestru: Hydrofor, Statystyki, Ustawienia, Dane, Operacje (bez harmonogramów) |
 | `api.ts` | `WaterPressureTankRequests` |
 | `types.ts` | uruchomienia, przepływ (`WaterFlow`), podsumowania, wodomierz |
 | `pages/Home.tsx` | układ „Instrument”: pasek Offline, hero „Woda dziś” z przełącznikami pompy i kompresora oraz KPI czasu kompresora i przepływu, karta dzisiejszych uruchomień (co 5 s) i słupki zużycia z 7 dni |
