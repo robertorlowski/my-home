@@ -7,13 +7,14 @@
 | File | Role |
 |---|---|
 | `server.ts` | entry point: MongoDB, heat pump scheduler, PV panel cleanup, weather, HTTP and WebSocket listening |
-| `core/app.ts` | Express application: CORS, JSON, `device-context` and routes under `/api` |
+| `core/app.ts` | Express application: CORS, response compression (`compression`, only with `Accept-Encoding` gzip / br / deflate, controllers unchanged), JSON, `device-context` and routes under `/api` |
 | `core/routes.ts` | assembles the routes: devices and `/temperature` from core plus each module's `routes.ts` |
 | `core/types.ts` | `DeviceType`, `WeekDay` (schedule days of the heat pump and the switch), `Device`, `DeviceProperties` (one settings field for all kinds), `DeviceTypeModule` |
 | `core/device-types.ts` | controller kind registry: `DeviceType` → module description (`device-type.ts`) |
 | `core/time.ts` | `TIME_ZONE = Europe/Warsaw`, Warsaw day boundaries as a UTC range |
 | `core/websocket.ts` | WebSocket server (`/ws?rootId=`), `sendMessage(type, rootId)` with a 1 s delay |
-| `core/middleware/device-context.ts` | resolves the device from `rootId` or (for controller paths in the `controllerPaths` map) from the pair `{deviceId, deviceType}`; 400/404/409 |
+| `core/middleware/device-context.ts` | resolves the device from `rootId` or (for controller paths in the `controllerPaths` map) from the pair `{deviceId, deviceType}`, from the device document cache; 400/404/409 |
+| `core/services/device-cache.service.ts`, `device-cache-store.ts` | device documents cached in memory (`cachedDeviceById`, `cachedDeviceBySn`) for controller paths; every write to `devices` through the model clears the cache (hooks in `device.model.ts`), refreshed every 5 min (`DEVICE_CACHE_TTL_MS`) |
 | `core/models/device.model.ts` | Mongoose model `devices`: device schema, `properties`, embedded schedules and legacy `settings` |
 | `core/controllers/device.controller.ts` | device routes; the registration reply includes `settings` from the registry; firmware update request and its cancellation |
 | `core/controllers/meteo.controller.ts` | `GET /temperature` |

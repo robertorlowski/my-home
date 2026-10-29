@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import app from '../src/core/app'
 import { WaterPressureTankRunModel } from '../src/modules/water-pressure-tank/models/water-pressure-tank-run.model'
 import { addWaterPressureTankReport, pumpSeconds } from '../src/modules/water-pressure-tank/services/water-pressure-tank.service'
+import { waterPressureTankTile } from '../src/modules/water-pressure-tank/tile'
 
 const register = (deviceId: string, extra: Record<string, unknown> = {}) =>
   request(app).post('/api/devices/register').send({
@@ -96,6 +97,23 @@ describe('Hydrofor (water-pressure-tank)', () => {
       expect(flow.body.litersPerMinute).toBeNull();
       const runs = await request(app).get(`/api/water-pressure-tank/runs?rootId=${rootId}&from=2026-09-02&to=2026-09-02`);
       expect(runs.body[0]).toMatchObject({ pumpSeconds: 90, waterLiters: null });
+    });
+
+    it('kafelek: dane z pamięci odświeżają się po wiadomości sterownika i zmianie wodomierza', async () => {
+      const { body } = await register('C3A1B2C3D453');
+      const rootId = body.rootId;
+      const now = new Date('2026-09-10T12:00:00Z');
+      const tile = () => waterPressureTankTile(rootId, {} as never, new Date(now.getTime() + 60_000));
+      await meter(rootId, '2026-09-01T00:00:00Z', 1);
+      await addWaterPressureTankReport(rootId, { runId: 1, pumpRunS: 100 }, now);
+      expect((await tile())?.row?.[1]?.value).toBe('1');
+      expect((await tile())?.note?.text).toBeDefined(); // bez przepływu: ostrzeżenie
+      // drugie uruchomienie dziś: kafelek liczy je od razu, mimo danych w pamięci
+      await addWaterPressureTankReport(rootId, { runId: 2, pumpRunS: 100 }, new Date(now.getTime() + 30_000));
+      expect((await tile())?.row?.[1]?.value).toBe('2');
+      // drugi odczyt wodomierza daje przepływ: ostrzeżenie znika
+      await meter(rootId, '2026-09-10T12:01:00Z', 1.2);
+      expect((await tile())?.note).toBeUndefined();
     });
   });
 

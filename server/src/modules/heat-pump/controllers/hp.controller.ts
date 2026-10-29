@@ -14,7 +14,7 @@ import { firmwareOfferForRoot } from '../../../core/services/firmware.service'
 import { systemMeta } from '../../../core/services/operation-log.service'
 import { markOperationsDelivered, noteOperationChange } from '../services/hp-operation-log.service'
 import { serverBaseUrl } from '../../../core/controllers/firmware.controller'
-import { DeviceDocument, DeviceModel } from '../../../core/models/device.model'
+import { cachedDeviceById } from '../../../core/services/device-cache.service'
 import { toControllerOperation } from '../services/controller-contract.service'
 import { pumpWorkMode } from '../services/pump-mode.service'
 import { getBoilerCoPump } from '../services/cwu-loading.service'
@@ -269,7 +269,8 @@ export const addHp = async (req: Request<{}, {}, HpEntry>, res: Response) => {
     const firmware = await firmwareOfferForRoot(rootId, serverBaseUrl(req));
     // co od 1.2.0: work_mode MANUAL / AUTO / OFF, temp_min / temp_max i konfiguracja pompy
     // (controller-contract.service.ts); starsze co dostaje operację bez zmian
-    const device = await DeviceModel.findById(rootId).select('firmwareVersion properties pumpConfig').lean<DeviceDocument>();
+    // z pamięci dokumentów urządzeń (zapis ustawień i konfiguracji pompy ją kasuje)
+    const device = await cachedDeviceById(rootId);
     const controllerOperation = toControllerOperation(operation, {
       firmwareVersion: device?.firmwareVersion,
       pumpMode: pumpWorkMode(device?.properties?.work_mode),

@@ -187,7 +187,7 @@ WebSocket niczego nie przenosi poza sygnałem „zajrzyj po dane”. Operacje za
 ## Start serwera
 
 1. Wczytanie zmiennych środowiskowych; bez `MONGODB_URI` serwer kończy start błędem.
-2. Połączenie z MongoDB.
+2. Połączenie z MongoDB (serwery bazy sprawdzane raz na minutę, `serverMonitoringMode: 'poll'`, żeby ograniczyć transfer na Render).
 3. Start schedulera pompy ciepła (przebieg od razu, potem co minutę).
 4. Czyszczenie szczegółów paneli PV starszych niż 90 dni (od razu i co 24 h).
 5. Pobranie temperatury IMGW i odświeżanie co 10 minut.

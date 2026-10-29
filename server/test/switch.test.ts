@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import app from '../src/core/app'
 import { DeviceModel } from '../src/core/models/device.model'
 import { SwitchRelayModel } from '../src/modules/switch/models/switch-relay.model'
+import { SwitchActivationModel } from '../src/modules/switch/models/switch-activation.model'
 import { activeSchedule, nextScheduleStart } from '../src/modules/switch/services/switch-schedule.service'
 import { listRelays, reportState, setRelayMode } from '../src/modules/switch/services/switch.service'
 import { switchTile } from '../src/modules/switch/tile'
@@ -198,6 +199,28 @@ describe('Włącznik (switch)', () => {
         offAt: at('2026-10-05T06:11').toISOString(),
       });
     });
+
+    it('zgłoszenia co 5 s: lastSeenAt w bazie raz na minutę, koniec włączenia z ostatniego zgłoszenia w pamięci', async () => {
+      const { body } = await register('4CC382C520E1');
+      const rootId = body.rootId;
+      await request(app).post(`/api/switch/schedules?rootId=${rootId}`)
+        .send({ relay: 1, dayOfWeek: -1, startTime: '06:00', endTime: '08:00' }).expect(201);
+      const on = (seconds: number) => reportState(rootId, 'SN',
+        { uptimeS: 900 + seconds, relays: [{ on: true, changedS: 600 + seconds }] }, new Date(at('2026-10-05T06:10').getTime() + seconds * 1000));
+      await on(0);
+      await on(5);
+      await on(30);
+      // baza ma czas pierwszego zgłoszenia (do minuty bez zapisu), historia jedno włączenie
+      const relay = await SwitchRelayModel.findOne({ rootId, relay: 1 }).lean();
+      expect(relay?.lastSeenAt?.toISOString()).toBe(at('2026-10-05T06:10').toISOString());
+      expect(await SwitchActivationModel.countDocuments({ rootId })).toBe(1);
+
+      await reportState(rootId, 'SN', { uptimeS: 30, relays: [{ on: false, changedS: 30 }] }, at('2026-10-05T07:00'));
+      const day = await request(app).get(`/api/switch/activations?rootId=${rootId}&date=2026-10-05`).expect(200);
+      expect(day.body[0]).toMatchObject({ approximate: true, offAt: new Date(at('2026-10-05T06:10').getTime() + 30_000).toISOString() });
+      // zmiana stanu zapisuje się od razu
+      expect((await SwitchRelayModel.findOne({ rootId, relay: 1 }).lean())?.lastSeenAt?.toISOString()).toBe(at('2026-10-05T07:00').toISOString());
+    });
   });
 
   describe('diagnostyka sterownika (firmware 1.1.2)', () => {
@@ -260,6 +283,25 @@ describe('Włącznik (switch)', () => {
       // błędna pogoda nie nadpisuje poprawnej
       await state({ weather: { code: 'x' } });
       expect((await request(app).get('/api/temperature').expect(200)).body.weather.code).toBe(61);
+    });
+
+    it('miejsca pogody tylko przy zmianie listy, po restarcie płytki i na początku', async () => {
+      const { body } = await register('4CC382C520FC');
+      const state = (uptimeS: number) => request(app).post(`/api/switch/state?rootId=${body.rootId}`)
+        .send({ uptimeS, relays: [{ on: false, changedS: uptimeS }] }).expect(200);
+      expect((await state(60)).body.weather_queries).toHaveLength(1);
+      // ta sama lista: bez pól, firmware zostawia swoją
+      const quiet = (await state(65)).body;
+      expect(quiet.weather_queries).toBeUndefined();
+      expect(quiet.weather_query).toBeUndefined();
+      expect(quiet.relays).toHaveLength(1);
+      // nowy kafelek pogody: nowa lista od razu
+      const tile = (await request(app).post('/api/weather-tiles').send({ name: 'Zakopane', lat: 49.3, lon: 19.95 }).expect(201)).body;
+      expect((await state(70)).body.weather_queries.map((q: { id: string }) => q.id)).toContain(tile.id);
+      expect((await state(75)).body.weather_queries).toBeUndefined();
+      // restart płytki (mniejszy czas pracy): lista od nowa
+      expect((await state(3)).body.weather_queries).toHaveLength(2);
+      await request(app).delete(`/api/weather-tiles/${tile.id}`).expect(204);
     });
   });
 

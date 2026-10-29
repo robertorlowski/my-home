@@ -1,6 +1,7 @@
 // Model urządzenia (kolekcja devices): rodzaj, deviceId (SN sterownika), nazwa,
 // sterownik domyślny, ustawienia (properties) i — dla pompy ciepła — osadzone
 // harmonogramy. _id dokumentu to rootId używany w API, WebSocket i rekordach danych.
+import { forgetDevices } from '../services/device-cache-store';
 import mongoose, { Schema, Model, Document } from 'mongoose';
 import { Device, DeviceProperties, DeviceType } from '../types';
 import { ScheduleEntrySchema } from '../../modules/heat-pump/models/schedule.model';
@@ -116,6 +117,16 @@ const DeviceSchema = new Schema<DeviceDocument>(
   },
   { timestamps: true, collection: 'devices' }
 );
+
+// Każdy zapis do devices kasuje pamięć dokumentów urządzeń (core/services/device-cache.service.ts, 2026-10-29).
+// Zapis przerwany błędem (rzadki) pokrywa odświeżanie pamięci po DEVICE_CACHE_TTL_MS.
+DeviceSchema.post('save', () => forgetDevices());
+DeviceSchema.post(
+  ['updateOne', 'updateMany', 'findOneAndUpdate', 'findOneAndReplace', 'replaceOne', 'deleteOne', 'deleteMany', 'findOneAndDelete'],
+  () => forgetDevices(),
+);
+DeviceSchema.post('insertMany', () => forgetDevices());
+DeviceSchema.post('bulkWrite', () => forgetDevices());
 
 // Nazwa modelu „Root” jest historyczna; kolekcja to devices.
 // mongoose.models.Root chroni przed ponowną rejestracją modelu (testy, hot reload).

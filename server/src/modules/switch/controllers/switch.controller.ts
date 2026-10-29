@@ -31,7 +31,22 @@ const handleError = (res: Response, error: unknown) => {
   return res.status(500).json({ message: String(error) });
 };
 
-// POST /switch/state {uptimeS?, relays: [{on, changedS}], diag?, weather?} → {relays: [{on, offAfterS?}], firmware?, weather_query, weather_queries}
+// Miejsca pogody w odpowiedzi tylko wtedy, gdy włącznik może ich nie mieć (2026-10-29, limit transferu Render):
+// pierwsze zgłoszenie po starcie serwera, zmiana listy, restart płytki (uptimeS mniejszy niż w poprzednim
+// zgłoszeniu) i co WEATHER_RESEND_MS na wypadek zgubionej odpowiedzi. Firmware (devices/common/weather,
+// WeatherPlaces.update) bez weather_queries i weather_query zostawia swoją listę bez zmian.
+const WEATHER_RESEND_MS = 10 * 60 * 1000;
+const weatherSent = new Map<string, { key: string; at: number; uptimeS?: number }>();
+
+function shouldSendWeather(rootId: string, key: string, uptimeS: number | undefined, now: number): boolean {
+  const previous = weatherSent.get(rootId);
+  const rebooted = uptimeS === undefined || previous?.uptimeS === undefined || uptimeS < previous.uptimeS;
+  const send = !previous || previous.key !== key || rebooted || now - previous.at >= WEATHER_RESEND_MS;
+  weatherSent.set(rootId, send ? { key, at: now, uptimeS } : { ...previous, uptimeS });
+  return send;
+}
+
+// POST /switch/state {uptimeS?, relays: [{on, changedS}], diag?, weather?} → {relays: [{on, offAfterS?}], firmware?, weather_query?, weather_queries?}
 // firmware: oferta OTA tylko przy zleceniu „Aktualizuj” z aplikacji (core/services/firmware.service.ts).
 export async function postSwitchState(req: Request, res: Response) {
   const report = parseStateReport(req.body);
@@ -51,9 +66,10 @@ export async function postSwitchState(req: Request, res: Response) {
     // weather_query: dom (włącznik 1.1.3 pobiera jedno miejsce); weather_queries: wszystkie kafelki pogody (od 1.2.0)
     const queries = await weatherQueries();
     const [home] = queries;
-    return res.status(200).json({
-      relays, ...(firmware ? { firmware } : {}), weather_query: { lat: home.lat, lon: home.lon }, weather_queries: queries,
-    });
+    const weather = shouldSendWeather(rootId, JSON.stringify(queries), report.uptimeS, Date.now())
+      ? { weather_query: { lat: home.lat, lon: home.lon }, weather_queries: queries }
+      : {};
+    return res.status(200).json({ relays, ...(firmware ? { firmware } : {}), ...weather });
   } catch (error) {
     return handleError(res, error);
   }

@@ -127,6 +127,7 @@ export async function createWeatherTile(input: WeatherTileInput, viewer?: TileVi
   }
   if (viewer) {
     const tile = (await WeatherTileModel.create({ ...data, hidden: false, ownerId: String(viewer._id) })).toObject();
+    forgetWeatherQueries();
     const sortOrder = await appendToViewerOrder(viewer, String(tile._id));
     return { ...toPublic(tile), sortOrder, hidden: false };
   }
@@ -136,6 +137,7 @@ export async function createWeatherTile(input: WeatherTileInput, viewer?: TileVi
     DeviceModel.findOne().sort({ sortOrder: -1 }).select('sortOrder').lean<{ sortOrder?: number }>(),
   ]);
   const tile = await WeatherTileModel.create({ ...data, sortOrder: Math.max(lastTile?.sortOrder ?? -1, lastDevice?.sortOrder ?? -1) + 1 });
+  forgetWeatherQueries();
   return toPublic(tile.toObject());
 }
 
@@ -148,6 +150,7 @@ export async function updateWeatherTile(id: string, input: WeatherTileInput, vie
     delete data.hidden;
   }
   const tile = await WeatherTileModel.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }).lean<WeatherTileDocument>();
+  forgetWeatherQueries();
   if (!tile) throw new Error('Weather tile not found.');
   return viewer ? (await placeForViewer(viewer, [toPublic(tile)]))[0] : toPublic(tile);
 }
@@ -156,6 +159,7 @@ export async function removeWeatherTile(id: string, viewer?: TileViewer): Promis
   const tile = await findTile(id, viewer);
   if (tile.home) throw new Error('Kafelka „Dom” nie można usunąć.');
   await WeatherTileModel.deleteOne({ _id: id });
+  forgetWeatherQueries();
 }
 
 // id kafelków pogody konta (do sprawdzenia układu w PUT /devices/order)
@@ -172,10 +176,19 @@ export async function setWeatherTilesOrder(entries: { id: string; index: number 
   })));
 }
 
+// Wynik weatherQueries w pamięci (2026-10-29, limit transferu Render): włącznik pyta co 5 s, a pompa przy każdym
+// hp/add, a za każdym razem to 3 zapytania do bazy. Kasowany przy dodaniu, zmianie (także ukryciu) i usunięciu
+// kafelka; po minucie liczony od nowa na wypadek zmiany inną drogą (np. usunięcie konta z kafelkami).
+const WEATHER_QUERIES_TTL_MS = 60_000;
+type WeatherQuery = { id: string; lat: number; lon: number };
+let weatherQueriesCache: { at: number; queries: WeatherQuery[] } | null = null;
+const forgetWeatherQueries = () => { weatherQueriesCache = null; };
+
 // Miejsca, dla których włącznik pobiera pogodę: dom zawsze (GET /temperature), pozostałe tylko widoczne dla
 // właściciela (kafelek bez właściciela: ukryty wspólnie albo przez użytkownika systemowego); najwyżej tyle, ile
 // przyjmuje włącznik, najstarsze kafelki pierwsze.
-export async function weatherQueries(): Promise<{ id: string; lat: number; lon: number }[]> {
+export async function weatherQueries(now = Date.now()): Promise<WeatherQuery[]> {
+  if (weatherQueriesCache && now - weatherQueriesCache.at < WEATHER_QUERIES_TTL_MS) return weatherQueriesCache.queries;
   const home = await ensureHomeWeatherTile();
   const tiles = await WeatherTileModel.find({ home: { $ne: true }, current: { $ne: true } }).sort({ _id: 1 })
     .select('lat lon hidden ownerId').lean<WeatherTileDocument[]>();
@@ -186,8 +199,10 @@ export async function weatherQueries(): Promise<{ id: string; lat: number; lon: 
     const system = hiding.find((viewer) => viewer.isSystem);
     return system ? system.hidden.has(id) : !!tile.hidden;
   };
-  return [home, ...tiles.filter((tile) => !hidden(tile))].slice(0, MAX_SWITCH_PLACES)
+  const queries = [home, ...tiles.filter((tile) => !hidden(tile))].slice(0, MAX_SWITCH_PLACES)
     .map((tile) => ({ id: String(tile._id), lat: tile.lat as number, lon: tile.lon as number }));
+  weatherQueriesCache = { at: now, queries };
+  return queries;
 }
 
 // Miejsca dla zapasowego pobierania przez sterownik co (odpowiedź POST /hp/add, co od 1.3.1): te same co dla

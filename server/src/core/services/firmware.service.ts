@@ -6,6 +6,7 @@
 import { createHash } from 'crypto';
 import { FirmwareImageModel, FirmwareOfferModel } from '../models/firmware.model';
 import { DeviceModel } from '../models/device.model';
+import { cachedDeviceById } from './device-cache.service';
 import { getDeviceTypeModule } from '../device-types';
 import { DeviceType, OperationMeta } from '../types';
 import { appUserMeta, logOperation, setStatusByRef } from './operation-log.service';
@@ -186,8 +187,9 @@ export async function firmwareOfferForDevice(device: FirmwareDevice, baseUrl: st
   };
 }
 
-// Oferta dla sterownika znanego tylko z rootId (odpowiedzi włącznika i pieca).
+// Oferta dla sterownika znanego tylko z rootId (odpowiedzi pompy, włącznika i pieca); dokument z pamięci
+// (device-cache.service.ts), bo pytają co kilka sekund, a zlecenie „Aktualizuj” zapisuje devices i kasuje pamięć.
 export async function firmwareOfferForRoot(rootId: string, baseUrl: string) {
-  const device = await DeviceModel.findById(rootId).select('deviceType firmwareVersion firmwareUpdate').lean();
+  const device = await cachedDeviceById(rootId);
   return device ? firmwareOfferForDevice(device as FirmwareDevice, baseUrl) : undefined;
 }

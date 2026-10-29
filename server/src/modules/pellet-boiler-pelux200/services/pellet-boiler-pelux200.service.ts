@@ -4,7 +4,7 @@
 import { PelletBoilerPelux200Entry, PelletBoilerPelux200Measurements } from '../types';
 import { PelletBoilerPelux200Model } from '../models/pellet-boiler-pelux200.model';
 import { getDeviceInfo } from '../../../core/services/device-info.service';
-import { DeviceModel } from '../../../core/models/device.model';
+import { cachedDeviceById } from '../../../core/services/device-cache.service';
 import { sendMessage } from '../../../core/websocket';
 import { setOutdoorTemperature } from '../../../core/services/meteo.service';
 import { comparisonKey, createPlateauWriter } from '../../../core/services/plateau-writer.service';
@@ -132,19 +132,15 @@ export const getPelletBoilerPelux200Range = (rootId: string, start: Date, end: D
     .lean<PelletBoilerPelux200Entry[]>();
 
 // Ustawiony w aplikacji odstęp odpytywania kotła; domyślny, gdy brak w properties.
+// Z pamięci dokumentów urządzeń: kafelek liczony co minutę i odpowiedź na każdy odczyt.
 export async function getPollIntervalSeconds(rootId: string): Promise<number> {
-  const device = await DeviceModel.findById(rootId).select('properties').lean();
+  const device = await cachedDeviceById(rootId);
   return device?.properties?.poll_interval_seconds ?? DEFAULT_POLL_INTERVAL_SECONDS;
 }
 
 // Odpowiedź na odczyt: odstęp odpytywania.
 export async function getControllerReply(rootId: string) {
-  const device = await DeviceModel.findById(rootId).select('properties').lean<{
-    properties?: { poll_interval_seconds?: number };
-  }>();
-  return {
-    poll_interval_seconds: device?.properties?.poll_interval_seconds ?? DEFAULT_POLL_INTERVAL_SECONDS,
-  };
+  return { poll_interval_seconds: await getPollIntervalSeconds(rootId) };
 }
 
 // Kocioł odpowiada, gdy ostatni odczyt jest młodszy niż RESPONDING_INTERVALS odstępów odpytywania

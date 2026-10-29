@@ -1,7 +1,8 @@
 // Aplikacja Express bez nasłuchu: używa jej server.ts i testy (supertest).
-// Kolejność: CORS, JSON, sesja (req.user), kontekst urządzenia (req.deviceRootId), dostęp (konta użytkowników), trasy /api.
+// Kolejność: CORS, kompresja, JSON, sesja (req.user), kontekst urządzenia (req.deviceRootId), dostęp (konta użytkowników), trasy /api.
 import express from 'express'
 import cors from 'cors'
+import compression from 'compression'
 import apiRoute from './routes'
 import { resolveDeviceContext } from './middleware/device-context'
 import { authenticate, authorize } from './middleware/session'
@@ -20,6 +21,14 @@ app.use((req, res, next) => {
 });
 
 app.use(cors())
+
+// Kompresja odpowiedzi (2026-10-29, limit transferu Render 5 GB): dane dnia pompy (/hp/4day) to ok. 4 MB JSON-u
+// bez kompresji i 180 KB po niej. Cloudflare przed Render kompresuje dla przeglądarki, ale serwer wysyła do niego
+// pełny rozmiar. Tylko gdy zapytanie wprost przyjmuje gzip / br / deflate: sterowniki (HTTPClient ESP32 wysyła
+// „identity”) dostają odpowiedzi bez zmian. Małe odpowiedzi (< 1 KB) zostają bez kompresji (domyślny próg).
+app.use(compression({
+  filter: (req, res) => /\b(gzip|br|deflate)\b/.test(String(req.headers['accept-encoding'] ?? '')) && compression.filter(req, res),
+}))
 app.use(express.json())
 
 // Każde żądanie /api (poza /devices...) musi wskazać urządzenie; kontrolery

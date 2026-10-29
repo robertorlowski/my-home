@@ -7,13 +7,14 @@
 | Plik | Rola |
 |---|---|
 | `server.ts` | punkt startowy: MongoDB, scheduler pompy, czyszczenie paneli PV, meteo, nasłuch HTTP i WebSocket |
-| `core/app.ts` | aplikacja Express: CORS, JSON, `device-context` i trasy pod `/api` |
+| `core/app.ts` | aplikacja Express: CORS, kompresja odpowiedzi (`compression`, tylko przy `Accept-Encoding` gzip / br / deflate, sterowniki bez zmian), JSON, `device-context` i trasy pod `/api` |
 | `core/routes.ts` | składa trasy: urządzenia i `/temperature` z core oraz `routes.ts` każdego modułu |
 | `core/types.ts` | `DeviceType`, `WeekDay` (dni harmonogramu pompy i włącznika), `Device`, `DeviceProperties` (jedno pole ustawień dla wszystkich rodzajów), `DeviceTypeModule` |
 | `core/device-types.ts` | rejestr rodzajów sterowników: `DeviceType` → opis modułu (`device-type.ts`) |
 | `core/time.ts` | `TIME_ZONE = Europe/Warsaw`, granice doby w Warszawie jako zakres UTC |
 | `core/websocket.ts` | serwer WebSocket (`/ws?rootId=`), `sendMessage(typ, rootId)` z opóźnieniem 1 s |
-| `core/middleware/device-context.ts` | ustala urządzenie z `rootId` albo (dla ścieżek sterownika z mapy `controllerPaths`) z pary `{deviceId, deviceType}`; 400/404/409 |
+| `core/middleware/device-context.ts` | ustala urządzenie z `rootId` albo (dla ścieżek sterownika z mapy `controllerPaths`) z pary `{deviceId, deviceType}`, z pamięci dokumentów urządzeń; 400/404/409 |
+| `core/services/device-cache.service.ts`, `device-cache-store.ts` | dokumenty urządzeń w pamięci (`cachedDeviceById`, `cachedDeviceBySn`) dla ścieżek sterowników; każdy zapis do `devices` przez model kasuje pamięć (haczyki w `device.model.ts`), odświeżanie co 5 min (`DEVICE_CACHE_TTL_MS`) |
 | `core/models/device.model.ts` | model Mongoose `devices`: schemat urządzenia, `properties`, osadzone harmonogramy i starsze `settings` |
 | `core/controllers/device.controller.ts` | obsługa tras urządzeń; odpowiedź zgłoszenia z `settings` z rejestru; zlecenie i odwołanie aktualizacji firmware |
 | `core/controllers/meteo.controller.ts` | `GET /temperature` |

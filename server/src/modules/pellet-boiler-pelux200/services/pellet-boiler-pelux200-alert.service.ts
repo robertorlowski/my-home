@@ -79,6 +79,17 @@ export async function saveAlerts(rootId: string, upload: AlertsUpload, now = new
 
 // Lista dla aplikacji: najpierw trwające, potem od najnowszego. Trwający = bez końca w ostatnim przesłaniu
 // (wpis, który zniknął z dziennika panelu, nie jest już „trwający”).
+// Aktywne alarmy (bez końca i w ostatnim odczycie dziennika, jak active w listAlerts), od najnowszego, same kody.
+// Dla kafelka listy (tile.ts), liczonego co minutę: dwa małe zapytania zamiast całego dziennika (do 100 wpisów,
+// ok. 21 KB z bazy; 2026-10-29, limit transferu Render).
+export async function listActiveAlertCodes(rootId: string): Promise<number[]> {
+  const latest = await PelletBoilerAlertModel.findOne({ rootId }).sort({ seenAt: -1 }).select({ seenAt: 1 }).lean<{ seenAt: Date }>();
+  if (!latest) return [];
+  const active = await PelletBoilerAlertModel.find({ rootId, toRaw: null, seenAt: latest.seenAt })
+    .sort({ from: -1 }).select({ code: 1 }).lean<{ code: number }[]>();
+  return active.map((alert) => alert.code);
+}
+
 export async function listAlerts(rootId: string) {
   const all = await PelletBoilerAlertModel.find({ rootId }).sort({ from: -1 }).lean<(PelletBoilerAlertEntry & { _id: unknown })[]>();
   const readAt = all.reduce<Date | null>((latest, a) => (!latest || a.seenAt > latest ? a.seenAt : latest), null);

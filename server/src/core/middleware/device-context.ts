@@ -3,7 +3,7 @@
 // z którego korzystają wszystkie kontrolery. 400 bez identyfikatora, 404 dla
 // nieznanego urządzenia, 409 gdy rootId sterownika należy do innego deviceId.
 import { NextFunction, Request, Response } from 'express';
-import { DeviceModel } from '../models/device.model';
+import { cachedDeviceById, cachedDeviceBySn } from '../services/device-cache.service';
 import { DeviceType } from '../types';
 
 // ścieżki względem /api (req.path w routerze montowanym pod /api)
@@ -56,11 +56,13 @@ export async function resolveDeviceContext(
     return res.status(400).json({ message: 'rootId jest wymagane.' });
   }
   try {
+    // z pamięci dokumentów urządzeń (core/services/device-cache.service.ts): każde zapytanie aplikacji i sterownika
+    // przechodzi tędy, a dokument zmienia się rzadko
     const device = rootId
-      ? await DeviceModel.findById(rootId).select('_id deviceId deviceType').lean()
+      ? await cachedDeviceById(rootId)
       // ten sam SN może mieć osobne dokumenty dla różnych rodzajów sterownika,
       // więc szukanie po samym deviceId musi być zawężone do rodzaju endpointu
-      : await DeviceModel.findOne({ deviceId, deviceType: expectedType }).select('_id deviceId deviceType').lean();
+      : await cachedDeviceBySn(deviceId, expectedType as DeviceType);
 
     if (!device) {
       return res.status(404).json({ message: 'Nie znaleziono urządzenia.' });

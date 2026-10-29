@@ -8,7 +8,7 @@ import { Device, DeviceTile } from '../../core/types';
 import { formatAge, formatTemperature, formatUnit, formatWhen, offlineLevel } from '../../core/services/tile-format';
 import { PelletBoilerCommandModel } from './models/pellet-boiler-pelux200-command.model';
 import { PelletBoilerPelux200Model } from './models/pellet-boiler-pelux200.model';
-import { listAlerts } from './services/pellet-boiler-pelux200-alert.service';
+import { listActiveAlertCodes } from './services/pellet-boiler-pelux200-alert.service';
 import { getPelletBoilerPelux200Last, getPollIntervalSeconds, readingResponding } from './services/pellet-boiler-pelux200.service';
 import { PelletBoilerPelux200Entry } from './types';
 import { simpleBoilerState } from './services/pellet-boiler-pelux200-simple.service';
@@ -40,15 +40,14 @@ export async function pelletBoilerTile(rootId: string, _device: Device, now = ne
   if (!last?.createdAt) return { level: 'off', chip: 'Brak danych' };
 
   const at = new Date(last.createdAt);
-  const [pollSeconds, alerts, failed] = await Promise.all([
+  const [pollSeconds, activeCodes, failed] = await Promise.all([
     getPollIntervalSeconds(rootId),
-    listAlerts(rootId),
+    listActiveAlertCodes(rootId),
     PelletBoilerCommandModel
       .findOne({ rootId, status: { $in: ['done', 'error'] } }).sort({ doneAt: -1 })
       .lean<{ status: string; label?: string; doneAt?: Date }>(),
   ]);
-  const activeAlerts = alerts.alerts.filter((alert) => alert.active);
-  const alarm = activeAlerts.length > 0 || last.alarm === true || last.state === 8;
+  const alarm = activeCodes.length > 0 || last.alarm === true || last.state === 8;
   const responding = readingResponding(at, pollSeconds, now.getTime());
 
   let level: DeviceTile['level'] = 'ok';
@@ -62,7 +61,7 @@ export async function pelletBoilerTile(rootId: string, _device: Device, now = ne
     note = { level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(age, lang) }) };
   } else if (alarm) {
     level = 'err';
-    const code = activeAlerts[0]?.code;
+    const code = activeCodes[0];
     note = { level: 'err', text: `${t(lang, 'boiler.alarm')}${code !== undefined ? t(lang, 'boiler.alarmCode', { code }) : ''}` };
   } else if (typeof last.fuel_level === 'number' && last.fuel_level < LOW_FUEL_PERCENT) {
     level = 'warn';

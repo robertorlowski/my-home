@@ -41,8 +41,15 @@ if (!MONGODB_URI) {
 
 const PORT = Number(process.env.PORT ?? 3001);
 
+// Sprawdzanie serwerów bazy raz na minutę, jednym zapytaniem (poll). Domyślnie sterownik MongoDB co 10 s
+// sprawdza każdy z 3 serwerów Atlas dwoma połączeniami (strumień i pomiar czasu), co samo dawało ok. 1,8 GB
+// ruchu na 30 dni przy limicie transferu Render 5 GB; poll co 60 s to ok. 0,17 GB (pomiar 2026-10-29).
+// Błąd zapytania i tak od razu oznacza serwer jako niedostępny i wymusza sprawdzenie, więc zmiana
+// serwera głównego jest wykrywana przy pierwszym nieudanym zapytaniu, nie po minucie.
+const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'poll' } as const;
+
 (async () => {
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI, MONGO_OPTIONS);
   console.log("Mongo connected");
 
   // konta użytkowników: użytkownik systemowy i (raz) właściciel sterowników sprzed kont

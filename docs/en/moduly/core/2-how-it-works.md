@@ -187,7 +187,7 @@ The WebSocket carries nothing but a "come and get the data" signal. Operations a
 ## Server start
 
 1. Environment variables are loaded; without `MONGODB_URI` the server stops with an error.
-2. MongoDB connection.
+2. MongoDB connection (database servers checked once a minute, `serverMonitoringMode: 'poll'`, to limit Render bandwidth).
 3. The heat pump scheduler starts (one run immediately, then every minute).
 4. PV panel details older than 90 days are cleaned (immediately and every 24 h).
 5. The IMGW temperature is fetched and then refreshed every 10 minutes.

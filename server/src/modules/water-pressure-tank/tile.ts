@@ -9,11 +9,9 @@ import { DEFAULT_LANG, Lang, t } from '../../core/i18n';
 import { Device, DeviceTile } from '../../core/types';
 import { formatDuration, formatUnit } from '../../core/services/tile-format';
 import { warsawDayBoundsUTC } from '../../core/time';
-import { WaterPressureTankRunModel } from './models/water-pressure-tank-run.model';
 import {
-  RUN_IN_PROGRESS_MS, getFlowRate, getWaterPressureTankRuns, litersFor, pumpSeconds,
+  RUN_IN_PROGRESS_MS, getTankTileData, litersFor, pumpSeconds,
 } from './services/water-pressure-tank.service';
-import { WaterPressureTankRun } from './types';
 
 export const LONG_RUN_MS = 30 * 60 * 1000;
 
@@ -21,11 +19,8 @@ export async function waterPressureTankTile(rootId: string, _device: Device, now
   const todayDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' });
   const today = warsawDayBoundsUTC(todayDate);
   const monthStart = warsawDayBoundsUTC(`${todayDate.slice(0, 8)}01`).startUTC;
-  const [last, monthRuns, { flow, litersPerSecond }] = await Promise.all([
-    WaterPressureTankRunModel.findOne({ rootId }).sort({ pumpStart: -1 }).lean<WaterPressureTankRun>(),
-    getWaterPressureTankRuns(rootId, monthStart, today.endUTC),
-    getFlowRate(rootId),
-  ]);
+  // z pamięci do nowej wiadomości sterownika, zmiany wodomierza albo nowego dnia (getTankTileData)
+  const { last, monthRuns, flow, litersPerSecond } = await getTankTileData(rootId, todayDate, monthStart, today.endUTC);
   const runs = monthRuns.filter((run) => new Date(run.pumpStart) >= today.startUTC);
   if (!last) return { level: 'off', chip: 'Brak uruchomień' };
 

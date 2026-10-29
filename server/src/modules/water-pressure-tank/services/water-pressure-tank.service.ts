@@ -127,6 +127,7 @@ export async function addWaterPressureTankReport(rootId: string, report: RunRepo
 
   if (existing) {
     await WaterPressureTankRunModel.updateOne({ _id: (existing as { _id?: unknown })._id }, { $set: update });
+    forgetTankTileData(rootId);
     return { ...existing, ...update };
   }
 
@@ -139,6 +140,7 @@ export async function addWaterPressureTankReport(rootId: string, report: RunRepo
     ...update,
     timeApproximate: report.queued === true,
   });
+  forgetTankTileData(rootId);
   // powiadomienie Web Push (core/services/push.service.ts): nowe uruchomienie na żywo (z kolejki = dawno zakończone)
   if (!report.queued) await notify(rootId, 'pump-start', { body: texts('push.pumpStart'), url: '/' }, receivedAt);
   return created.toObject();
@@ -158,11 +160,13 @@ export const listWaterMeterReadings = (rootId: string) =>
 
 export async function addWaterMeterReading(rootId: string, reading: { readAt: Date; valueM3: number; note?: string }) {
   const created = await WaterMeterReadingModel.create({ rootId, ...reading });
+  forgetTankTileData(rootId);
   return created.toObject();
 }
 
 export async function deleteWaterMeterReading(rootId: string, id: string) {
   const result = await WaterMeterReadingModel.deleteOne({ _id: id, rootId });
+  forgetTankTileData(rootId);
   return result.deletedCount > 0;
 }
 
@@ -236,6 +240,40 @@ async function loadFlow(rootId: string): Promise<FlowData> {
 export async function getFlowRate(rootId: string): Promise<{ flow: FlowRate; litersPerSecond: number | null }> {
   const { flow, litersPerSecond } = await loadFlow(rootId);
   return { flow, litersPerSecond };
+}
+
+// --- dane kafelka listy w pamięci (2026-10-29, limit transferu Render 5 GB) ---
+// Kafelki liczy co minutę wartownik powiadomień (push-watchdog.service) i co 30 s lista w przeglądarce, a kafelek
+// hydroforu czytał za każdym razem uruchomienia z miesiąca i okresy wodomierza (ok. 35 KB z bazy). Te dane zmieniają
+// się tylko przy wiadomości sterownika i zmianie odczytów wodomierza (forgetTankTileData), więc są w pamięci do
+// takiej zmiany albo do nowego dnia. generation chroni przed zapamiętaniem danych, które zmieniły się w trakcie odczytu.
+export interface TankTileData {
+  last: WaterPressureTankRun | null;
+  monthRuns: WaterPressureTankRun[];
+  flow: FlowRate;
+  litersPerSecond: number | null;
+}
+const tankTileData = new Map<string, { day: string; data: TankTileData }>();
+const tankTileGeneration = new Map<string, number>();
+
+export function forgetTankTileData(rootId: string) {
+  tankTileData.delete(rootId);
+  tankTileGeneration.set(rootId, (tankTileGeneration.get(rootId) ?? 0) + 1);
+}
+
+// day: dzień warszawski (YYYY-MM-DD), monthStart i dayEnd jego granice w UTC
+export async function getTankTileData(rootId: string, day: string, monthStart: Date, dayEnd: Date): Promise<TankTileData> {
+  const cached = tankTileData.get(rootId);
+  if (cached && cached.day === day) return cached.data;
+  const generation = tankTileGeneration.get(rootId) ?? 0;
+  const [last, monthRuns, { flow, litersPerSecond }] = await Promise.all([
+    WaterPressureTankRunModel.findOne({ rootId }).sort({ pumpStart: -1 }).lean<WaterPressureTankRun>(),
+    getWaterPressureTankRuns(rootId, monthStart, dayEnd),
+    getFlowRate(rootId),
+  ]);
+  const data = { last: last ?? null, monthRuns, flow, litersPerSecond };
+  if ((tankTileGeneration.get(rootId) ?? 0) === generation) tankTileData.set(rootId, { day, data });
+  return data;
 }
 
 export type SummaryPeriod = 'day' | 'month' | 'year';

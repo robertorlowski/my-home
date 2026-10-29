@@ -111,6 +111,10 @@ void testPlacesFromCloud()
     "{\"id\":\"krakow\",\"lat\":50.06,\"lon\":19.94},{\"lat\":1,\"lon\":1},{\"id\":\"zle\",\"lat\":99,\"lon\":0}]}").as<JsonVariantConst>()));
   TEST_ASSERT_EQUAL(2, places.size());
   TEST_ASSERT_EQUAL_STRING("krakow", places.at(1).id.c_str());
+  // odpowiedź bez miejsc (chmura od 2026-10-29 wysyła je tylko przy zmianie): lista bez zmian
+  TEST_ASSERT_FALSE(places.update(json("{\"relays\":[{\"on\":false,\"mode\":\"schedule\"}]}").as<JsonVariantConst>()));
+  TEST_ASSERT_EQUAL(2, places.size());
+  TEST_ASSERT_EQUAL_STRING("krakow", places.at(1).id.c_str());
 
   // pobieranie: pierwsze miejsce od razu, drugie dopiero po odstępie
   TEST_ASSERT_EQUAL(0, places.dueIndex(1000));

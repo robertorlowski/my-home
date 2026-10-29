@@ -31,9 +31,23 @@ type ScheduleDoc = SwitchSchedule & { _id?: unknown };
 export const isRelayCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= MAX_RELAYS;
 
+// Mniej zapytań przy zgłoszeniu co 5 s (2026-10-29, limit transferu Render; wcześniej ok. 12 operacji na bazie
+// na zgłoszenie): pamięć procesu, po restarcie serwera pierwsze zgłoszenie robi wszystko jak dawniej.
+// - knownRelayCount: przekaźniki zakładane tylko przy innej liczbie niż ostatnio (zmienia je tylko ensureRelays);
+// - reported: ostatni przetworzony stan przekaźnika (historia włączeń sprawdzana tylko przy zmianie stanu) i dokładny
+//   czas ostatniego zgłoszenia, bo lastSeenAt w bazie jest zapisywane najwyżej raz na LAST_SEEN_WRITE_MS.
+const knownRelayCount = new Map<string, number>();
+const reported = new Map<string, { on: boolean; changedAt: number; seenAt: Date }>();
+const relayKey = (rootId: string, relay: number) => `${rootId}:${relay}`;
+// lastSeenAt służy do „online” (5 min) i „dane sprzed”; minuta wystarcza
+const LAST_SEEN_WRITE_MS = 60_000;
+// changedAt = now − changedS różni się między zgłoszeniami o sekundę z powodu czasu przesyłu
+const CHANGED_AT_TOLERANCE_MS = 5_000;
+
 // Przekaźniki 1…count istnieją (nowe w trybie harmonogramu, wyłączone), a nadmiarowe
 // (sterownik zgłasza mniej niż wcześniej) są usuwane razem z harmonogramami.
 export async function ensureRelays(rootId: string, deviceId: string, count: number): Promise<void> {
+  if (knownRelayCount.get(rootId) === count) return;
   await Promise.all(Array.from({ length: count }, (_, index) =>
     SwitchRelayModel.updateOne(
       { rootId, relay: index + 1 },
@@ -42,7 +56,15 @@ export async function ensureRelays(rootId: string, deviceId: string, count: numb
     )));
   await SwitchRelayModel.deleteMany({ rootId, relay: { $gt: count } });
   await SwitchScheduleModel.deleteMany({ rootId, relay: { $gt: count } });
+  knownRelayCount.set(rootId, count);
 }
+
+// Ostatnie zgłoszenie przekaźnika: dokładne z pamięci, a po restarcie serwera z bazy.
+const lastSeen = (rootId: string, relay: RelayDoc): Date | undefined => {
+  const seen = reported.get(relayKey(rootId, relay.relay))?.seenAt;
+  const stored = relay.lastSeenAt ? new Date(relay.lastSeenAt) : undefined;
+  return seen && (!stored || seen > stored) ? seen : stored;
+};
 
 // Tryby z końcem (timer, pause) po upływie until działają jak harmonogram (zapis w bazie przy najbliższym zgłoszeniu).
 const timed = (mode: RelayMode) => mode === 'timer' || mode === 'pause';
@@ -107,13 +129,14 @@ async function recordActivation(
   changedAt: Date,
   bootAt: Date | null,
   now: Date,
+  seen: Date | undefined,
 ) {
   const open = await SwitchActivationModel.findOne({ rootId, relay: relay.relay, offAt: null }).sort({ onAt: -1 });
   if (report.on) {
     if (open && open.onAt.getTime() >= changedAt.getTime() - BOOT_MARGIN_S * 1000) return;
     if (open) {
       // włączenie zaczęło się później niż otwarte w historii: wyłączenie w przerwie łączności
-      open.offAt = relay.lastSeenAt && relay.lastSeenAt < changedAt ? relay.lastSeenAt : changedAt;
+      open.offAt = seen && seen < changedAt ? seen : changedAt;
       open.approximate = true;
       await open.save();
     }
@@ -126,7 +149,7 @@ async function recordActivation(
   // wyłączony od startu sterownika: koniec to utrata zasilania, czyli ostatnie zgłoszenie przed nią
   const offSinceBoot = bootAt !== null && changedAt.getTime() <= bootAt.getTime() + BOOT_MARGIN_S * 1000;
   let offAt = changedAt;
-  if (offSinceBoot && relay.lastSeenAt && relay.lastSeenAt < changedAt) offAt = relay.lastSeenAt;
+  if (offSinceBoot && seen && seen < changedAt) offAt = seen;
   open.offAt = offAt < open.onAt ? open.onAt : offAt;
   open.approximate = offSinceBoot;
   await open.save();
@@ -152,7 +175,14 @@ export async function reportState(
   for (const relay of relays) {
     const state = report.relays[relay.relay - 1];
     const changedAt = new Date(now.getTime() - state.changedS * 1000);
-    await recordActivation(rootId, relay, state, changedAt, bootAt, now);
+    const key = relayKey(rootId, relay.relay);
+    const previous = reported.get(key);
+    const seen = lastSeen(rootId, relay);
+    // ten sam stan co w poprzednim zgłoszeniu: historia jest już zapisana (recordActivation nic by nie zmienił)
+    const sameState = previous !== undefined && previous.on === state.on
+      && Math.abs(previous.changedAt - changedAt.getTime()) <= BOOT_MARGIN_S * 1000;
+    if (!sameState) await recordActivation(rootId, relay, state, changedAt, bootAt, now, seen);
+    reported.set(key, { on: state.on, changedAt: sameState && previous ? previous.changedAt : changedAt.getTime(), seenAt: now });
     if (relay.on !== state.on) {
       changed = true;
       // powiadomienie Web Push (core/services/push.service.ts): zmiana stanu przekaźnika według sterownika
@@ -163,13 +193,18 @@ export async function reportState(
     }
 
     const expired = timed(relay.mode) && effectiveMode(relay, now) === 'schedule';
-    await SwitchRelayModel.updateOne({ rootId, relay: relay.relay }, {
-      $set: {
-        on: state.on, changedAt, lastSeenAt: now, deviceId,
-        ...(expired ? { mode: 'schedule', modeChangedAt: now } : {}),
-      },
-      ...(expired ? { $unset: { until: 1 } } : {}),
-    });
+    // zapis tylko przy zmianie stanu, trybu albo właściciela SN; samo „widziany” najwyżej raz na minutę
+    const stale = !relay.lastSeenAt || now.getTime() - new Date(relay.lastSeenAt).getTime() >= LAST_SEEN_WRITE_MS;
+    const moved = !relay.changedAt || Math.abs(new Date(relay.changedAt).getTime() - changedAt.getTime()) > CHANGED_AT_TOLERANCE_MS;
+    if (stale || moved || expired || relay.on !== state.on || relay.deviceId !== deviceId) {
+      await SwitchRelayModel.updateOne({ rootId, relay: relay.relay }, {
+        $set: {
+          on: state.on, changedAt, lastSeenAt: now, deviceId,
+          ...(expired ? { mode: 'schedule', modeChangedAt: now } : {}),
+        },
+        ...(expired ? { $unset: { until: 1 } } : {}),
+      });
+    }
     const { command, mode, until, scheduleId } = relayCommand(relay, schedules, now);
     // dziennik operacji: polecenie zmienione przez harmonogram albo koniec czasu, potwierdzenie czekających zmian
     await noteRelayReport(rootId, relay, state.on, { on: command.on, mode, until, scheduleId }, schedules, now);

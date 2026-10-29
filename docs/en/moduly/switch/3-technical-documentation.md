@@ -37,7 +37,7 @@ Changes in `core` for the switch: `DeviceType.SWITCH`, `WeekDay` moved to `core/
 
 | Method and path | Who | Description |
 |---|---|---|
-| `POST /switch/state` | controller | `{uptimeS?, relays: [{on, changedS}], diag?, weather?}` (`diag` — firmware diagnostics, `weather` — Open-Meteo weather, CLAUDE.md section 5d; 1–16 relays, `changedS` ≥ 0); `deviceId` alone is enough, 404/409 as in core; reply 200 `{relays: [{on, offAfterS?, mode}], firmware?}` (`firmware: {version, url, sha256, request}` only with an "Aktualizuj" request; firmware from 1.1.0 updates from it without a restart); bad data 400 |
+| `POST /switch/state` | controller | `{uptimeS?, relays: [{on, changedS}], diag?, weather?}` (`diag` — firmware diagnostics, `weather` — Open-Meteo weather, CLAUDE.md section 5d; 1–16 relays, `changedS` ≥ 0); `deviceId` alone is enough, 404/409 as in core; reply 200 `{relays: [{on, offAfterS?, mode}], firmware?, weather_query?, weather_queries?}` (weather places only on the first report after a server start, a list change, a board restart and every 10 min) (`firmware: {version, url, sha256, request}` only with an "Aktualizuj" request; firmware from 1.1.0 updates from it without a restart); bad data 400 |
 | `PUT /switch/mode` | application, controller | `{relay, mode, minutes?, source?}`; `mode`: `schedule`, `on`, `timer`, `off`, `pause` (off until the end of the current schedule window, outside a window = `schedule`); `minutes` only for `timer`, whole 1–10080; `source: "controller"` or a request with `deviceId` only = change from the controller; reply: the relay as in `GET /switch/relays`; 400 bad mode, number, time or unknown relay |
 | `GET /switch/relays` | application | relays: `relay`, `name`, `mode` (an expired timer or pause already as `schedule`), `modeSource`, `modeChangedAt`, `on`, `changedAt`, `lastSeenAt`, `online`, `desiredOn`, `until`, `scheduleId` (entry active now), `nextStart` |
 | `PUT /switch/relays/:relay` | application | `{name}` (at most 40 characters, empty = "Przekaźnik N"); 404 unknown relay |
@@ -61,7 +61,7 @@ The registration (`POST /devices/register`, core module) with `deviceType: "swit
 | `mode`, `until` | mode `schedule` \| `on` \| `timer` \| `off` \| `pause` (default `schedule`); `until` — end of `timer` or `pause` mode |
 | `modeSource`, `modeChangedAt` | who set the mode and when (`app` \| `controller`) |
 | `on`, `changedAt` | state reported by the controller and the moment it changed (`now − changedS`) |
-| `lastSeenAt` | last state report (online < 5 min) |
+| `lastSeenAt` | last state report (online < 5 min); written at most once a minute, the exact time is kept in server memory (since 2026-10-29) |
 | `createdAt`, `updatedAt` | write timestamps |
 
 **`switch_schedules`** — schedule entries: `rootId`, `relay`, `enabled`, `dayOfWeek` (`WeekDay`), `date`, `startTime`, `endTime` (`HH:mm`); index `{rootId, relay}`. A separate collection rather than `devices.schedules`: an entry has a relay number and none of the pump fields (type, temperatures, force).

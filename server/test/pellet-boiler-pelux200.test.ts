@@ -19,6 +19,7 @@ import { heatPumpRunningInHeatPumpMode, runWinterCycle, winterFromMax } from '..
 import { migrateBoilerDefinitions } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-heat-pump-link.service'
 import { DeviceModel } from '../src/core/models/device.model'
 import { pelletBoilerTile } from '../src/modules/pellet-boiler-pelux200/tile'
+import { listActiveAlertCodes } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-alert.service'
 
 const TYPE = 'pellet-boiler-pelux200';
 const register = (deviceId: string, deviceType = TYPE) =>
@@ -744,11 +745,14 @@ describe('Kocioł pelletowy Pellux 200', () => {
     expect((await post({ total: 3, alerts: [fuel, stb, oldPower] })).body.initial).toBe(false);
     view = await list();
     expect(view.alerts[0]).toMatchObject({ code: 8, active: true, initial: false, to: null });
+    // kafelek listy: same kody aktywnych alarmów, bez całego dziennika
+    expect(await listActiveAlertCodes(rootId)).toEqual([8]);
     // koniec alarmu w kolejnym przesłaniu: ten sam wpis (kod + początek), uzupełniony koniec
     await post({ total: 3, alerts: [{ ...fuel, to: ecomax(2026, 10, 7, 7, 0) }, stb, oldPower] }).expect(201);
     view = await list();
     expect(view.alerts).toHaveLength(3);
     expect(view.alerts.find((a: { code: number }) => a.code === 8)).toMatchObject({ active: false, to: '2026-10-07T05:00:00.000Z' });
+    expect(await listActiveAlertCodes(rootId)).toEqual([]);
     // liczba aktywnych alarmów w odczycie
     await request(app).post(`/api/pellet-boiler-pelux200/add?deviceId=${sn}`).send({ state: 0, alerts_active: 1 }).expect(201);
     expect((await request(app).get(`/api/pellet-boiler-pelux200/last?rootId=${rootId}`)).body.alerts_active).toBe(1);

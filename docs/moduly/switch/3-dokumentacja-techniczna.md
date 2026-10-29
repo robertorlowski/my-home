@@ -37,7 +37,7 @@ Zmiany w `core` dla włącznika: `DeviceType.SWITCH`, `WeekDay` przeniesione do 
 
 | Metoda i ścieżka | Kto | Opis |
 |---|---|---|
-| `POST /switch/state` | sterownik | `{uptimeS?, relays: [{on, changedS}], diag?, weather?}` (`diag` — diagnostyka firmware, `weather` — pogoda z Open-Meteo, punkt 5d CLAUDE.md; 1–16 przekaźników, `changedS` ≥ 0); sam `deviceId` wystarcza, 404/409 jak w core; odpowiedź 200 `{relays: [{on, offAfterS?, mode}], firmware?}` (`firmware: {version, url, sha256, request}` tylko przy zleceniu „Aktualizuj”; firmware od 1.1.0 aktualizuje się z niej bez restartu); złe dane 400 |
+| `POST /switch/state` | sterownik | `{uptimeS?, relays: [{on, changedS}], diag?, weather?}` (`diag` — diagnostyka firmware, `weather` — pogoda z Open-Meteo, punkt 5d CLAUDE.md; 1–16 przekaźników, `changedS` ≥ 0); sam `deviceId` wystarcza, 404/409 jak w core; odpowiedź 200 `{relays: [{on, offAfterS?, mode}], firmware?, weather_query?, weather_queries?}` (miejsca pogody tylko przy pierwszym zgłoszeniu po starcie serwera, zmianie listy, restarcie płytki i co 10 min) (`firmware: {version, url, sha256, request}` tylko przy zleceniu „Aktualizuj”; firmware od 1.1.0 aktualizuje się z niej bez restartu); złe dane 400 |
 | `PUT /switch/mode` | aplikacja, sterownik | `{relay, mode, minutes?, source?}`; `mode`: `schedule`, `on`, `timer`, `off`, `pause` (wyłączony do końca bieżącego okna harmonogramu, poza oknem = `schedule`); `minutes` tylko dla `timer`, pełne 1–10080; `source: "controller"` albo żądanie z samym `deviceId` = zmiana ze sterownika; odpowiedź: przekaźnik jak w `GET /switch/relays`; 400 zły tryb, numer, czas albo nieznany przekaźnik |
 | `GET /switch/relays` | aplikacja | przekaźniki: `relay`, `name`, `mode` (timer i pause po czasie już jako `schedule`), `modeSource`, `modeChangedAt`, `on`, `changedAt`, `lastSeenAt`, `online`, `desiredOn`, `until`, `scheduleId` (wpis działający teraz), `nextStart` |
 | `PUT /switch/relays/:relay` | aplikacja | `{name}` (najwyżej 40 znaków, pusta = „Przekaźnik N”); 404 nieznany przekaźnik |
@@ -61,7 +61,7 @@ Zgłoszenie (`POST /devices/register`, moduł core) z `deviceType: "switch"` prz
 | `mode`, `until` | tryb `schedule` \| `on` \| `timer` \| `off` \| `pause` (domyślnie `schedule`); `until` — koniec trybu `timer` albo `pause` |
 | `modeSource`, `modeChangedAt` | kto i kiedy ustawił tryb (`app` \| `controller`) |
 | `on`, `changedAt` | stan zgłoszony przez sterownik i chwila jego zmiany (`teraz − changedS`) |
-| `lastSeenAt` | ostatnie zgłoszenie stanu (online < 30 s) |
+| `lastSeenAt` | ostatnie zgłoszenie stanu (online < 5 min); zapisywane najwyżej raz na minutę, dokładny czas jest w pamięci serwera (od 2026-10-29) |
 | `createdAt`, `updatedAt` | znaczniki zapisu |
 
 **`switch_schedules`** — wpisy harmonogramu: `rootId`, `relay`, `enabled`, `dayOfWeek` (`WeekDay`), `date`, `startTime`, `endTime` (`HH:mm`); indeks `{rootId, relay}`. Osobna kolekcja, a nie `devices.schedules`: wpis ma numer przekaźnika i nie ma pól pompy (typ, temperatury, wymuszenie).
