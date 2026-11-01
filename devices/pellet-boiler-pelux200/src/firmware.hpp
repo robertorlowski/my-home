@@ -7,7 +7,7 @@
 
 constexpr const char *DEVICE_TYPE = "pellet-boiler-pelux200";
 // Wersja firmware: wysyłana w zgłoszeniu (strona Ustawienia w aplikacji). Podnieść przy wydaniu.
-constexpr const char *FW_VERSION = "1.10.1";
+constexpr const char *FW_VERSION = "1.11.0";
 // Nazwa nadawana nowemu urządzeniu przy pierwszym zgłoszeniu.
 constexpr const char *DEVICE_NAME = "Piec Pellux 200";
 

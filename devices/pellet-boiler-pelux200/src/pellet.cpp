@@ -24,6 +24,8 @@
 // Od 1.7.2 zmiany ustawień z panelu wykrywa tabela wersji z SensorData (FrameVersionWatch, jak PyPlumIO): pełny
 // odczyt ustawień zaraz po zmianie wersji 0x31/0x32/0x36/0x38/0x5C, dziennik alarmów po zmianie 0x3D; odczyt
 // okresowy rzadziej, co 60 min, tylko jako zabezpieczenie.
+// Od 1.11.0 (settings_refresh.hpp): odczyt ustawień co 15 min, także zaraz po przerwie w SensorData (2 min i dłużej)
+// i bez Wi-Fi (powody sprawdza busTask, nie tick()); niewysłane ustawienia idą od razu po udanej wysyłce odczytu.
 // Przy kotle nikt nie naciśnie resetu, więc sterownik restartuje się sam: watchdog pętli
 // (WATCHDOG_S) i po WIFI_RESTART_AFTER_MS bez Wi-Fi (2026-10-03 płytka raz zawisła bez restartu);
 // wcześniej co 2 min ponowne łączenie bez restartu. Przyczyna restartu programowego w NVS.
@@ -52,6 +54,7 @@
 #include <pellet_telemetry.hpp>
 #include <secrets.h>
 #include <service_password.hpp>
+#include <settings_refresh.hpp>
 
 namespace {
 
@@ -146,9 +149,11 @@ EconetNetworkInfo networkInfo;
 uint32_t econetSkipped = 0;
 bool econetAllowed = false;
 
-// Odczyt ustawień kotła (etap 3): zlecany flagą (start, konsola), wykonywany w busTask.
+// Odczyt ustawień kotła (etap 3): zlecany flagą (start, konsola, settingsRefresh), wykonywany w busTask.
 BoilerSettingsReader boilerSettings;
 volatile bool boilerSettingsRequested = true;
+// powody odczytu „po przerwie w SensorData”, „zmiana zadanej” i „co 15 min” (settings_refresh.hpp; busTask)
+SettingsRefresh settingsRefresh;
 // Dziennik alarmów z panelu (alerts_log.hpp, od 1.7.0): odczyt po starcie (po ustawieniach), co ALERTS_EVERY_MS
 // i przy zmianie liczby aktywnych alarmów w SensorData; kompletny dziennik po każdej zmianie idzie do chmury.
 AlertsLogReader alertsLog;
@@ -327,15 +332,10 @@ bool readingDue = false;
 // podpis ostatnio wysłanego odczytu (readingSignature; 0 = jeszcze nic): stan, wyjścia i zadane
 uint32_t lastSentSignature = 0;
 uint32_t lastImmediatePostMs = 0;
-// Ustawienia kotła: koniec ostatniego pełnego odczytu (busTask), podpis zadanych z ostatniego świeżego
-// odczytu; zmiana zadanej (np. na panelu) albo SETTINGS_REFRESH_MS bez odczytu = odczyt ustawień od nowa.
+// Ustawienia kotła: koniec ostatniego pełnego odczytu (busTask); zapis parametru tylko na odczycie nie starszym
+// niż SETTINGS_FRESH_MS. Kiedy czytać od nowa: settingsRefresh (settings_refresh.hpp).
 constexpr uint32_t SETTINGS_FRESH_MS = 60000;
-// od 1.7.2 zmiany z panelu wykrywa tabela wersji (FrameVersionWatch); odczyt okresowy już tylko jako zabezpieczenie
-constexpr uint32_t SETTINGS_REFRESH_MS = 60UL * 60 * 1000;
-constexpr uint32_t SETTINGS_TRIGGER_MIN_MS = 60000;
 volatile uint32_t settingsReadDoneMs = 0;
-uint32_t lastTargetsSignature = 0;
-uint32_t lastSettingsTriggerMs = 0;
 
 bool accessPointOn = false;
 uint32_t wifiLostSinceMs = 0;
@@ -420,6 +420,8 @@ const char *econetStateText(uint32_t nowMs)
   if (!guard.mayTransmit(nowMs)) return "listening before transmitting";
   return "responding";
 }
+
+void requestSettingsWhenChanged(uint32_t nowMs, const EcomaxSensorData &reading);
 
 // Koniec odczytu ustawień (busTask): wpis na konsoli i zlecenie wysyłki do chmury.
 void finishParameterSet(bool ok, const char *error);
@@ -765,6 +767,7 @@ void readBus(uint32_t nowMs)
       sensorFrames++;
       fuelMeter.onSensorData(decoded.fuelConsumption, nowMs);
       portEXIT_CRITICAL(&stateLock);
+      requestSettingsWhenChanged(nowMs, decoded);
       uint8_t refresh = versionWatch.onTable(decoded.frameVersions, decoded.frameVersionCount);
       if ((refresh & FrameVersionWatch::REFRESH_SETTINGS) && ownWriteConfirmed && nowMs - ownWriteConfirmedMs < OWN_WRITE_MS) {
         logf("ramka 0x%02x wersja %u → %u po naszym zapisie, odczyt już zlecony", versionWatch.changedType(),
@@ -1033,12 +1036,15 @@ bool settingsItemHex(uint8_t item, String &hex, uint32_t &at)
 
 // Ustawienia regulatora do chmury (panel „Ustawienia zaawansowane”) po każdym pełnym odczycie:
 // POST pellet-boiler-pelux200/settings {nazwa: hex}. Błąd (także 404/409 — starszy serwer bez
-// tego endpointu) nie kasuje Root ID, tylko ponawia wysyłkę po SETTINGS_RETRY_MS.
-constexpr uint32_t SETTINGS_RETRY_MS = 10UL * 60 * 1000;
-uint32_t nextSettingsUploadMs = 0;
+// tego endpointu) nie kasuje Root ID, tylko ponawia wysyłkę po SETTINGS_RETRY_MS, a od 1.11.0 od razu
+// po udanej wysyłce odczytu kotła (SettingsUpload). Flaga kasowana przed wysyłką: odczyt zakończony
+// w trakcie zapytania (busTask) zostaje do wysłania.
+constexpr uint32_t SETTINGS_RETRY_MS = SettingsUpload::RETRY_MS;
+SettingsUpload settingsUpload;
 
 void sendSettings(uint32_t nowMs)
 {
+  settingsUploadPending = false;
   JsonDocument document;
   for (uint8_t item = 0; item < BOILER_SETTINGS_COUNT; item++) {
     String hex;
@@ -1050,8 +1056,8 @@ void sendSettings(uint32_t nowMs)
   const bool ok = post(requestUrl("pellet-boiler-pelux200/settings"), body);
   logf("ustawienia kotła do chmury: %s (HTTP %d, %u B)", ok ? "OK" : "błąd", lastHttpStatus,
     static_cast<unsigned>(body.length()));
-  if (ok) settingsUploadPending = false;
-  else nextSettingsUploadMs = nowMs + SETTINGS_RETRY_MS;
+  if (!ok) settingsUploadPending = true;
+  settingsUpload.onResult(ok, nowMs);
 }
 
 // Dziennik alarmów do chmury po każdej zmianie (od 1.7.0): POST pellet-boiler-pelux200/alerts
@@ -1124,6 +1130,8 @@ void sendReading(uint32_t nowMs, const EcomaxSensorData &reading)
   if (ok) {
     lastPostOkMs = nowMs;
     lastSentSignature = readingSignature(reading);
+    // serwer odpowiada: niewysłane ustawienia od razu, bez czekania SETTINGS_RETRY_MS
+    settingsUpload.onCloudOk();
     // zlecenia czekające na stan kotła (zmiana trybu po wyłączeniu) mogą być już do wysłania
     commandPollDue = true;
     JsonDocument reply;
@@ -1166,21 +1174,18 @@ uint32_t readingSignature(const EcomaxSensorData &reading)
   return fnv(hash, reading.outputs, 4) | 1;
 }
 
-// Pełny odczyt ustawień: po zmianie zadanej (zmiana na panelu albo nasza, najwyżej co SETTINGS_TRIGGER_MIN_MS)
-// i co SETTINGS_REFRESH_MS; nie w trakcie zapisu ani zlecenia z aplikacji.
+// Pełny odczyt ustawień po przerwie w SensorData, po zmianie zadanej (na panelu albo naszej) i co 15 min
+// (settings_refresh.hpp); nie w trakcie odczytu, zapisu ani zlecenia z aplikacji. Woła busTask przy każdym
+// SensorData, także bez Wi-Fi (do 1.10.1 tick(), tylko z Wi-Fi i po zgłoszeniu).
 void requestSettingsWhenChanged(uint32_t nowMs, const EcomaxSensorData &reading)
 {
-  const uint32_t targets = targetsSignature(reading);
-  const bool targetsChanged = lastTargetsSignature != 0 && targets != lastTargetsSignature;
-  lastTargetsSignature = targets;
-  if (boilerSettings.busy() || boilerSettingsRequested || parameterWriter.busy() || cloudCommandActive) return;
-  const bool stale = nowMs - settingsReadDoneMs >= SETTINGS_REFRESH_MS;
-  if ((targetsChanged && nowMs - lastSettingsTriggerMs >= SETTINGS_TRIGGER_MIN_MS && nowMs - settingsReadDoneMs >= 10000)
-    || stale) {
-    lastSettingsTriggerMs = nowMs;
-    boilerSettingsRequested = true;
-    logf("ustawienia kotła: %s, odczyt od nowa", targetsChanged ? "zmiana zadanej" : "co 60 min");
-  }
+  const SettingsRefresh::Reason reason = settingsRefresh.onReading(nowMs, targetsSignature(reading), settingsReadDoneMs,
+    boilerSettingsRequested, boilerSettings.busy() || parameterWriter.busy() || cloudCommandActive);
+  if (reason == SettingsRefresh::Reason::NONE) return;
+  boilerSettingsRequested = true;
+  logf("ustawienia kotła: %s, odczyt od nowa",
+    reason == SettingsRefresh::Reason::AFTER_GAP ? "dane z kotła po przerwie"
+      : reason == SettingsRefresh::Reason::TARGETS ? "zmiana zadanej" : "co 15 min");
 }
 
 // Zlecenia zmiany parametrów z aplikacji (serwer: pellet-boiler-pelux200-command.service.ts):
@@ -1598,7 +1603,6 @@ void tick(uint32_t nowMs)
   EcomaxSensorData reading;
   const bool fresh = freshReading(reading);
   const bool changed = fresh && lastSentSignature != 0 && readingSignature(reading) != lastSentSignature;
-  if (fresh) requestSettingsWhenChanged(nowMs, reading);
   if (fresh && (readingDue || changed) && nowMs - lastImmediatePostMs >= IMMEDIATE_POST_MIN_MS) {
     lastImmediatePostMs = nowMs;
     readingDue = false;
@@ -1607,7 +1611,7 @@ void tick(uint32_t nowMs)
   } else if (fresh && static_cast<int32_t>(nowMs - nextPostMs) >= 0) {
     sendReading(nowMs, reading);
   }
-  if (settingsUploadPending && static_cast<int32_t>(nowMs - nextSettingsUploadMs) >= 0) sendSettings(nowMs);
+  if (settingsUploadPending && settingsUpload.due(nowMs)) sendSettings(nowMs);
   saveFuel(nowMs, false);
   if (servicePasswordSavePending) {
     servicePasswordSavePending = false;
