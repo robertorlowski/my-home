@@ -39,7 +39,7 @@
 | `components/PumpConfigFields.tsx`, `pumpConfig.css` | pola okna „Dane sterownika”: podłączenie CWU / CO ze schematem, pojemność zbiornika, PV |
 | `components/icons.tsx` | ikony widoków pompy |
 | `utils/utils.ts` | pobranie i spłaszczenie danych dnia do tabeli i wykresu |
-| `utils/energy-cost-g12w.ts` | koszt energii w taryfie G12w (czas warszawski, format `YYYY.MM.DD`) |
+| `utils/energy-cost-g12w.ts` | strefy taryfy G12w ze świętami (czas warszawski); koszt liczy serwer |
 | `utils/errors.ts` | opisy kodów błędów CHPC (zmieniać razem z `ERRC_*` w firmware) |
 
 ## API
@@ -51,7 +51,7 @@
 | `GET /hp/all` | aplikacja | dane od początku roku (CSV) |
 | `GET /hp/dates` | aplikacja | dni z danymi (`YYYY.MM.DD`) |
 | `GET /hp/4day?date=` albo `?startDate=&endDate=` | aplikacja | rekordy dnia / zakresu dni (czas warszawski) |
-| `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day` | aplikacja | energia, PV, zużycie z sieci, koszt |
+| `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day\|hour` | aplikacja | bilans godzinowy jak w eLiczniku: energia pompy, PV z liczników falowników, pobór i oddanie, koszt G12w (`services/energy-balance.service.ts`) |
 | `GET /hp/last-error` | aplikacja | ostatni rekord z `error_code` (24 h, przy blokadzie bez limitu) |
 | `POST /pv/add` | `co` | odczyt PV; wymagane `total_power`; odpowiedź `{}` (201) |
 | `GET /pv`, `GET /pv/range?date=` / `?startDate=&endDate=` | aplikacja | ostatni odczyt z panelami / odczyty z zakresu |
@@ -126,7 +126,7 @@ Test całego łańcucha (`test/e2e`, most z prawdziwym kodem `co` i symulowanym 
 - **Akcje jednorazowe giną, gdy `co` nie jest w trybie CLOUD** (`applyServerOperation` w `devices/co/src/main.cpp` odrzuca wtedy całą operację, a serwer wysyła akcję tylko raz).
 - **Operacje ręczne i ostatnia telemetria tylko w pamięci** — restart serwera je kasuje.
 - **Harmonogram na konkretny dzień tygodnia przez północ** (np. poniedziałek 22:00–06:00) działa w poniedziałek 00:00–06:00 i 22:00–24:00, a nie we wtorek rano — dzień jest sprawdzany dla bieżącej chwili. Wpisy „każdy dzień” działają zgodnie z oczekiwaniem.
-- **Koszt G12w liczony dwa razy, inaczej**: klient (wykres dnia) traktuje święta jako strefę tańszą i dzieli przedziały na granicach stref, serwer (`monthly-summary`) nie zna świąt i przypisuje strefę po godzinie próbki. W święta dzień i miesiąc mogą pokazać inny koszt. Stawki i godziny stref są wpisane w kod w obu miejscach.
+- **Bilans to sama pompa**: `monthly-summary` liczy pobór i oddanie w godzinach jak dystrybutor, ale tylko z poboru pompy i produkcji PV; eLicznik pokazuje cały dom, więc jego pobór jest większy (porównanie 24–31.10.2026: ok. 0,1–0,2 kWh/h reszty domu). Stawki i godziny stref G12w są wpisane w kod.
 - **Rekord `hp` powstaje tylko przy niezerowym `HP.Ttarget`** — celowo: zbiornik nigdy nie jest chłodzony do 0 °C, więc 0 oznacza brak odczytu z CHPC.
 - **Nie łączyć `hp` z `pv` w agregacji** (limit 32 MB sortowania w Atlasie, brak `allowDiskUse`).
 - Porządki 2026-10-21: `GET /hp/all` liczy początek roku w czasie warszawskim; nowy harmonogram pokazuje błąd zapisu (`Requests.json`); klient woła `/hp/4day`; usunięte nieużywane `getSchedulesForDate`, `getHpDataForDay`, `assignLegacyHpData`, `/operation/getAndClear`, `utils/energy.ts`, `components/ResourceBlock.tsx` oraz starszy model ustawień czasowych (kolekcja `settings`, `GET /settings`, `POST /settings/set`, pole `devices.settings`; stare dokumenty zachowują to pole, schemat je pomija). `setOperationData` zostaje (używa go `onPropertiesSaved`).

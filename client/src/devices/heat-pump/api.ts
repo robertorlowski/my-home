@@ -5,22 +5,29 @@ import { CurrentSchedule, HpEntry, OperationEntry, ScheduleEntry, HpCwuLoading }
 // Endpointy /api/hp*, /api/operation*, /api/schedules* z modułu server/src/modules/heat-pump;
 // rootId i deviceId dopisuje core/http.ts.
 export class HpRequests {
-  // bilans energii liczony na serwerze (zużycie, PV.total_power z rekordów hp, koszt G12w);
-  // group: 'month' dla widoku Rok, 'day' dla widoku Miesiąc na Wykresie
+  // bilans energii liczony na serwerze w godzinach jak licznik dystrybutora (pompa z HP.Watts, PV z liczników
+  // falowników, koszt G12w ze świętami; server/.../heat-pump/services/energy-balance.service.ts);
+  // group: 'month' dla widoku Rok, 'day' dla widoku Miesiąc i Dzień na Wykresie i „Energii dziś”, 'hour' godziny dnia
   static getHpMonthlySummary(
     startDate: string,
     endDate: string,
-    group: 'month' | 'day' = 'month',
+    group: 'month' | 'day' | 'hour' = 'month',
   ) {
       return Requests.get(
         `/hp/monthly-summary?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&group=${group}`,
       ) as Promise<Array<{
         month?: number;
         day?: number;
+        hour?: number;
+        // YYYY-MM-DD przy group day i hour
+        date?: string;
         consumptionKWh: number;
         pvGenerationKWh: number;
         gridEnergyKWh: number;
+        exportKWh: number;
         pvUsedKWh: number;
+        peakGridEnergyKWh: number;
+        offPeakGridEnergyKWh: number;
         totalVariableCostPLN: number;
       }> | null>;
   }

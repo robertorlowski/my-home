@@ -7,6 +7,7 @@ import { HpEntry, OperationEntry } from '../types'
 import { clearOperation, consumeManualForceOnStart, getOperationData, takeOperationActions } from '../services/operation.service'
 import { HpEntryModel } from '../models/hp.model'
 import { getFreshPvSummary } from '../services/pv.service'
+import { energyBalance } from '../services/energy-balance.service'
 import { getTemperature, setWeatherFromController } from '../../../core/services/meteo.service'
 import { backupWeatherQueries } from '../../../core/services/weather-tile.service'
 import { warsawDateRangeBoundsUTC, warsawDayBoundsUTC } from '../../../core/time'
@@ -89,125 +90,19 @@ export async function getHp4Day(req: Request, res: Response) {
   }
 }
 
-// GET /hp/monthly-summary?startDate=&endDate=[&group=day]: energia pompy, PV i sieci
-// w miesiącach (albo dniach) czasu warszawskiego oraz koszt zmienny w taryfie G12w.
-// Energia to całka trapezowa mocy między kolejnymi rekordami hp (HP.Watts, PV.total_power).
-// Nie łączyć tu kolekcji pv ($unionWith, $lookup): Atlas na planie współdzielonym sortuje
-// w pamięci najwyżej 32 MB bez allowDiskUse, a rok danych mieści się tylko dzięki
-// indeksowi createdAt na hp. Dlatego addHp wpisuje PV.total_power do rekordu hp.
+// GET /hp/monthly-summary?startDate=&endDate=[&group=month|day|hour]: energia pompy, PV i sieci po bilansowaniu
+// godzinowym (jak licznik dystrybutora) w miesiącach, dobach (z date) albo godzinach (hour, dla widoku dnia
+// i „Energii dziś”) czasu warszawskiego oraz koszt zmienny w taryfie G12w. Opis i źródła: energy-balance.service.ts.
 export async function getHpMonthlySummary(req: Request, res: Response) {
   try {
     const { startDate, endDate, group } = req.query;
     if (typeof startDate !== "string" || typeof endDate !== "string") {
       return res.status(400).json({ error: "Musisz podać startDate i endDate" });
     }
-
     const { startUTC: start } = warsawDayBoundsUTC(startDate);
     const { endUTC: end } = warsawDayBoundsUTC(endDate);
-    const groupByDay = group === "day";
-    const bucket = groupByDay
-      ? { $dayOfMonth: { date: "$createdAt", timezone: "Europe/Warsaw" } }
-      : { $month: { date: "$createdAt", timezone: "Europe/Warsaw" } };
-
-    const result = await HpEntryModel.aggregate([
-      { $match: { rootId: req.deviceRootId as string, createdAt: { $gte: start, $lt: end } } },
-      { $sort: { createdAt: 1 } },
-      {
-        $setWindowFields: {
-          sortBy: { createdAt: 1 },
-          output: {
-            previousCreatedAt: { $shift: { output: "$createdAt", by: -1 } },
-            previousWatts: { $shift: { output: "$HP.Watts", by: -1 } },
-            previousPv: { $shift: { output: "$PV.total_power", by: -1 } },
-          },
-        },
-      },
-      {
-        $set: {
-          intervalHours: { $divide: [{ $subtract: ["$createdAt", "$previousCreatedAt"] }, 3600000] },
-          bucket,
-          localHour: { $hour: { date: "$createdAt", timezone: "Europe/Warsaw" } },
-          localDayOfWeek: { $dayOfWeek: { date: "$createdAt", timezone: "Europe/Warsaw" } },
-        },
-      },
-      // odstęp dłuższy niż 15 min to przerwa w danych (sterownik offline): pomijany,
-      // żeby nie przypisać ostatniej mocy całej przerwie
-      { $match: { intervalHours: { $gt: 0, $lte: 0.25 }, previousWatts: { $gte: 0 } } },
-      {
-        $set: {
-          consumptionWh: { $multiply: [{ $avg: ["$previousWatts", { $ifNull: ["$HP.Watts", 0] }] }, "$intervalHours"] },
-          pvWh: { $multiply: [{ $avg: ["$previousPv", { $ifNull: ["$PV.total_power", 0] }] }, "$intervalHours"] },
-          // pobór z sieci: nadwyżka poboru pompy nad produkcją PV (nadwyżka PV = 0)
-          gridWh: {
-            $multiply: [
-              { $max: [0, { $avg: [
-                { $subtract: ["$previousWatts", { $ifNull: ["$previousPv", 0] }] },
-                { $subtract: [{ $ifNull: ["$HP.Watts", 0] }, { $ifNull: ["$PV.total_power", 0] }] },
-              ] }] },
-              "$intervalHours",
-            ],
-          },
-        },
-      },
-      {
-        // G12w, strefa droga: pon.–pt. ($dayOfWeek 2–6) 6–13 i 15–22 czasu polskiego.
-        // Święta nie są tu uwzględniane (w G12w są w strefie taniej).
-        $set: {
-          peakGridWh: {
-            $cond: [
-              { $and: [
-                { $gte: ["$localDayOfWeek", 2] }, { $lte: ["$localDayOfWeek", 6] },
-                { $or: [
-                  { $and: [{ $gte: ["$localHour", 6] }, { $lt: ["$localHour", 13] }] },
-                  { $and: [{ $gte: ["$localHour", 15] }, { $lt: ["$localHour", 22] }] },
-                ] },
-              ] },
-              "$gridWh",
-              0,
-            ],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: "$bucket",
-          consumptionKWh: { $sum: { $divide: ["$consumptionWh", 1000] } },
-          pvGenerationKWh: { $sum: { $divide: ["$pvWh", 1000] } },
-          gridEnergyKWh: { $sum: { $divide: ["$gridWh", 1000] } },
-          peakGridEnergyKWh: { $sum: { $divide: ["$peakGridWh", 1000] } },
-          offPeakGridEnergyKWh: { $sum: { $divide: [{ $subtract: ["$gridWh", "$peakGridWh"] }, 1000] } },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          ...(groupByDay ? { day: "$_id" } : { month: "$_id" }),
-          consumptionKWh: 1,
-          pvGenerationKWh: 1,
-          gridEnergyKWh: 1,
-          pvUsedKWh: {
-            $max: [
-              0,
-              { $subtract: ["$consumptionKWh", "$gridEnergyKWh"] },
-            ],
-          },
-          // stawki zmienne TAURON G12w [zł/kWh] na stałe: 1.2302 szczyt, 0.6305 poza szczytem;
-          // te same w kliencie (devices/heat-pump/utils/energy-cost-g12w.ts), zmieniać razem
-          totalVariableCostPLN: {
-            $max: [
-              { $add: [
-                { $multiply: ["$peakGridEnergyKWh", 1.2302] },
-                { $multiply: ["$offPeakGridEnergyKWh", 0.6305] },
-              ] },
-              { $multiply: ["$gridEnergyKWh", 0.6305] },
-            ],
-          },
-        },
-      },
-      { $sort: groupByDay ? { day: 1 } : { month: 1 } },
-    ]);
-
-    return res.status(200).json(result);
+    const balanceGroup = group === "day" || group === "hour" ? group : "month";
+    return res.status(200).json(await energyBalance(req.deviceRootId as string, start, end, balanceGroup));
   } catch (error) {
     console.error(error);
     return res.status(500).send({ message: String(error) });

@@ -1,7 +1,8 @@
 // Widok główny pompy (/ i /hp) w układzie makiety „Instrument” (#s-hp-podglad): karta hero z temperaturą zbiornika
 // (HP.Ttarget, czujnik w środku zbiornika, nie zadana) na pasku zakresu Tmin–Tmax, stan sprężarki i cztery KPI
 // (moc, PV teraz, tryb, na zewnątrz); karta „Pomiary”, karta „Obieg” (stan przekaźników z telemetrii) i karta
-// „Energia dziś” (zużycie i koszt G12w liczone w przeglądarce z GET /hp/4day, mini wykres mocy i PV).
+// „Energia dziś” (zużycie, PV zużyte przez pompę i koszt G12w z bilansu serwera GET /hp/monthly-summary, mini wykres
+// mocy i PV z GET /hp/4day).
 // Dane bieżące z GET /hp (HP z CHPC, PV, t_out, COP zbiornika) i dzwonek błędu z GET /hp/last-error; odświeża je
 // komunikat WebSocket „update” (po zapisie telemetrii) i zegar co 30 s. Energia dnia odświeżana co 5 min.
 // Na górze paski: „Offline od …” (OfflineBanner), „Pompa ciepła wstrzymana” (kocioł pali albo jest gorący,
@@ -18,8 +19,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Area, Bar, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { cc } from '../../../../core/chartColors';
 import { errorDescription, ERROR_LOCK_LIMIT, isLocked } from '../../utils/errors';
-import { fetchData, formatDateYMD } from '../../utils/utils';
-import { energyCostG12w } from '../../utils/energy-cost-g12w';
+import { fetchData, fetchMonthlySummary, formatDateYMD } from '../../utils/utils';
 import { OfflineBanner } from '../../../../core/components/OfflineBanner';
 import { Switch } from '../../components/Switch';
 import { BellIcon } from '../../components/icons';
@@ -116,11 +116,12 @@ const HP: React.FC = () => {
       .catch(err => console.log(err));
   };
 
-  // Energia dziś: wszystkie rekordy dnia (koszt liczy się z pełnego przebiegu mocy, przerwy > 15 min pomijane
-  // jak na serwerze) i co piąty rekord na mini wykres. Pobierane osobno od telemetrii bieżącej, co 5 min.
+  // Energia dziś: bilans dnia z serwera (godzinowy jak w eLiczniku, PV z liczników falowników) i co piąty rekord
+  // dnia na mini wykres. Pobierane osobno od telemetrii bieżącej, co 5 min.
   const loadToday = () => {
-    fetchData(true, formatDateYMD(new Date())).then((rows) => {
-      const result = energyCostG12w(rows, { maxGapMinutes: 15 });
+    const today = formatDateYMD(new Date());
+    Promise.all([fetchData(true, today), fetchMonthlySummary(today, today, 'day')]).then(([rows, summaries]) => {
+      const result = summaries?.[0] ?? { consumptionKWh: 0, pvUsedKWh: 0, totalVariableCostPLN: 0 };
       const points = rows
         .filter((row) => row?.time)
         .sort((a, b) => a.time.localeCompare(b.time))

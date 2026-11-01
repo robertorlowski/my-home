@@ -161,6 +161,58 @@ describe('PV telemetry', () => {
     expect(day.gridEnergyKWh).toBeCloseTo(500 / 60 / 1000, 9);
   });
 
+  it('bilans godzinowy: PV z liczników falowników (moc 0 przy utracie łączności), oddanie do sieci, święto poza szczytem', async () => {
+    const rootId = await createDevice('A4CF00000109');
+    // 11.11 (święto, środa) i 12.11 (czwartek); 09:00–11:00 UTC = 10:00–12:00 w Warszawie
+    for (const date of ['2026-11-11', '2026-11-12']) {
+      const at = (time: string) => new Date(`${date}T${time}:00Z`);
+      // pompa 1200 W co 5 min od 09:00 do 10:55: godzina 10 = 11 odstępów (1100 Wh), godzina 11 = 12 odstępów (1200 Wh);
+      // moc PV w rekordach 0, jak przy falowniku bez łączności z DTU
+      await HpEntryModel.collection.insertMany(Array.from({ length: 24 }, (_, i) => {
+        const createdAt = new Date(at('09:00').getTime() + i * 5 * 60_000);
+        return { rootId, deviceType: DeviceType.HP, HP: { Ttarget: 40, Watts: 1200 }, PV: { total_power: 0 }, createdAt, updatedAt: createdAt };
+      }));
+      // liczniki: godzina 10 do 1600 Wh, godzina 11 do 2000 Wh; chwilowe zero nie cofa sumy
+      await PvEntryModel.collection.insertMany([['09:10', 0], ['09:50', 1600], ['10:30', 2000], ['10:40', 0]].map(([time, wh]) => ({
+        rootId, deviceType: DeviceType.HP, total_power: 0, total_prod_today: wh, createdAt: at(time as string), updatedAt: at(time as string),
+      })));
+    }
+    const summary = (group: string, startDate: string, endDate = startDate) =>
+      request(app).get(`/api/hp/monthly-summary?rootId=${rootId}&startDate=${startDate}&endDate=${endDate}&group=${group}`);
+
+    const hours = (await summary('hour', '2026-11-12')).body;
+    expect(hours.map((h: { hour: number }) => h.hour)).toEqual([10, 11]);
+    // 10:00: pompa 1,1 kWh, PV 1,6 kWh — bez poboru, 0,5 kWh oddane; 11:00: pompa 1,2, PV 0,4 — pobór 0,8 kWh
+    expect(hours[0]).toMatchObject({ date: '2026-11-12', consumptionKWh: 1.1, pvGenerationKWh: 1.6, gridEnergyKWh: 0, pvUsedKWh: 1.1 });
+    expect(hours[0].exportKWh).toBeCloseTo(0.5, 9);
+    expect(hours[1].pvGenerationKWh).toBeCloseTo(0.4, 9);
+    expect(hours[1].gridEnergyKWh).toBeCloseTo(0.8, 9);
+    expect(hours[1].peakGridEnergyKWh).toBeCloseTo(0.8, 9);
+
+    // czwartek w szczycie, święto 11.11 poza szczytem
+    const days = (await summary('day', '2026-11-11', '2026-11-12')).body;
+    expect(days.map((d: { date: string }) => d.date)).toEqual(['2026-11-11', '2026-11-12']);
+    expect(days[0].offPeakGridEnergyKWh).toBeCloseTo(0.8, 9);
+    expect(days[0].totalVariableCostPLN).toBeCloseTo(0.8 * 0.6305, 9);
+    expect(days[1].totalVariableCostPLN).toBeCloseTo(0.8 * 1.2302, 9);
+    expect(days[1].exportKWh).toBeCloseTo(0.5, 9);
+
+    // 13.11: moc PV w rekordach 600 W (połowa paneli bez łączności), liczniki 2300 Wh: godziny według mocy
+    // (550 i 600 Wh) przeskalowane do licznika — 1100 i 1200 Wh, czyli tyle, ile zużyła pompa
+    const at13 = (time: string) => new Date(`2026-11-13T${time}:00Z`);
+    await HpEntryModel.collection.insertMany(Array.from({ length: 24 }, (_, i) => {
+      const createdAt = new Date(at13('09:00').getTime() + i * 5 * 60_000);
+      return { rootId, deviceType: DeviceType.HP, HP: { Ttarget: 40, Watts: 1200 }, PV: { total_power: 600 }, createdAt, updatedAt: createdAt };
+    }));
+    await PvEntryModel.collection.insertMany([['09:10', 0], ['09:50', 2000], ['10:30', 2300]].map(([time, wh]) => ({
+      rootId, deviceType: DeviceType.HP, total_power: 600, total_prod_today: wh, createdAt: at13(time as string), updatedAt: at13(time as string),
+    })));
+    const scaled = (await summary('hour', '2026-11-13')).body;
+    expect(scaled[0].pvGenerationKWh).toBeCloseTo(1.1, 9);
+    expect(scaled[1].pvGenerationKWh).toBeCloseTo(1.2, 9);
+    expect(scaled.map((h: { gridEnergyKWh: number }) => h.gridEnergyKWh)).toEqual([0, 0]);
+  });
+
   it('removes panel details after 90 days and keeps the summary', async () => {
     const rootId = await createDevice('A4CF00000107');
     const old = new Date(Date.now() - 91 * 24 * 60 * 60 * 1000);

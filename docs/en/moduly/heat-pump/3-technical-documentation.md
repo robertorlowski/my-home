@@ -39,7 +39,7 @@
 | `components/PumpConfigFields.tsx`, `pumpConfig.css` | "Dane sterownika" dialog fields: CWU / CO connection with a diagram, tank volume, PV |
 | `components/icons.tsx` | heat pump view icons |
 | `utils/utils.ts` | fetching and flattening a day's data for the table and the chart |
-| `utils/energy-cost-g12w.ts` | energy cost in the G12w tariff (Warsaw time, `YYYY.MM.DD` format) |
+| `utils/energy-cost-g12w.ts` | G12w tariff zones with public holidays (Warsaw time); the cost is computed by the server |
 | `utils/errors.ts` | CHPC error code descriptions (change together with `ERRC_*` in the firmware) |
 
 ## API
@@ -51,7 +51,7 @@
 | `GET /hp/all` | application | data since the start of the year (CSV) |
 | `GET /hp/dates` | application | days with data (`YYYY.MM.DD`) |
 | `GET /hp/4day?date=` or `?startDate=&endDate=` | application | records of a day / a range of days (Warsaw time) |
-| `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day` | application | energy, PV, grid use, cost |
+| `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day\|hour` | application | hourly balance as on the utility meter (eLicznik): pump energy, PV from the inverter counters, grid import and export, G12w cost (`services/energy-balance.service.ts`) |
 | `GET /hp/last-error` | application | latest record with `error_code` (24 h, no limit while locked) |
 | `POST /pv/add` | `co` | PV reading; `total_power` required; reply `{}` (201) |
 | `GET /pv`, `GET /pv/range?date=` / `?startDate=&endDate=` | application | latest reading with panels / readings in a range |
@@ -126,7 +126,7 @@ The whole-chain test (`test/e2e`, a bridge with the real `co` code and a simulat
 - **One-off actions are lost when `co` is not in CLOUD mode** (`applyServerOperation` in `devices/co/src/main.cpp` rejects the whole operation, and the server sends the action only once).
 - **Manual operations and the latest telemetry live only in memory** — a server restart clears them.
 - **A schedule for a specific weekday crossing midnight** (e.g. Monday 22:00–06:00) is active on Monday 00:00–06:00 and 22:00–24:00, not on Tuesday morning — the day is checked for the current moment. "Every day" entries work as expected.
-- **The G12w cost is computed twice, differently**: the client (day chart) treats holidays as the cheap zone and splits intervals at zone boundaries, the server (`monthly-summary`) knows no holidays and assigns the zone by the sample hour. On holidays the day and the month may show a different cost. Rates and zone hours are hard-coded in both places.
+- **The balance covers the pump only**: `monthly-summary` computes grid import and export per hour like the utility, but only from the pump draw and PV production; eLicznik shows the whole house, so its import is higher (comparison 24–31.10.2026: about 0.1–0.2 kWh/h for the rest of the house). G12w rates and zone hours are hard-coded.
 - **An `hp` record is created only for a non-zero `HP.Ttarget`** — on purpose: the tank is never cooled down to 0 °C, so 0 means no reading from CHPC.
 - **Never join `hp` with `pv` in an aggregation** (32 MB Atlas sort limit, no `allowDiskUse`).
 - Clean-up 2026-10-21: `GET /hp/all` computes the start of the year in Warsaw time; a new schedule shows its save error (`Requests.json`); the client calls `/hp/4day`; removed the unused `getSchedulesForDate`, `getHpDataForDay`, `assignLegacyHpData`, `/operation/getAndClear`, `utils/energy.ts`, `components/ResourceBlock.tsx` and the legacy time settings model (`settings` collection, `GET /settings`, `POST /settings/set`, the `devices.settings` field; old documents keep the field, the schema ignores it). `setOperationData` stays (used by `onPropertiesSaved`).

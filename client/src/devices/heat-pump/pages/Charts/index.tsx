@@ -1,7 +1,7 @@
 // Zakładka Wykres pompy (/chart) w układzie makiety „Instrument” (#s-hp-wykres): pasek filtrów (okres Dzień /
 // Miesiąc / Rok, nawigacja po dacie, „Cały dzień”), cztery kafelki statystyk i karty wykresów. Dzień: karta
-// „Temperatury” i karta „Moc i produkcja PV” z GET /hp/4day, zużycie i koszt liczone w przeglądarce
-// (energy-cost-g12w.ts), czas pracy sprężarki z rekordów. Miesiąc i Rok: karta „Energia i koszt” (słupki energii,
+// „Temperatury” i karta „Moc i produkcja PV” z GET /hp/4day, czas pracy sprężarki z rekordów, zużycie, energia
+// z sieci i koszt z bilansu serwera (GET /hp/monthly-summary, group day; do 2026-11-01 w przeglądarce). Miesiąc i Rok: karta „Energia i koszt” (słupki energii,
 // PV i koszt) z bilansu serwera (GET /hp/monthly-summary, group day/month). Legenda w nagłówku karty przełącza
 // serie. Dane pobierane przy zmianie okresu, daty lub filtra; oś czasu dnia bieżącego przesuwa się co minutę,
 // ale nowe dane nie są dociągane. Kolory wykresów z tokenów przez cc() (core/chartColors.ts).
@@ -31,7 +31,6 @@ import {
   formatDuration,
 } from '../../utils/utils';
 import { ClipLoader } from 'react-spinners';
-import { energyCostG12w } from '../../utils/energy-cost-g12w';
 import { Segmented } from '../../components/Segmented';
 import { DateNav, formatDayLabel, isToday, useHpDates } from '../../components/DateNav';
 
@@ -68,16 +67,6 @@ const toDateString = (date: Date): string => {
     String(date.getMonth() + 1).padStart(2, '0'),
     String(date.getDate()).padStart(2, '0'),
   ].join('-');
-};
-
-// Dzień rekordu jako YYYY-MM-DD z time "YYYY.MM.DD HH:MM:SS" (co) albo innych zapisów daty.
-const getRowDate = (time: string): string => {
-  const date = time.split(/[ T]/)[0] || '';
-  const parts = date.split(/[./-]/);
-
-  if (parts.length !== 3) return date;
-  if (parts[0].length === 4) return parts.join('-');
-  return `${parts[2]}-${parts[1]}-${parts[0]}`;
 };
 
 const getDates = (
@@ -359,7 +348,7 @@ export const HeatPumpChart: React.FC = () => {
           setWorkSeconds(0);
           setFilteredData(dates.map((date) => {
             const day = Number(date.slice(8, 10));
-            const item = dailyData.find((summary) => summary.day === day);
+            const item = dailyData.find((summary) => summary.date === date);
 
             return {
               time: String(day),
@@ -371,53 +360,26 @@ export const HeatPumpChart: React.FC = () => {
           return;
         }
 
-        // Dzień: wszystkie rekordy (także postój sprężarki), bo koszt liczy się z pełnego przebiegu mocy;
-        // przerwy dłuższe niż 15 min są pomijane (jak na serwerze)
-        const data = await fetchData(
-          true,
-          dates[0],
-          dates[dates.length - 1],
-        );
+        // Dzień: rekordy na wykres i czas pracy sprężarki; zużycie, energia z sieci i koszt z bilansu serwera
+        // (GET /hp/monthly-summary, group = day: bilans godzinowy jak w eLiczniku, PV z liczników falowników)
+        const [data, summaries] = await Promise.all([
+          fetchData(true, dates[0], dates[dates.length - 1]),
+          fetchMonthlySummary(dates[0], dates[dates.length - 1], 'day'),
+        ]);
 
         if (!active) return;
 
-        // rekordy pogrupowane po dniu (z pola time sterownika), bo koszt G12w liczy się osobno dla każdej doby
-        const rowsByDate = new Map<string, THPL[]>();
-        data.forEach((row) => {
-          // rekord bez czasu ze sterownika (np. z testu lokalnego) pomijany, jak w widoku dnia niżej
-          if (!row?.time) return;
-          const dateRows = rowsByDate.get(getRowDate(row.time)) || [];
-          dateRows.push(row);
-          rowsByDate.set(getRowDate(row.time), dateRows);
-        });
-
-        const dailyResults = dates.map((date) => {
-          const rows = rowsByDate.get(date) || [];
-
-          const result = energyCostG12w(rows, {
-            maxGapMinutes: 15,
-          });
-
-          return {
-            date,
-            rows,
-            energy: Number(result.consumptionKWh || 0),
-            pv: Number(result.pvUsedKWh || 0),
-            cost: Number(result.totalVariableCostPLN || 0),
-          };
-        });
-
-        const periodTotal = dailyResults.reduce(
+        const periodTotal = (summaries || []).reduce(
           (total, item) => ({
-            energy: total.energy + item.energy,
-            pv: total.pv + item.pv,
-            cost: total.cost + item.cost,
+            energy: total.energy + Number(item.consumptionKWh || 0),
+            grid: total.grid + Number(item.gridEnergyKWh || 0),
+            cost: total.cost + Number(item.totalVariableCostPLN || 0),
           }),
-          { energy: 0, pv: 0, cost: 0 },
+          { energy: 0, grid: 0, cost: 0 },
         );
 
         setKwh(Number(periodTotal.energy.toFixed(2)));
-        setKwhGrid(Number((periodTotal.energy - periodTotal.pv).toFixed(2)));
+        setKwhGrid(Number(periodTotal.grid.toFixed(2)));
         setCost(periodTotal.cost);
         setWorkSeconds(compressorSeconds(data));
 

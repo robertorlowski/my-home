@@ -36,7 +36,7 @@ export const fetchData = async (
 export const fetchMonthlySummary = (
   startDate: string,
   endDate: string,
-  group: 'month' | 'day' = 'month',
+  group: 'month' | 'day' | 'hour' = 'month',
 ) => HpRequests.getHpMonthlySummary(startDate, endDate, group);
 
 // Czas pracy sprężarki z rekordów dnia: suma odstępów między kolejnymi rekordami z HPS (co 10 s w czasie pracy),

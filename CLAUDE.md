@@ -276,7 +276,7 @@ Dane PV są oddzielone od telemetrii pompy, pod przyszły widok zarządzania ene
 - `POST /api/hp/add` — przed zapisem `addHp` wpisuje do rekordu `PV: {total_power}`, jeśli telemetria nie ma własnego `PV` (starszy firmware wysyła je sam i zostaje ono bez zmian). `pv_power`, temperatura i produkcja nie trafiają do `hp`;
 - `GET /api/hp` — do bieżącej telemetrii dołącza pełne podsumowanie (`PV` bez `panels` i `pv_power`), bo ekran HP pokazuje też temperaturę i dzisiejszą produkcję.
 
-Dzięki temu `/hp/4day`, `/hp/all` i `monthly-summary` działają bez zmian na `PV.total_power` z rekordów `hp`, a klient (ekran HP, zakładka Dane, koszty G12w) nie wymagał zmian. **Nie łączyć `hp` z `pv` w agregacji:** baza produkcyjna (współdzielony plan Atlas) sortuje w pamięci najwyżej 32 MB i nie pozwala na `allowDiskUse`, a `monthly-summary` za rok mieści się tylko dzięki indeksowi `createdAt` na `hp`. Wersja z `$unionWith` + `$locf` przekraczała limit już dla jednego miesiąca (sprawdzone na produkcji 2026-09-26).
+Dzięki temu `/hp/4day` i `/hp/all` działają bez zmian na `PV.total_power` z rekordów `hp`. **Bilans energii** (`monthly-summary`, od 2026-11-01 `modules/heat-pump/services/energy-balance.service.ts`) liczy w pełnych godzinach jak licznik dystrybutora (eLicznik TAURON, net-billing): w godzinie pobór z sieci = max(0, pompa − PV), oddane = max(0, PV − pompa); pompa z całki `HP.Watts` (`hp`), PV: suma doby z liczników falowników (`total_prod_today` z `pv`, bieżące maksimum w dobie) rozłożona na godziny według całki `PV.total_power` z `hp` (przeskalowanej do licznika; sam licznik falownika bez łączności rośnie skokami), w dobie bez odczytów `pv` sama całka mocy; obie kolekcje osobnymi agregacjami, łączone w JS; strefa G12w z początku godziny, święta (`calendar.service`) poza szczytem. Moc chwilowa PV zaniża produkcję, gdy DTU traci łączność z falownikiem (`link` 0: moc portów 0, licznik rośnie; 27.10.2026 z mocy 11,5 kWh, z liczników 18,0, eLicznik oddał 15,4). Pompa to nie cały dom: eLicznik pokazuje też resztę odbiorników (ok. 0,1–0,2 kWh/h przy samej pompie, porównanie 24–31.10.2026). **Nie łączyć `hp` z `pv` w agregacji:** baza produkcyjna (współdzielony plan Atlas) sortuje w pamięci najwyżej 32 MB i nie pozwala na `allowDiskUse`, a `monthly-summary` za rok mieści się tylko dzięki indeksowi `createdAt` na `hp`. Wersja z `$unionWith` + `$locf` przekraczała limit już dla jednego miesiąca (sprawdzone na produkcji 2026-09-26).
 
 ### Fotowoltaika jako osobny rodzaj (`photovoltaic`)
 
@@ -565,7 +565,7 @@ Trasy składa [`server/src/core/routes.ts`](server/src/core/routes.ts): urządze
 | `GET /api/hp/all` | dane od początku bieżącego roku (czas warszawski) |
 | `GET /api/hp/dates` | dni, dla których są dane |
 | `GET /api/hp/4day?date=...` | dane dla jednego dnia |
-| `GET /api/hp/monthly-summary` | podsumowania energii |
+| `GET /api/hp/monthly-summary?startDate=&endDate=&group=month\|day\|hour` | bilans energii w godzinach (pompa, PV z liczników, pobór i oddanie, koszt G12w) w miesiącach, dobach albo godzinach |
 | `GET /api/hp/last-error` | ostatni błąd sterownika z 24 h (przy blokadzie bez limitu czasu) |
 | `POST /api/hp/add` | zapis telemetrii i zwrot operacji |
 | `GET /api/pv` | ostatni odczyt PV z panelami |
@@ -712,7 +712,7 @@ Eksport CSV stosuje tę samą prezentację. Tabela jest zwykłą tabelą `.data`
 
 ### Koszt energii
 
-[`client/src/devices/heat-pump/utils/energy-cost-g12w.ts`](client/src/devices/heat-pump/utils/energy-cost-g12w.ts) liczy koszt w taryfie G12w. Parser czasu przyjmuje zarówno `YYYY-MM-DD`, jak i `YYYY.MM.DD` (format z `co`) i zawsze używa czasu warszawskiego. W widoku głównym `lt_pow` jest opisane jako „Energia cyklu” w Wh, a `WWatt` jako „Limit mocy” (w Ustawieniach pole `working_watt` to „Limit mocy [W]”).
+Zużycie, energię z sieci i koszt w taryfie G12w liczy serwer (`GET /hp/monthly-summary`, punkt 5a): widok Dzień, Miesiąc i Rok na Wykresie i karta „Energia dziś” korzystają z tego samego bilansu (do 2026-11-01 dzień i „Energia dziś” liczyła przeglądarka z próbek mocy). [`client/src/devices/heat-pump/utils/energy-cost-g12w.ts`](client/src/devices/heat-pump/utils/energy-cost-g12w.ts) ma już tylko strefy G12w ze świętami (`getTauronG12wZone`, zakładka Ogrzewanie strony pogody). W widoku głównym `lt_pow` jest opisane jako „Energia cyklu” w Wh, a `WWatt` jako „Limit mocy” (w Ustawieniach pole `working_watt` to „Limit mocy [W]”).
 
 ## 10. Definicja harmonogramu
 
