@@ -173,7 +173,10 @@ export async function runWinterCycle(
   }
   // zlecenie sezonu w toku: najpierw jego wynik i nowy odczyt ustawień
   const pending = await PelletBoilerCommandModel.exists({ rootId, kind: 'ecomax', index: SEASON_PARAMETER, status: { $in: ['pending', 'sent'] } });
-  if (!pending && phase === 'waiting') {
+  // Bez świeżego odczytu kotła (temperature === null) cykl czeka: ani Zimy z samej wody w pompie (zlecenie i tak nie
+  // dojdzie do niedostępnego kotła), ani wymuszenia pompy ciepła. Do 2026-11-01 wystarczała woda w pompie, więc przy
+  // kotle bez danych (31.10: 48 min) pompa ciepła mogła być wymuszana co FORCE_REPEAT_MS bez odbioru ciepła.
+  if (!pending && phase === 'waiting' && temperature !== null) {
     const from = cycle.winterFrom ?? WINTER_FROM;
     const reached = [temperature, cycle.pumpTemperature ?? null].some((t) => t !== null && t >= from);
     if (reached) {
@@ -183,7 +186,7 @@ export async function runWinterCycle(
           + `${cycle.winterFrom !== WINTER_FROM ? ' (Tmax pompy − 3 °C)' : ''}`,
       ));
       console.log(`[pellet zima] ${rootId} kocioł ${temperature} °C, pompa ${cycle.pumpTemperature} °C, próg ${from} — Zima`);
-    } else if (temperature !== null || cycle.pumpTemperature != null) {
+    } else {
       await forcePumpIfDue(rootId, cycle, now, pump);
     }
   } else if (!pending && temperature !== null && temperature < SUMMER_BELOW && last?.heating_pump === false) {

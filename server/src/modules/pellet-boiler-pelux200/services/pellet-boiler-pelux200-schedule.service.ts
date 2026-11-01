@@ -509,11 +509,17 @@ async function transitionMeta(
   const seasonEntry = entries.find((entry) => String(entry._id) === seasonScheduleId);
   const manual = (await PelletBoilerScheduleSettingsModel.findOne({ rootId }).select('manualSeason')
     .lean<{ manualSeason?: PelletBoilerManualSeason | null }>())?.manualSeason;
+  // wpis „Tryb Zima”, który działał do poprzedniego przejścia, a teraz nie działa: przez temperaturę tylko wtedy, gdy
+  // jego okno trwa dalej, inaczej skończyło się okno (31.10 o 10:00 dziennik pisał „6 °C powyżej 7 °C” przy końcu okna)
+  const ended = !seasonEntry && last?.seasonScheduleId && state.season !== last.season
+    ? entries.find((entry) => String(entry._id) === last.seasonScheduleId) : undefined;
+  const endedByTemperature = !!ended && !!seasonThresholds(ended) && !!activeEntry([ended], mode, now, 'season');
   const reasons: string[] = [];
   if (last?.mode && last.mode !== mode) reasons.push(`zmiana trybu pracy na ${MODE_NAMES[mode]}`);
   if (state.season && state.season !== last?.season) {
     reasons.push(manual?.season === state.season ? 'sezon z przycisku w Ustawieniach'
-      : seasonEntry ? `wpis sezonu ${window(seasonEntry)}` : 'sezon poza harmonogramem');
+      : seasonEntry ? `wpis sezonu ${window(seasonEntry)}`
+      : ended && !endedByTemperature ? `koniec wpisu sezonu ${window(ended)}` : 'sezon poza harmonogramem');
   }
   if (state.cwuFrom !== last?.cwuFrom || state.cwuTo !== last?.cwuTo || !!state.pelletCwu !== !!last?.pelletCwu
     || !!state.cwuUnchanged !== !!last?.cwuUnchanged) {
@@ -525,11 +531,9 @@ async function transitionMeta(
   const thresholds = seasonEntry && seasonThresholds(seasonEntry);
   if (thresholds) {
     conditions.push(`temperatura zewnętrzna ${outdoor ?? '?'} °C (Zima poniżej ${thresholds.winterBelow} °C, Lato powyżej ${thresholds.summerAbove} °C)`);
-  } else if (!seasonEntry && last?.seasonScheduleId && state.season !== last.season) {
+  } else if (ended && endedByTemperature) {
     // wpis „Tryb Zima” przestał działać przez temperaturę (okno trwa dalej)
-    const ended = entries.find((entry) => String(entry._id) === last.seasonScheduleId);
-    const endedThresholds = ended && seasonThresholds(ended);
-    if (endedThresholds) conditions.push(`temperatura zewnętrzna ${outdoor ?? '?'} °C powyżej ${endedThresholds.summerAbove} °C`);
+    conditions.push(`temperatura zewnętrzna ${outdoor ?? '?'} °C powyżej ${seasonThresholds(ended)!.summerAbove} °C`);
   }
   return systemMeta('Harmonogram', `Przejście harmonogramu: ${reasons.join(', ') || 'zmiana stanu'}.`, conditions.join(', '));
 }

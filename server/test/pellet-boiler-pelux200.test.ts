@@ -18,6 +18,7 @@ import { PelletBoilerScheduleSettingsModel } from '../src/modules/pellet-boiler-
 import { heatPumpRunningInHeatPumpMode, runWinterCycle, winterFromMax } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-winter-cycle.service'
 import { migrateBoilerDefinitions } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-heat-pump-link.service'
 import { DeviceModel } from '../src/core/models/device.model'
+import { OperationLogModel } from '../src/core/models/operation-log.model'
 import { pelletBoilerTile } from '../src/modules/pellet-boiler-pelux200/tile'
 import { listActiveAlertCodes } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-alert.service'
 
@@ -631,6 +632,72 @@ describe('Kocioł pelletowy Pellux 200', () => {
     await boiler(44);
     await runWinterCycle(rootId, 'summer', new Date(), pump(47));
     expect(await seasonCommands()).toHaveLength(1);
+  });
+
+  it('dziennik: Lato po końcu okna „Tryb Zima” z progami bez warunku temperatury, przez temperaturę z warunkiem', async () => {
+    const sn = 'AABBCC000031';
+    const { rootId } = (await register(sn)).body;
+    const api = (path: string) => `/api/pellet-boiler-pelux200/${path}?rootId=${rootId}`;
+    // kopia z 3.10: tryb Pellet (minimum 65 °C), kocioł na Zimie (nr 125 = 0)
+    await request(app).post(`/api/pellet-boiler-pelux200/settings?deviceId=${sn}`).send(archive.raw_hex).expect(201);
+    const raw125 = (await request(app).get(api('settings'))).body.groups
+      .flatMap((g: { parameters: { index: number; raw: number[] }[] }) => g.parameters).find((p: { index: number }) => p.index === 125).raw[0];
+    expect(raw125).toBe(0);
+    await request(app).post(api('schedules')).send({
+      type: 'season', mode: 'pellet', dayOfWeek: -1, startTime: '07:00', endTime: '10:00', winterBelow: 5, summerAbove: 7,
+    }).expect(201);
+    const settings = (await request(app).get(api('schedule-settings'))).body;
+    await request(app).put(api('schedule-settings')).send({
+      ...settings, enabled: true, defaults: { ...settings.defaults, pellet: { ...settings.defaults.pellet, season: 'summer' } },
+    }).expect(200);
+    const seasonLog = async () => (await OperationLogModel.find({ rootId }).sort({ _id: 1 }).lean())
+      .filter((entry) => entry.action.includes('Lato'));
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      const at = async (iso: string, outside_temp: number) => {
+        vi.setSystemTime(new Date(iso));
+        await request(app).post(`/api/pellet-boiler-pelux200/add?deviceId=${sn}`).send({ state: 5, outside_temp }).expect(201);
+        await applySchedule(rootId, new Date());
+        await PelletBoilerCommandModel.updateMany({ rootId, status: 'pending' }, { $set: { status: 'done' } });
+      };
+      // 07:30, 3 °C: Zima z wpisu (kocioł już na Zimie); 10:00, 6 °C (między progami): koniec okna — Lato bez warunku temperatury
+      await at('2026-11-02T06:30:00Z', 3);
+      await at('2026-11-02T09:00:30Z', 6);
+      expect(await seasonLog()).toMatchObject([{ reason: expect.stringContaining('koniec wpisu sezonu 07:00–10:00'), conditions: 'tryb Pellet' }]);
+
+      // następnego dnia 07:30, 3 °C: Zima; 08:00, 8 °C (okno trwa): Lato przez temperaturę
+      await at('2026-11-03T06:30:00Z', 3);
+      await at('2026-11-03T07:00:00Z', 8);
+      expect((await seasonLog())[1]).toMatchObject({
+        reason: expect.stringContaining('sezon poza harmonogramem'),
+        conditions: 'tryb Pellet, temperatura zewnętrzna 8 °C powyżej 7 °C',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cykl Zimy bez świeżego odczytu kotła czeka: bez wymuszenia pompy ciepła i bez Zimy z samej wody w pompie', async () => {
+    const sn = 'AABBCC000032';
+    const { rootId } = (await registerWithHeatPump(sn, 'AABBCC0000E2')).body;
+    await register('AABBCC0000E2', 'heat_pump');
+    await request(app).post(`/api/pellet-boiler-pelux200/settings?deviceId=${sn}`).send(archiveHeatPump.raw_hex).expect(201);
+    await request(app).post(`/api/pellet-boiler-pelux200/add?deviceId=${sn}`).send({ state: 5, heating_temp: 35, heating_pump: false }).expect(201);
+    const forced: string[] = [];
+    const pump = (water: number) =>
+      ({ running: async () => false, force: async (id: string) => { forced.push(id); }, temperatures: async () => ({ max: 47, water }) });
+    // 31.10: kocioł bez danych 48 min; ostatni odczyt starszy niż 15 min = brak danych
+    const later = new Date(Date.now() + 20 * 60_000);
+
+    expect(await runWinterCycle(rootId, 'summer', later, pump(40))).toMatchObject({ phase: 'waiting', temperature: null });
+    expect(forced).toEqual([]);
+    await runWinterCycle(rootId, 'summer', later, pump(46));
+    expect(((await request(app).get(`/api/pellet-boiler-pelux200/commands?rootId=${rootId}`)).body as { index: number }[])
+      .filter((c) => c.index === 125)).toEqual([]);
+
+    // świeży odczyt: znowu wymuszenie startu
+    await runWinterCycle(rootId, 'summer', new Date(), pump(40));
+    expect(forced).toHaveLength(1);
   });
 
   it('cykl Zimy na prawdziwych odczytach kotła z 2026-10-04 (Lato do 22:27, potem Zima)', async () => {
