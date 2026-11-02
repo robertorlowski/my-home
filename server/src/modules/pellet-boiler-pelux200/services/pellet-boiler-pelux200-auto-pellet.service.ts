@@ -2,8 +2,8 @@
 // (nr 99 < 50 °C) zgłosi rozpalanie (stan 2), serwer od razu zleca nastawy trybu Pellet (profiles.pellet
 // z ustawień harmonogramu) — bez wyłączania regulatora, w trakcie palenia; to jedyny wyjątek od zasady
 // „zmiana trybu tylko na postoju albo przy wyłączonym kotle” (Ustawienia → Tryb pracy). Kolejność jak
-// w aplikacji (orderChanges): granice poszerzające zakres, zadane, granice zawężające, reszta — przejście
-// idzie w górę (zadana 30 → 67 przed minimum 30 → 65), więc nic nie wymusza wygaszenia ani przegrzania.
+// w aplikacji (orderChanges): granice zadanej, zadane, reszta (od 2026-11-02 minimum 30 → 65 przed zadaną
+// 30 → 67; do tego dnia zadana szła pierwsza).
 // Ekran główny kotła pokazuje czerwony komunikat do kliknięcia „OK” (POST …/auto-pellet/ack); powrót na
 // pompę ciepła tylko ręcznie. Do potwierdzenia komunikatu przejście nie jest powtarzane.
 // Wołane po każdym odczycie kotła (kontroler /add; firmware 1.6.x wysyła odczyt od razu po zmianie stanu).
@@ -33,17 +33,15 @@ const currentRaw = (view: ReturnType<typeof buildSettingsView>, change: PelletBo
     ? view.mixers.find((m) => m.mixer === change.mixer)?.parameters.find((p) => p.index === change.index)
     : view.groups.flatMap((g) => g.parameters).find((p) => p.index === change.index))?.raw[0];
 
-// Kolejność jak orderChanges w kliencie (components/MainParameters.tsx): 0 granica poszerzająca zakres
-// zadanej, 1 zadana, 2 granica zawężająca, 3 reszta; w obrębie rangi kolejność profilu.
-export function orderProfileChanges(changes: PelletBoilerCommandChange[], current: (c: PelletBoilerCommandChange) => number | undefined) {
+// Kolejność jak orderChanges w kliencie (components/MainParameters.tsx): 0 granice zadanej (min, max), 1 zadana,
+// 2 reszta; w obrębie rangi kolejność profilu. Zakres granic jest w regulatorze stały, a zakres zadanej wynika
+// z granic (decyzja użytkownika 2026-11-02: najpierw minimalna temperatura kotła, potem zadana).
+export function orderProfileChanges(changes: PelletBoilerCommandChange[]) {
   const rank = (change: PelletBoilerCommandChange) => {
-    const raising = change.value > (current(change) ?? change.value);
     const role = change.kind === 'ecomax'
-      ? ({ 99: 'min', 100: 'max', 98: 'target' } as Record<number, string>)[change.index]
-      : ({ 1: 'min', 2: 'max', 0: 'target' } as Record<number, string>)[change.index];
-    if (role === 'min') return raising ? 2 : 0;
-    if (role === 'max') return raising ? 0 : 2;
-    return role === 'target' ? 1 : 3;
+      ? ({ 99: 'bound', 100: 'bound', 98: 'target' } as Record<number, string>)[change.index]
+      : ({ 1: 'bound', 2: 'bound', 0: 'target' } as Record<number, string>)[change.index];
+    return role === 'bound' ? 0 : role === 'target' ? 1 : 2;
   };
   return changes.map((change, i) => ({ change, i, r: rank(change) }))
     .sort((a, b) => a.r - b.r || a.i - b.i).map(({ change }) => change);
@@ -97,7 +95,6 @@ export async function checkAutoPellet(rootId: string, now = new Date()) {
   const current = (change: PelletBoilerCommandChange) => currentRaw(view, change);
   const changes = orderProfileChanges(
     Object.entries(profiles.pellet).map(([key, value]) => changeOf(key, value)).filter((c) => current(c) !== c.value),
-    current,
   );
   const autoPellet: PelletBoilerAutoPellet = { at: readingAt, acknowledged: false, changes: changes.length };
   try {

@@ -1451,7 +1451,7 @@ export const pl = {
   'pb.group': 'Grupa',
   'pb.fromCurve': 'zadaną liczy regulator z krzywej',
   'pb.cleanHoursOnPanel': 'godziny czyszczenia ustawia się na panelu kotła',
-  'pb.groupHelp': 'Wysyłane są tylko zmienione pola, po kolei: granice poszerzające zakres przed zadaną, zawężające po niej; każde następne po potwierdzeniu poprzedniego przez regulator i ponownym odczycie ustawień (zwykle kilka sekund na pole). Zapis działa w każdym stanie kotła.',
+  'pb.groupHelp': 'Wysyłane są tylko zmienione pola, po kolei: najpierw minimalna i maksymalna temperatura, potem zadana; każde następne po potwierdzeniu poprzedniego przez regulator i ponownym odczycie ustawień (zwykle kilka sekund na pole). Zapis działa w każdym stanie kotła.',
   'pb.saveSettingFailed': 'Nie udało się zapisać ustawienia.',
   'pb.confirmWinterHp': 'Przełączyć na Zimę z pompą ciepła? Kocioł przejdzie na Zimę, gdy kocioł albo woda w pompie ciepła osiągnie temperaturę, do której grzeje pompa, minus 3 °C (do tego czasu pompa ciepła dostaje wymuszenie startu), a wróci na Lato poniżej 30 °C przy stojącej pompie CO.',
   'pb.confirmSummer': 'Przełączyć kocioł na Lato?',

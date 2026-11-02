@@ -78,18 +78,17 @@ export const itemOfKey = (key: string): Item => {
     : { kind: 'mixer', mixer: Number(where.slice(5)), index: Number(index) };
 };
 
-// Kolejność, którą regulator przyjmie: granice poszerzające zakres zadanej (min w dół, max w górę),
-// potem zadane (kotła nr 98, mieszacza nr 0), potem granice zawężające, na końcu reszta.
-export const orderChanges = (changes: PelletBoilerChange[], settings: PelletBoilerSettings | null) => {
+// Kolejność wysyłki: najpierw granice zadanej (min i max: kotła nr 99, 100, mieszacza nr 1, 2), potem zadane
+// (kotła nr 98, mieszacza nr 0), na końcu reszta. Zakres granic jest w regulatorze stały (nr 99: 30–80 °C,
+// nr 100: 30–90 °C, mieszacz 20–90 °C), a zakres zadanej wynika z granic, więc granica przechodzi zawsze, a zadana
+// po niej mieści się w nowym zakresie (decyzja użytkownika 2026-11-02; do tego dnia granica zawężająca zakres
+// szła po zadanej, np. minimum 30 → 65 po zadanej 30 → 67).
+export const orderChanges = (changes: PelletBoilerChange[]) => {
   const rank = (change: PelletBoilerChange) => {
-    const current = findIn(settings, change)?.raw[0] ?? change.value;
-    const raising = change.value > current;
     const role = change.kind === 'ecomax'
-      ? ({ 99: 'min', 100: 'max', 98: 'target' } as Record<number, string>)[change.index]
-      : ({ 1: 'min', 2: 'max', 0: 'target' } as Record<number, string>)[change.index];
-    if (role === 'min') return raising ? 2 : 0;
-    if (role === 'max') return raising ? 0 : 2;
-    return role === 'target' ? 1 : 3;
+      ? ({ 99: 'bound', 100: 'bound', 98: 'target' } as Record<number, string>)[change.index]
+      : ({ 1: 'bound', 2: 'bound', 0: 'target' } as Record<number, string>)[change.index];
+    return role === 'bound' ? 0 : role === 'target' ? 1 : 2;
   };
   return changes.map((change, i) => ({ change, i, r: rank(change) }))
     .sort((a, b) => a.r - b.r || a.i - b.i).map(({ change }) => change);
@@ -245,9 +244,9 @@ export const EditPanel: React.FC<{
   );
 };
 
-// Okno grupy: wszystkie parametry grupy w jednym formularzu; wysyłane tylko zmienione, w kolejności,
-// którą regulator przyjmie: najpierw granice poszerzające zakres zadanej, potem zadana, potem granice
-// zawężające, na końcu reszta. Zadana sprawdzana z nowymi granicami z tego samego formularza.
+// Okno grupy: wszystkie parametry grupy w jednym formularzu; wysyłane tylko zmienione, w kolejności jak
+// orderChanges: najpierw granice zadanej (min, max), potem zadana, na końcu reszta. Zadana sprawdzana
+// z nowymi granicami z tego samego formularza.
 const GroupEditPanel: React.FC<{
   section: Section; settings: PelletBoilerSettings; reading: PelletBoilerReading | null; onClose: () => void; onSent: () => void;
 }> = ({ section, settings, reading, onClose, onSent }) => {
@@ -299,12 +298,8 @@ const GroupEditPanel: React.FC<{
         return setError(`${parameter.label ?? parameter.name}: ${tr('pb.allowedLower', { range: `${display(item, parameter, min)} – ${display(item, parameter, max)}` })}`);
       }
     }
-    const rank = ({ item, parameter }: (typeof changed)[number]) => {
-      const raising = toRaw(parameter, numberOf(item.index)) > parameter.raw[0];
-      if (item.index === section.min) return raising ? 2 : 0;
-      if (item.index === section.max) return raising ? 0 : 2;
-      return item.index === target ? 1 : 3;
-    };
+    const rank = ({ item }: (typeof changed)[number]) =>
+      item.index === section.min || item.index === section.max ? 0 : item.index === target ? 1 : 2;
     const ordered = [...changed].sort((a, b) => rank(a) - rank(b));
     setSending(true);
     const response = await PelletBoilerRequests.postCommands([
@@ -403,7 +398,7 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
 
   // tylko zmiany, które coś zmieniają (parametr bez odczytu zostaje — serwer go odrzuci z opisem)
   const pendingChanges = (changes: PelletBoilerChange[]) => orderChanges(
-    changes.filter((change) => findIn(settings ?? null, change)?.raw[0] !== change.value), settings ?? null);
+    changes.filter((change) => findIn(settings ?? null, change)?.raw[0] !== change.value));
   const profiles: Profile[] = (['heat-pump', 'pellet'] as PelletBoilerMode[]).map((key) => ({
     key, label: profileLabel(key),
     changes: Object.entries(scheduleSettings?.profiles[key] ?? {}).map(([name, value]) => ({ ...itemOfKey(name), value })),

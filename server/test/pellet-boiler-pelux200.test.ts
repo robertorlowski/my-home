@@ -17,6 +17,7 @@ import { PelletBoilerCommandModel } from '../src/modules/pellet-boiler-pelux200/
 import { PelletBoilerScheduleSettingsModel } from '../src/modules/pellet-boiler-pelux200/models/pellet-boiler-pelux200-schedule.model'
 import { heatPumpRunningInHeatPumpMode, runWinterCycle, winterFromMax } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-winter-cycle.service'
 import { migrateBoilerDefinitions } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-heat-pump-link.service'
+import { orderProfileChanges } from '../src/modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-auto-pellet.service'
 import { DeviceModel } from '../src/core/models/device.model'
 import { OperationLogModel } from '../src/core/models/operation-log.model'
 import { pelletBoilerTile } from '../src/modules/pellet-boiler-pelux200/tile'
@@ -237,6 +238,18 @@ describe('Kocioł pelletowy Pellux 200', () => {
     expect(created.body[0]).toMatchObject({ kind: 'mixer', mixer: 2, index: 0, value: 30, label: 'Temperatura zadana mieszacza' });
     expect(created.body[0].previous).toBeUndefined();
   });
+
+  it('kolejność zmian: granice zadanej (min, max) przed zadaną, potem reszta — także przy podnoszeniu minimum', () => {
+    const order = orderProfileChanges([
+      { kind: 'ecomax', index: 119, value: 55 },
+      { kind: 'ecomax', index: 98, value: 67 },
+      { kind: 'mixer', mixer: 1, index: 0, value: 45 },
+      { kind: 'ecomax', index: 99, value: 65 },
+      { kind: 'mixer', mixer: 1, index: 2, value: 50 },
+    ])
+    expect(order.map((c) => `${c.kind}${c.mixer ?? ''}:${c.index}`))
+      .toEqual(['ecomax:99', 'mixer1:2', 'ecomax:98', 'mixer1:0', 'ecomax:119'])
+  })
 
   it('ustawienia: 400 bez parametrów kotła, dla złego hex i nie-napisu', async () => {
     const sn = 'AABBCC00000A';

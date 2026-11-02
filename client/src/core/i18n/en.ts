@@ -1451,7 +1451,7 @@ export const en: Record<keyof typeof pl, string> = {
   'pb.group': 'Group',
   'pb.fromCurve': 'the regulator computes the setpoint from the curve',
   'pb.cleanHoursOnPanel': 'cleaning hours are set on the boiler panel',
-  'pb.groupHelp': 'Only changed fields are sent, in order: limits widening the range before the setpoint, narrowing ones after it; each next one after the regulator confirms the previous and the settings are read again (usually a few seconds per field). Writing works in every boiler state.',
+  'pb.groupHelp': 'Only changed fields are sent, in order: minimum and maximum temperature first, then the setpoint; each next one after the regulator confirms the previous and the settings are read again (usually a few seconds per field). Writing works in every boiler state.',
   'pb.saveSettingFailed': 'Could not save the setting.',
   'pb.confirmWinterHp': 'Switch to Winter with the heat pump? The boiler goes to Winter when the boiler or the heat pump water reaches the heat pump target minus 3 °C (until then the heat pump gets a forced start), and returns to Summer below 30 °C with the CH pump stopped.',
   'pb.confirmSummer': 'Switch the boiler to Summer?',
