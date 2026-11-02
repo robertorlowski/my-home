@@ -218,10 +218,15 @@ describe('Kocioł pelletowy Pellux 200', () => {
     expect(res.body.mixers[0].parameters[0]).toMatchObject({ name: 'mixer_target_temp', value: 40 });
     const assumed = res.body.mixers[1];
     expect(assumed).toMatchObject({ mixer: 2, assumed: true });
-    expect(assumed.parameters.map((p: { index: number }) => p.index)).toEqual([0, 4, 5, 6]);
+    expect(assumed.parameters.map((p: { index: number }) => p.index)).toEqual([0, 1, 2, 4, 5, 6]);
     expect(assumed.parameters[0]).toMatchObject({ name: 'mixer_target_temp', min: 20, max: 40, unknown: true });
-    expect(assumed.parameters[1]).toMatchObject({ name: 'weather_control', min: 0, max: 1, unknown: true });
-    expect(assumed.parameters[3]).toMatchObject({ name: 'heating_curve_shift', min: -20, max: 20, unknown: true });
+    // podpowiedzi w oknie grupy: min 20, max 40, sterowanie pogodowe Nie, krzywa i przesunięcie z mieszacza 1
+    expect(assumed.parameters[1]).toMatchObject({ index: 1, value: 20, unknown: true });
+    expect(assumed.parameters[2]).toMatchObject({ index: 2, value: 40, unknown: true });
+    expect(assumed.parameters[3]).toMatchObject({ name: 'weather_control', value: 0, min: 0, max: 1, unknown: true });
+    const first = (index: number) => res.body.mixers[0].parameters.find((p: { index: number }) => p.index === index);
+    expect(assumed.parameters[4]).toMatchObject({ index: 5, value: first(5).value, unknown: true });
+    expect(assumed.parameters[5]).toMatchObject({ name: 'heating_curve_shift', value: first(6).value, min: -20, max: 20, unknown: true });
 
     // zlecenie dla mieszacza 2: zakres 20–40, bez poprzedniej wartości
     await request(app).post(`/api/pellet-boiler-pelux200/add?deviceId=${sn}`).send({ state: 0 }).expect(201);

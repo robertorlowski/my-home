@@ -146,21 +146,25 @@ export function boilerMode(settings: PelletBoilerSettingsEntry | null): PelletBo
 }
 
 // Mieszacz 2: regulator podaje w 0xB2 same FF, choć mieszacz pracuje (zadana w SensorData). Od 2026-10-08
-// aplikacja i tak pozwala go zmieniać (decyzja użytkownika): zadana 20–40 °C, sterowanie pogodowe, krzywa
-// i przesunięcie z zakresami mieszacza 1. Wartości nieznane (unknown); sterownik od firmware 1.8.1 wysyła
-// zmianę bez zakresu z odczytu, wyniku nie da się odczytać.
+// aplikacja i tak pozwala go zmieniać (decyzja użytkownika): zadana 20–40 °C, od 2026-11-02 też minimalna
+// i maksymalna temperatura (jak mieszacz 1), sterowanie pogodowe, krzywa i przesunięcie z zakresami mieszacza 1.
+// Wartości nieznane (unknown); value to podpowiedź w oknie grupy (decyzja użytkownika 2026-11-02): min 20 i max 40
+// (zakres zadanej), sterowanie pogodowe Nie, krzywa i przesunięcie jak w mieszaczu 1. Sterownik od firmware 1.8.1
+// wysyła zmianę bez zakresu z odczytu, wyniku nie da się odczytać.
 const ASSUMED_MIXER = 2;
 const ASSUMED_TARGET_RANGE: [number, number] = [20, 40];
-const ASSUMED_INDEXES = [0, 4, 5, 6];
-const DEFAULT_RANGES: Record<number, [number, number]> = { 4: [0, 1], 5: [1, 40], 6: [0, 40] };
+const ASSUMED_INDEXES = [0, 1, 2, 4, 5, 6];
+const DEFAULT_RANGES: Record<number, [number, number]> = { 1: [20, 90], 2: [20, 90], 4: [0, 1], 5: [1, 40], 6: [0, 40] };
+const ASSUMED_VALUES: Record<number, number> = { 1: ASSUMED_TARGET_RANGE[0], 2: ASSUMED_TARGET_RANGE[1], 4: 0 };
 
 function withAssumedMixer(mixers: PelletBoilerSettingsView['mixers']): PelletBoilerSettingsView['mixers'] {
   if (mixers.some((m) => m.mixer === ASSUMED_MIXER)) return mixers;
   const first = mixers.find((m) => m.mixer === 1);
   const parameters = ASSUMED_INDEXES.map((index) => {
-    const [min, max] = index === 0 ? ASSUMED_TARGET_RANGE
-      : ((first?.parameters.find((p) => p.index === index)?.raw.slice(1, 3) as [number, number] | undefined) ?? DEFAULT_RANGES[index]);
-    return { ...parameter(index, [min, min, max], MIXER_PARAMETERS[index]), unknown: true };
+    const known = first?.parameters.find((p) => p.index === index)?.raw;
+    const [min, max] = index === 0 ? ASSUMED_TARGET_RANGE : ((known?.slice(1, 3) as [number, number] | undefined) ?? DEFAULT_RANGES[index]);
+    const hint = ASSUMED_VALUES[index] ?? (index === 0 ? min : known?.[0] ?? min);
+    return { ...parameter(index, [Math.min(max, Math.max(min, hint)), min, max], MIXER_PARAMETERS[index]), unknown: true };
   });
   return [...mixers, { mixer: ASSUMED_MIXER, parameters, assumed: true }].sort((a, b) => a.mixer - b.mixer);
 }

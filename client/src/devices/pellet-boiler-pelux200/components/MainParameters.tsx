@@ -36,7 +36,8 @@ export type Item = { kind: 'ecomax' | 'mixer'; mixer?: number; index: number };
 // okno ze wszystkimi parametrami grupy. min/max: numery granic zadanej (kolejność wysyłki).
 // cleanSchedule: w grupie także przełącznik harmonogramu czyszczenia (Kocioł; zlecenie schedule, firmware od 1.8.0)
 // weather: mieszacz ze sterowaniem pogodowym (nr 4 Tak/Nie); krzywa (nr 5) i przesunięcie (nr 6) tylko przy „Tak”,
-// zadana (nr 0) jest wtedy liczona z krzywej (decyzja użytkownika 2026-10-08)
+// zadana (nr 0) jest wtedy liczona z krzywej (decyzja użytkownika 2026-10-08); od 2026-11-02 tylko w oknie grupy,
+// bez osobnego wiersza na liście
 // extra: parametr kotła pokazany na liście pod zadaną (CWU: tryb pracy pompy CWU nr 122, „Wyłączony” na czerwono)
 // title: klucz słownika pb.sec.<title> (sectionTitle)
 type Section = { title: string; items: Item[]; min?: number; max?: number; cleanSchedule?: boolean; weather?: boolean; extra?: number };
@@ -49,8 +50,9 @@ const SECTIONS: Section[] = [
   { title: 'boiler', items: ecomax([98, 99, 17, 101, 105]), min: 99, cleanSchedule: true },
   { title: 'cwu', items: ecomax([119, 123, 122]), extra: 122 },
   { title: 'mixer1', items: mixerItems(1, [0, 1, 2, 4, 5, 6]), min: 1, max: 2, weather: true },
-  // mieszacz 2: regulator nie podaje nastaw (same FF), serwer zakłada zadaną 20–40 °C i zakresy mieszacza 1
-  { title: 'mixer2', items: mixerItems(2, [0, 4, 5, 6]), weather: true },
+  // mieszacz 2: regulator nie podaje nastaw (same FF), serwer zakłada zadaną 20–40 °C i zakresy mieszacza 1,
+  // a w oknie grupy podpowiada wartości (min 20, max 40, sterowanie pogodowe Nie, krzywa i przesunięcie z mieszacza 1)
+  { title: 'mixer2', items: mixerItems(2, [0, 1, 2, 4, 5, 6]), min: 1, max: 2, weather: true },
 ];
 
 // Wybory zamiast liczb (kolejność według kopii ustawień; 125 niepotwierdzona na kotle).
@@ -252,13 +254,13 @@ const GroupEditPanel: React.FC<{
   const fields = section.items
     .map((item) => ({ item, parameter: findIn(settings, item) }))
     .filter((field): field is { item: Item; parameter: PelletBoilerParameter } => !!field.parameter);
-  // wartości na starcie; nastawa nieznana (mieszacz 2) pusta, tylko zadana podpowiedziana z odczytu pracy kotła
+  // wartości na starcie; nastawa nieznana (mieszacz 2): podpowiedź z serwera (value), zadana z odczytu pracy kotła
   const [initial] = useState<Record<number, string>>(() => Object.fromEntries(fields.map(({ item, parameter }) => {
     if (!parameter.unknown) return [item.index, String(parameter.value)];
     const target = item.kind === 'mixer' && item.index === 0
       ? reading?.[`mixer${item.mixer}_target` as keyof PelletBoilerReading]
       : undefined;
-    return [item.index, typeof target === 'number' ? String(target) : ''];
+    return [item.index, typeof target === 'number' ? String(target) : item.index === 0 ? '' : String(parameter.value)];
   })));
   const [values, setValues] = useState<Record<number, string>>(initial);
   const [error, setError] = useState('');
@@ -273,9 +275,12 @@ const GroupEditPanel: React.FC<{
   // sterowanie pogodowe: krzywa i przesunięcie tylko przy „Tak”, zadana wtedy liczona z krzywej
   const weatherOn = !!section.weather && values[WEATHER_SWITCH] === '1';
   const hidden = (index: number) => !!section.weather && WEATHER_FIELDS.includes(index) && !weatherOn;
-  // nastawa nieznana (mieszacz 2): zmieniona, gdy wpisano coś innego niż na starcie
+  // nastawa nieznana (mieszacz 2): zmieniona, gdy wpisano coś innego niż na starcie; przy zmianie sterowania
+  // pogodowego krzywa i przesunięcie idą zawsze (podpowiedź z mieszacza 1, wartości w regulatorze nie znamy)
+  const weatherChanged = !!section.weather && values[WEATHER_SWITCH] !== initial[WEATHER_SWITCH];
   const changed = fields.filter(({ item, parameter }) => !hidden(item.index) && (parameter.unknown
-    ? (values[item.index] ?? '') !== '' && values[item.index] !== initial[item.index]
+    ? (values[item.index] ?? '') !== ''
+      && (values[item.index] !== initial[item.index] || (weatherChanged && WEATHER_FIELDS.includes(item.index)))
     : toRaw(parameter, numberOf(item.index)) !== parameter.raw[0]));
   const service = changed.some(({ parameter }) => ratingClass(parameter.rating) === 'boiler-rating-service');
 
@@ -809,23 +814,6 @@ export const MainParameters: React.FC<{ onReady?: () => void }> = ({ onReady }) 
                     note={t('pb.hoursOnPanel')} value={t(cleanSchedule.enabled ? 'common.yes' : 'common.no')} chip={cleanPending && waitChip}
                     disabled={offline} editLabel={`${t('pb.change')}: ${cleanSchedule.label}`} onEdit={() => setEditing(section)} />,
                 );
-              }
-              if (section.weather && parameter) {
-                // sterowanie pogodowe mieszacza: Tak/Nie, przy „Tak” krzywa i przesunięcie (nastawy nieznane: „?”)
-                const at = (index: number) => findIn(settings, { kind: 'mixer', mixer: item.mixer, index });
-                const weather = at(WEATHER_SWITCH);
-                const curve = at(5);
-                const shift = at(6);
-                if (weather) {
-                  const on = !weather.unknown && weather.value === 1;
-                  const mixerItem = (index: number): Item => ({ kind: 'mixer', mixer: item.mixer, index });
-                  rows.push(
-                    <ParamRow key={`${section.title}-weather`} name={`${title} · ${t('pb.weatherControl')}`}
-                      note={on && curve && shift ? <>{t('pb.curve')} {shownValue(mixerItem(5), curve)} · {t('pb.shift')} {shownValue(mixerItem(6), shift)}</> : <>{t('pb.no')} {WEATHER_SWITCH}</>}
-                      value={weather.unknown ? '?' : t(on ? 'common.yes' : 'common.no')} disabled={offline}
-                      editLabel={t('pb.changeGroup', { name: title.toLowerCase() })} onEdit={() => setEditing(section)} />,
-                  );
-                }
               }
               return rows;
             })}
