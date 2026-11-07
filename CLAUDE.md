@@ -149,84 +149,13 @@ Po stronie klienta wybrane urządzenie jest przechowywane w `localStorage` pod k
 
 ## 4. Model danych MongoDB
 
-### `devices`
+Pełny opis kolekcji, pól, indeksów i retencji: [`docs/baza-danych.md`](docs/baza-danych.md). Najważniejsze zasady:
 
-Model główny to `DeviceModel` z kolekcją `devices`. Urządzenie zawiera między innymi:
-
-- `deviceType` — `heat_pump`, `water-pressure-tank` (hydrofor), `pellet-boiler-pelux200` (kocioł) albo `switch` (włącznik); scheduler obsługuje tylko `heat_pump`;
-- `deviceId` — identyfikator sterownika, SN (MAC ESP32); najstarszy sterownik miał `hp-1`, w produkcji zmienione na SN (także w rekordach `hp`, 2026-09-26);
-- `name` — opcjonalna nazwa nadana przez użytkownika (domyślnie pusta; rejestracja automatyczna jej nie ustawia). Klient pokazuje `name`, a gdy jest pusta — `deviceId` (`deviceLabel` w [`DeviceContext.tsx`](client/src/core/context/DeviceContext.tsx));
-- `firmwareVersion`, `firmwareSeenAt` — wersja firmware i czas ostatniego zgłoszenia, które ją niosło (pole `version`; starsze sterowniki go nie wysyłają, więc zostaje ostatnia znana);
-- `firmwareUpdate` — zlecenie aktualizacji z aplikacji `{version, requestedAt}` (przycisk „Aktualizuj”, punkt 5e); znika, gdy sterownik zgłosi oferowaną wersję;
-- `ipAddress`, `ipSeenAt` — adres IPv4 sterownika w sieci lokalnej i czas zgłoszenia, które go niosło (pole `ip`; bez niego zostaje ostatni znany); klient pokazuje go w karcie „Sterownik” w Ustawieniach (`DeviceAddress`) jako odnośnik do stron sterownika;
-- `sortOrder` — numer pola kafelka na liście sterowników (szachownica, punkt 9; wspólny z `weather_tiles`), `hidden` — kafelek ukryty (widoczny tylko w trybie „Zmień układ”);
-- `properties` — ustawienia domyślne;
-- `schedules` — osadzone definicje harmonogramów pompy (włącznik ma własną kolekcję `switch_schedules`). Dawne pole `settings` (starszy model ustawień czasowych, kolekcja `settings`, `GET /settings`, `POST /settings/set`) usunięte 2026-10-21 razem z nieużywanym `/operation/getAndClear`; stare dokumenty zachowują pole, schemat je pomija.
-
-### `properties`
-
-Ustawienia domyślne pompy:
-
-- `co_min`, `co_max`;
-- `cwu_min`, `cwu_max`;
-- `work_mode` — `M`, `A`, `CWU` albo `OFF`.
-
-Domyślny `work_mode` modelu to `CWU` (dopisywany też hydroforowi, który go nie używa).
-
-Ustawienia hydroforu (punkt 5b): tylko `compressor_seconds` (1–3600); nowy hydrofor dostaje przy zgłoszeniu 30 s. Dawne zbiorniki i progi presostatu (`tanks`, `pressure_low`, `pressure_high`) usunięto w wersji 1.3.0.
-
-Ustawienie włącznika (punkt 5d): `default_on_minutes` — domyślny czas „Włącz” w pełnych minutach 0–10080 (0 = bez limitu), nowy włącznik dostaje 30.
-
-### `hp`
-
-Kolekcja `hp` przechowuje telemetrię. Dokument jest wzbogacany o:
-
-- `rootId`;
-- `deviceType`;
-- `deviceId`;
-- `t_out` — temperaturę zewnętrzną z serwisu meteo;
-- `error_code` — kod błędu CHPC, gdy w tym odczycie pojawiło się nowe zdarzenie;
-- znaczniki `createdAt` i `updatedAt`.
-
-Telemetria zawiera między innymi `HP`, `work_mode`, temperatury, moc, stan sprężarki oraz stany pomp. Rekordy sprzed wydzielenia PV (2026-09-26) mają pełne `PV` i `pv_power` z telemetrii; nowe mają tylko `PV.total_power`, wpisane przez serwer (sekcja 5a). `co_pomp` jest polem telemetrii i może występować w operacji ręcznej, ale nie jest polem harmonogramu.
-
-**Schemat jest ścisły** ([`server/src/modules/heat-pump/models/hp.model.ts`](server/src/modules/heat-pump/models/hp.model.ts)): klucz, którego nie wymienia, jest po cichu pomijany przy zapisie. Dotyczy to m.in. `EEV_pulse`, `cop_min`, `cop_max`, `controller_mode` i **wszystkich liczników diagnostycznych** z `co`. Ostatnia surowa telemetria jest dostępna przez `GET /api/hp` z pamięci podręcznej do restartu serwera. **Nowe pole telemetrii trzeba dodać do schematu, do typów `server/src/modules/heat-pump/types.ts` i `client/src/devices/heat-pump/types.ts` oraz do widoków klienta**, inaczej nie zostanie zapisane ani pokazane.
-
-### `pv`
-
-Kolekcja `pv` przechowuje odczyty DTU z `POST /api/pv/add`, jeden dokument na odczyt: `rootId`, `deviceType`, `deviceId`, `time`, podsumowanie (`total_power`, `total_prod`, `total_prod_today`, `temperature`, `pv_power`) i `panels[]`. `panels` jest usuwane z dokumentów starszych niż 90 dni (`PANEL_DETAILS_RETENTION_DAYS` w [`server/src/modules/heat-pump/services/pv.service.ts`](server/src/modules/heat-pump/services/pv.service.ts)), podsumowanie zostaje na zawsze. Indeksy: `{rootId, createdAt}` i `{createdAt}`.
-
-### `water_pressure_tank` i `water_meter`
-
-`water_pressure_tank` — uruchomienia pompy hydroforu, jeden dokument na `runId` sterownika: `pumpStart`, `pumpEnd`, `compressorStart`, `compressorEnd`, `restarts`, `manualSeconds` (czas ręcznego włączenia kompresora, odejmowany od czasu pompy), `timeApproximate`, `lastSeenAt`, `compressorRunning` (stan kompresora z ostatniej wiadomości; po „Uruchom na N s” `compressorEnd` zostaje z poprzedniego wyłączenia). Indeksy: unikalny `{rootId, runId}` i `{rootId, pumpStart}`. Wody w rekordzie nie ma: liczy ją serwer przy odczycie (punkt 5b); dawne `waterLiters`, `waterAirBaseLiters` i `waterMembraneLiters` zostają w starszych dokumentach, ale nie są używane. `water_meter` — ręczne odczyty wodomierza: `readAt`, `valueM3`, `note`; indeks `{rootId, readAt}`.
-
-### `switch_relays`, `switch_schedules` i `switch_activations`
-
-Włącznik (punkt 5d). `switch_relays` — jeden dokument na przekaźnik (unikalny `{rootId, relay}`, `relay` od 1): `name` (≤ 40 znaków), `mode` (`schedule`, `on`, `timer`, `off`, `pause`), `until` (koniec `timer` albo `pause`), `modeSource` (`app` albo `controller`), `modeChangedAt`, stan ze sterownika `on`, `changedAt`, `lastSeenAt`. Tryb jest trwały: restart serwera go nie kasuje. `switch_schedules` — wpisy harmonogramu: `relay`, `enabled`, `dayOfWeek` (`WeekDay`) albo `date`, `startTime`, `endTime`; indeks `{rootId, relay}`. `switch_activations` — włączenia: `relay`, `onAt`, `offAt` (`null` = trwa), `source` (`schedule`, `app`, `controller`), `approximate`; indeksy `{rootId, onAt}` i `{rootId, relay, offAt}`.
-
-### `pellet_boiler_pelux200_commands`
-
-Zlecenia zmiany parametrów regulatora z aplikacji (punkt 5c): `kind` (`ecomax`, `mixer`), `mixer` (od 1), `index`, `value` (surowa), `previous`, `label`, `status` (`pending`, `sent`, `done`, `error`, `replaced`), `error`, `sentAt`, `doneAt`; indeksy `{rootId, createdAt}` i `{rootId, status, createdAt}`. Brak retencji.
-
-### `pellet_boiler_pelux200_settings`
-
-Ostatni odczyt ustawień regulatora kotła (punkt 5c), jeden dokument na `rootId` (unikalny): `readAt`, `deviceId`, surowe odpowiedzi regulatora jako hex (`ecomax_parameters`, `mixer_parameters`, `thermostat_parameters`, `schedules`, `regulator_data_schema`). Rozkodowanie przy odczycie.
-
-### `weather_tiles`
-
-Lista sterowników (punkt 9). `weather_tiles` — kafelki pogody: `name`, `lat`, `lon`, `sortOrder` (wspólny z `devices`), `hidden`, `home` (kafelek „Dom”, tworzony przy starcie serwera z `WEATHER_LOCATION`, bez usuwania); najwyżej 8. Pogoda nie jest zapisywana: trzyma ją w pamięci `meteo.service` po id kafelka (punkt 5d).
-
-### `firmware_images` i `firmware_offers`
-
-Firmware sterowników z aktualizacją przez sieć (OTA). `firmware_images`: `deviceType`, `version`, `data` (plik `.bin`, ok. 1 MB), `size`, `description` (opis wersji), `sha256`; indeks unikalny `{deviceType, version}`. `firmware_offers`: jeden dokument na rodzaj: `version` (oferowana), `previousVersion`, `enabled`. W bazie zostają tylko te dwie wersje (przy zmianie oferty starsze pliki są kasowane).
-
-### `push_subscriptions`
-
-Subskrypcje Web Push (punkt 5g), jedna na przeglądarkę / telefon: `userId`, `endpoint` (unikalny), `keys {p256dh, auth}`, `label` („Edge · Windows”), `createdAt`, `lastUsedAt`. Wygasła (404 / 410 z usługi push) jest kasowana przy wysyłce. Reguły konta są w `users.notifications {rules: [{rootId, events}], quietFrom, quietTo}`.
-
-### `mail_outbox`
-
-Kolejka maili dla przekaźnika poczty (punkt 5f): `to`, `subject`, `raw` (cała wiadomość MIME), `status` (`pending`, `sending`, `sent`, `error`, `expired`), `attempts`, `leasedBy`, `leaseUntil`, `receipt`, `failedBy`, `sentBy`, `sentAt`, `error`, `expiresAt` (15 min); TTL dobę po utworzeniu. W `devices` przekaźniki mają `mailKey {publicKey, fingerprint, approvedAt, seenAt}` i `mailKeyPending`.
+- `devices` to sterowniki (`DeviceModel`); `rootId` w innych kolekcjach to `devices._id` jako tekst, a usunięcie konta kasuje dokumenty z `rootId` jego sterowników w każdej kolekcji z tym polem.
+- **Schematy `hp` i `pellet_boiler_pelux200` są ścisłe:** pole spoza schematu jest po cichu pomijane. Nowe pole telemetrii trzeba dodać do modelu, do typów serwera i klienta oraz do widoków.
+- `app_settings` to ustawienia aplikacji (jeden dokument, `_id` = nazwa bazy). Kolekcja `settings` to pozostałość po dawnym modelu ustawień czasowych pompy (usuniętym 2026-10-21), nie ustawienia aplikacji.
+- Usunięcie modelu, pola albo indeksu z kodu nie zmienia bazy: kolekcje i indeksy trzeba usunąć ręcznie w `hpdb` i `hpdb_test`, po kopii.
+- Pogoda, ostatnia surowa telemetria, ręczne operacje pompy i diagnostyka sterowników są tylko w pamięci serwera.
 
 ## 5. Telemetria pompy
 
@@ -487,7 +416,7 @@ Serwis utrzymuje trzy mapy w pamięci procesu:
 
 ### Kontrakt operacji z `co`
 
-Odpowiedź na każdy `POST /api/hp/add` ma postać `{"operation":{…}, "t_out": 12.3}`. `t_out` to temperatura zewnętrzna z IMGW (`getTemperature()` w `meteo.service.ts`, stacja Zakopane, odświeżana co 10 min) jako liczba, poza operacją; brak go, dopóki serwer nie pobrał pomiaru. `co` pokazuje ją na ekranie jako „T. out:” (do 1.3.2 „T. zew:”) (po 30 min bez nowej wartości `--`). W `operation` **wszystkie wartości są napisami**, np. `"1"`, `"45"`. Klucze:
+Odpowiedź na każdy `POST /api/hp/add` ma postać `{"operation":{…}, "t_out": 12.3}`. `t_out` to temperatura zewnętrzna (`getTemperature()` w `meteo.service.ts`: czujnik zewnętrzny kotła, bez świeżego odczytu prognoza Open-Meteo) jako liczba, poza operacją; brak go, dopóki serwer nie pobrał pomiaru. `co` pokazuje ją na ekranie jako „T. out:” (do 1.3.2 „T. zew:”) (po 30 min bez nowej wartości `--`). W `operation` **wszystkie wartości są napisami**, np. `"1"`, `"45"`. Klucze:
 
 - `work_mode`: `M`, `A`, `CWU`, `OFF` (`co` przyjmuje też `PV`, którego serwer nie wysyła);
 - `force`, `co_pomp`, `hot_pomp`, `cold_pomp`, `sump_heater`: `"0"` albo `"1"`;

@@ -27,7 +27,7 @@ flowchart LR
     SRV["My Home — serwer<br/>(Node.js, Docker, Oracle Cloud)"]
     DB[("MongoDB w Dockerze")]
     WEB["My Home — aplikacja WWW<br/>(przeglądarka, telefon)"]
-    IMGW["IMGW<br/>temperatura zewnętrzna"]
+    OM["Open-Meteo<br/>pogoda"]
 
     CHPC <-- "RS-485<br/>komendy i stan (JSON)" --> CO
     DTU <-- "RS-485<br/>Modbus RTU" --> CO
@@ -36,7 +36,7 @@ flowchart LR
     PEL -- "HTTPS: odczyt kotła co kilka minut<br/>zgłoszenie → interwał" --> SRV
     HYD -- "HTTPS: uruchomienia co 1 s<br/>zgłoszenie → ustawienia" --> SRV
     SW <-- "HTTPS: stan co 5 s → polecenia<br/>WebSocket: szybka zmiana" --> SRV
-    IMGW -- "co 10 min" --> SRV
+    OM -- "co 15 min" --> SRV
     SRV <--> DB
     WEB <-- "REST API, WebSocket" --> SRV
 ```
@@ -98,6 +98,7 @@ Lokalna baza jest w `.local-db/` (poza gitem). Aplikacja i serwer produkcyjny: `
 
 ## Inne dokumenty
 
+- [Baza danych MongoDB](baza-danych.md) — kolekcje, pola, indeksy, retencja i zasady zmian modelu.
 - [CLAUDE.md](../CLAUDE.md) — przewodnik dla Claude Code i szczegółowe zasady całego łańcucha.
 - Historia zmian w firmware `co`: [devices/co/docs](../devices/co/docs/) (opis stanu przed i po przebudowie z 2026-09).
 - Analiza pracy pompy z 2026-09-26: [devices/chpc/docs/analiza-pracy](../devices/chpc/docs/analiza-pracy/).

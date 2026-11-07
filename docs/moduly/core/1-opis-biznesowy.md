@@ -14,7 +14,7 @@ Moduł odpowiada za:
 - **konta użytkowników**: logowanie e-mailem i kodem, dane konta, udostępnianie sterownika innej osobie z wyborem zakładek;
 - **wspólny wygląd**: pasek sterownika z zakładkami, dolną nawigację na telefonie, motyw jasny i ciemny, język polski albo angielski, okna dialogowe, kartę „Sterownik” i dziennik operacji;
 - **menu i ekrany zależne od rodzaju sterownika** (pompa ma harmonogramy, hydrofor i fotowoltaika nie);
-- **wspólne usługi**: temperaturę zewnętrzną (IMGW), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez serwer, zapasowo przez włącznik), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
+- **wspólne usługi**: temperaturę zewnętrzną (czujnik kotła, bez niego prognoza), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez serwer, zapasowo przez włącznik), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
 - **pocztę**: kody logowania i powiadomienia wysyła serwer; opcjonalnie mogą je wysyłać sterowniki w domu (włącznik, zapasowo `co`).
 - **ustawienia aplikacji**: konto systemowe ma w menu po lewej Moje dane, Powiadomienia i Ustawienia. Zakładka Ustawienia (poczta, adresy aplikacji, wersja demo, klucze powiadomień, zadania w tle) wymaga osobnego hasła.
 
@@ -103,7 +103,7 @@ Moduł odpowiada za:
 - **Endpointy sterowników bez autoryzacji.** Aplikacja wymaga zalogowania (konta użytkowników), ale endpointy sterowników przyjmują sam SN (klucza API nie ma). Root ID nie powinien trafiać do publicznych miejsc (zrzuty w tej dokumentacji mają zmyślone identyfikatory).
 - **Sterownika nie da się usunąć z aplikacji.** Usunięcie wymaga zmiany w bazie danych.
 - **Część danych jest w pamięci serwera** (ostatnia telemetria, operacje ręczne, dane urządzeń). Restart serwera je czyści; sterownik odtwarza je przy kolejnej wysyłce.
-- **Temperatura zewnętrzna** pochodzi z jednej stacji IMGW (Zakopane) — dla instalacji w innym miejscu trzeba zmienić stację w kodzie.
+- **Temperatura zewnętrzna** pochodzi z czujnika zewnętrznego kotła pelletowego; bez kotła albo bez świeżego odczytu z prognozy Open-Meteo dla domu.
 - **Poczta przez sterowniki jest opcją.** Domyślnie maile wysyła serwer. Po włączeniu „Wysyłki przez sterowniki” maile (kody logowania, zaproszenia, potwierdzenia) wysyła włącznik, a zapasowo `co`. Gdy oba są wtedy bez sieci, logowanie kodem nie działa (komunikat „Poczta jest chwilowo niedostępna”); zostaje konto systemowe z hasłem. Klucz płytki, która ma dostać dane poczty, zatwierdza użytkownik systemowy po porównaniu odcisku ze stroną `/install` płytki.
 - **Powiadomienia zależą od przeglądarki.** Na iPhonie działają tylko w aplikacji dodanej do ekranu początkowego (iOS 16.4+), w trybie incognito wcale, a Android potrafi opóźnić je przy oszczędzaniu baterii. Temperatura na kafelku „Dom” pochodzi z czujnika zewnętrznego kotła, gdy piec daje świeży pomiar (do 15 min); przy wyłączonym piecu z modelu pogodowego, który w dolinie myli się nocą o kilka stopni.
 - **Wersja demo jest publiczna.** Każdy, kto zna adres aplikacji, widzi dane instalacji właściciela (temperatury, historię, harmonogramy). Serwer ukrywa dane wrażliwe i blokuje zapisy, ale sam podgląd jest jawny; wyłącza się go, usuwając `DEMO_OWNER_EMAIL` z konfiguracji serwera.

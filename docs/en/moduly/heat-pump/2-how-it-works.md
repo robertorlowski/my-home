@@ -39,7 +39,7 @@ sequenceDiagram
     H->>O: consumeManualForceOnStart — manual force is dropped when the compressor starts
     alt telemetry has HP.Ttarget
         H->>P: PV.total_power from the latest PV reading (≤ 3 min) if there is no own PV
-        H->>S: addHpData: rootId, deviceType, deviceId, t_out (IMGW), error_code
+        H->>S: addHpData: rootId, deviceType, deviceId, t_out (boiler sensor or forecast), error_code
         S->>M: save the record
         S->>WS: "update" for browsers
     end

@@ -18,7 +18,7 @@ flowchart TB
         WPT["modules/water-pressure-tank"]
         PBM["modules/pellet-boiler-pelux200"]
         WS["core/websocket.ts"]
-        MET["core: meteo (IMGW)<br/>kalendarz świąt"]
+        MET["core: meteo (czujnik kotła, Open-Meteo)<br/>kalendarz świąt"]
         APP --> CTX --> RT
         RT --> DEV
         RT --> HPM
@@ -174,7 +174,7 @@ WebSocket niczego nie przenosi poza sygnałem „zajrzyj po dane”. Operacje za
 
 ## Usługi wspólne
 
-- **Temperatura zewnętrzna.** Przy starcie i co 10 minut serwer pobiera pomiar ze stacji synoptycznej IMGW (Zakopane). Wartość jest dopisywana do rekordów telemetrii pompy (`t_out`) i odsyłana sterownikowi `co`, który pokazuje ją na ekranie.
+- **Temperatura zewnętrzna.** Od 2026-10-04 pochodzi z czujnika zewnętrznego kotła (każdy odczyt kotła, po starcie serwera ostatni z bazy), a gdy pomiar jest starszy niż 15 min, z prognozy Open-Meteo dla domu. Wartość jest dopisywana do rekordów telemetrii pompy (`t_out`) i odsyłana sterownikowi `co`, który pokazuje ją na ekranie.
 - **Kalendarz.** Wszystkie daty użytkownika są w strefie `Europe/Warsaw`. Kalendarz zna polskie święta stałe i ruchome (także Wigilię) i rozstrzyga, czy dzień jest roboczy — korzysta z tego scheduler harmonogramów pompy.
 - **Pogoda.** Od 2026-11-07 serwer sam pyta Open-Meteo (`weather-fetch.service`): na Oracle ma własny adres IP, a na Renderze dzielił go z innymi usługami i zapytania były odrzucane. Jedno zapytanie obejmuje wszystkie miejsca (dom i widoczne kafelki pogody wszystkich kont, najwyżej 8), co 15 min, po błędzie co 5 min, a po zmianie listy miejsc od razu. Włącznik pobiera już tylko zapasowo: w odpowiedzi na zgłoszenie stanu dostaje miejsca (`weather_queries`), dla których serwer nie ma świeżej pogody od 25 min, zwykle pustą listę, która wyłącza u niego pobieranie. Sterownik `co` dostaje miejsca, których nie dostarczył ani serwer, ani włącznik. Serwer trzyma odczyty w pamięci po id kafelka (`meteo.service`), odczyt starszy niż 45 min pomija. `GET /temperature` daje temperaturę domu (czujnik zewnętrzny kotła do 15 min od pomiaru, bez niego prognoza) i pogodę domu — z niej korzystają pasek nad listą, kafelek „Dom”, kafelek konta do 3 km od domu (`nearHome`; „Dom” widzi tylko użytkownik systemowy) i nagłówek „Teraz” strony pogody (od 2026-10-21), bo model z siatką 2 km mylił się nocą o 3–4 °C; `GET /weather-tiles` kafelki z pogodą. Prognozę na stronie pogody przeglądarka pobiera wprost z Open-Meteo.
 - **Poczta przez sterowniki** (`MAIL_RELAY=1`). `sendMail` składa wiadomość MIME, odkłada ją w kolejce `mail_outbox` i budzi sterowniki komunikatem WebSocket `{type:"mail"}`. Wysyła włącznik; `co` przejmuje mail, gdy włącznik nie odebrał go w 20 s, zgłosił błąd albo nie odpowiedział w 60 s; najwyżej 3 próby, mail ważny 15 min. Płytka ma własną parę kluczy P-256 (klucz publiczny w zgłoszeniu `mailKey`); dane SMTP i każdy mail są szyfrowane jej kluczem (ECDH + AES-256-GCM) i trzymane tylko w pamięci płytki. Nowy klucz czeka na zatwierdzenie w aplikacji (karta „Sterownik”, wiersz „Poczta”, użytkownik systemowy). Bez sterownika pytającego o maile w ostatnich 150 s logowanie, zmiana e-maila i usunięcie konta dostają 503 jeszcze przed utworzeniem kodu.
@@ -190,5 +190,5 @@ WebSocket niczego nie przenosi poza sygnałem „zajrzyj po dane”. Operacje za
 2. Połączenie z MongoDB (serwery bazy sprawdzane raz na minutę, `serverMonitoringMode: 'poll'`, ustawione dla limitu transferu na Renderze), potem odczyt ustawień z kolekcji `app_settings`.
 3. Start schedulera pompy ciepła (przebieg od razu, potem co minutę).
 4. Czyszczenie szczegółów paneli PV starszych niż 90 dni (od razu i co 24 h).
-5. Pobranie temperatury IMGW i odświeżanie co 10 minut.
+5. Temperatura zewnętrzna z ostatniego odczytu kotła w bazie i pierwsze pobranie pogody z Open-Meteo (dalej co 15 minut).
 6. Nasłuch HTTP i WebSocket na porcie `PORT`.

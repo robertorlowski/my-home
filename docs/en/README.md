@@ -27,7 +27,7 @@ flowchart LR
     SRV["My Home — server<br/>(Node.js, Docker, Oracle Cloud)"]
     DB[("MongoDB in Docker")]
     WEB["My Home — web application<br/>(browser, phone)"]
-    IMGW["IMGW<br/>outdoor temperature"]
+    OM["Open-Meteo<br/>weather"]
 
     CHPC <-- "RS-485<br/>commands and state (JSON)" --> CO
     DTU <-- "RS-485<br/>Modbus RTU" --> CO
@@ -36,7 +36,7 @@ flowchart LR
     PEL -- "HTTPS: boiler reading every few minutes<br/>registration → interval" --> SRV
     HYD -- "HTTPS: runs every 1 s<br/>registration → settings" --> SRV
     SW <-- "HTTPS: state every 5 s → commands<br/>WebSocket: fast change" --> SRV
-    IMGW -- "every 10 min" --> SRV
+    OM -- "every 15 min" --> SRV
     SRV <--> DB
     WEB <-- "REST API, WebSocket" --> SRV
 ```
@@ -94,3 +94,8 @@ pio test -d devices/switch -e native
 ```
 
 Application and production server: `https://dom.mojeturnie.pl`. Server environment variables (`MONGODB_URI`, `PORT` and others) are described in the [core module](moduly/core/3-technical-documentation.md).
+
+## Other documents
+
+- [MongoDB database](database.md) — collections, fields, indexes, retention and rules for model changes.
+- [CLAUDE.md](../CLAUDE.md) — guide for Claude Code and detailed rules of the whole chain (Polish).

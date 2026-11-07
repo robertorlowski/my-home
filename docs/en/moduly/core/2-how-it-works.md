@@ -18,7 +18,7 @@ flowchart TB
         WPT["modules/water-pressure-tank"]
         PBM["modules/pellet-boiler-pelux200"]
         WS["core/websocket.ts"]
-        MET["core: weather (IMGW)<br/>holiday calendar"]
+        MET["core: weather (boiler sensor, Open-Meteo)<br/>holiday calendar"]
         APP --> CTX --> RT
         RT --> DEV
         RT --> HPM
@@ -174,7 +174,7 @@ The WebSocket carries nothing but a "come and get the data" signal. Operations a
 
 ## Shared services
 
-- **Outdoor temperature.** At start and every 10 minutes the server fetches the reading of the IMGW synoptic station (Zakopane). The value is added to heat pump telemetry records (`t_out`) and sent back to the `co` controller, which shows it on its display.
+- **Outdoor temperature.** Since 2026-10-04 it comes from the boiler's outdoor sensor (every boiler reading, after a server start the last one from the database), and when the reading is older than 15 min, from the Open-Meteo forecast for the home. The value is added to heat pump telemetry records (`t_out`) and sent back to the `co` controller, which shows it on its display.
 - **Calendar.** All user dates are in the `Europe/Warsaw` time zone. The calendar knows fixed and movable Polish holidays (Christmas Eve included) and decides whether a day is a working day — the heat pump schedule uses it.
 - **Weather.** Since 2026-11-07 the server queries Open-Meteo itself (`weather-fetch.service`): on Oracle it has its own IP address, while on Render it shared it with other services and the requests were rejected. One request covers all places (the home and the visible weather tiles of all accounts, at most 8), every 15 min, after an error every 5 min, and immediately after the list of places changes. The switch fetches only as a fallback: in the reply to a state report it receives the places (`weather_queries`) for which the server has had no fresh weather for 25 min, usually an empty list, which turns its fetching off. The `co` controller receives the places delivered neither by the server nor by the switch. The server keeps the readings in memory by tile id (`meteo.service`) and ignores readings older than 45 min. `GET /temperature` returns the home temperature (the boiler's outdoor sensor up to 15 min after the reading, otherwise the forecast) and the home weather — used by the strip above the list, the "Dom" tile, an account's tile within 3 km of home (`nearHome`; only the system user sees "Dom") and the "Teraz" header of the weather page (since 2026-10-21), because the 2 km model was off by 3–4 °C at night; `GET /weather-tiles` the tiles with weather. The forecast on the weather page is fetched by the browser directly from Open-Meteo.
 - **Mail through the controllers** (`MAIL_RELAY=1`). `sendMail` composes the MIME message, puts it in the `mail_outbox` queue and wakes the controllers with the WebSocket message `{type:"mail"}`. The switch sends; `co` takes the mail over when the switch did not pick it up within 20 s, reported an error or did not answer within 60 s; at most 3 attempts, a mail is valid 15 min. The board has its own P-256 key pair (public key in the registration, `mailKey`); the SMTP credentials and every mail are encrypted with its key (ECDH + AES-256-GCM) and kept only in the board's memory. A new key waits for approval in the application (the "Sterownik" card, "Poczta" row, system user). Without a controller asking for mail in the last 150 s, login, e-mail change and account deletion get 503 before a code is even created.
@@ -190,5 +190,5 @@ The WebSocket carries nothing but a "come and get the data" signal. Operations a
 2. MongoDB connection (database servers checked once a minute, `serverMonitoringMode: 'poll'`, set for Render bandwidth). The settings are then read from the `app_settings` collection.
 3. The heat pump scheduler starts (one run immediately, then every minute).
 4. PV panel details older than 90 days are cleaned (immediately and every 24 h).
-5. The IMGW temperature is fetched and then refreshed every 10 minutes.
+5. The outdoor temperature from the last boiler reading in the database and the first Open-Meteo weather fetch (then every 15 minutes).
 6. HTTP and WebSocket listen on `PORT`.

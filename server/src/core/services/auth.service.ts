@@ -389,7 +389,7 @@ export async function confirmDeleteAccount(token: unknown) {
 }
 
 // Kolekcje bez danych sterowników (pozostałe z polem rootId należą do sterowników).
-const NOT_DEVICE_DATA = new Set(['users', 'sessions', 'auth_codes', 'device_shares', 'devices', 'firmware_images', 'firmware_offers', 'migrations']);
+const NOT_DEVICE_DATA = new Set(['users', 'sessions', 'auth_codes', 'device_shares', 'devices', 'firmware_images', 'firmware_offers']);
 
 // Konto, jego sterowniki z całą historią (każda kolekcja z rootId), udostępnienia (jego i jemu) i sesje.
 // Sterownik, który dalej działa, zgłosi się później sam jako nowy, bez właściciela.

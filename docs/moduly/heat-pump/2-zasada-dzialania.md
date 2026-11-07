@@ -39,7 +39,7 @@ sequenceDiagram
     H->>O: consumeManualForceOnStart — ręczne force znika przy starcie sprężarki
     alt telemetria ma HP.Ttarget
         H->>P: PV.total_power z ostatniego odczytu PV (≤ 3 min), gdy brak własnego PV
-        H->>S: addHpData: rootId, deviceType, deviceId, t_out (IMGW), error_code
+        H->>S: addHpData: rootId, deviceType, deviceId, t_out (czujnik kotła albo prognoza), error_code
         S->>M: zapis rekordu
         S->>WS: "update" dla przeglądarek
     end

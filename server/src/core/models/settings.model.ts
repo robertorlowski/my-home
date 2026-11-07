@@ -1,4 +1,4 @@
-// Ustawienia aplikacji (kolekcja app_settings, od 2026-11-07; kolekcja settings to harmonogramy pompy), zmieniane na ekranie konta systemowego: jeden dokument,
+// Ustawienia aplikacji (kolekcja app_settings, od 2026-11-07; kolekcja settings to pozostałość po dawnym modelu ustawień czasowych pompy), zmieniane na ekranie konta systemowego: jeden dokument,
 // a jego _id to nazwa bazy (core/services/settings.service.ts). Kopia produkcji odtworzona pod inną nazwą
 // (hpdb_test) ma dokument z _id hpdb, więc środowisko testowe go nie użyje.
 import mongoose, { Schema } from 'mongoose';
