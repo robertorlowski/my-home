@@ -788,6 +788,7 @@ export const en: Record<keyof typeof pl, string> = {
   'hp.kwhConsumed': 'kWh consumed',
   'hp.kwhFromPv': 'kWh from PV',
   'hp.kwhPvToday': 'kWh PV today',
+  'hp.plnTariff': 'PLN in the G12w tariff',
   'hp.miniChartLabel': 'Power draw and PV production today',
   'hp.consumption': 'Draw',
   'hp.consumptionLower': 'draw',

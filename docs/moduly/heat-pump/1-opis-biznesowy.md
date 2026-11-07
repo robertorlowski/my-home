@@ -34,7 +34,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z danymi z 13.10.2026 (wygląd 
 
 ![Widok główny](img/glowny.png)
 
-*Widok główny (HP): na górze pasek „Offline od …” z przyczyną, gdy pompa nie przysyła danych. Karta hero: temperatura w środku zbiornika na pasku zakresu od–do, stan sprężarki (z czasem i energią cyklu), cel od–do i czas odczytu oraz cztery pola: moc, PV teraz, tryb i temperatura na zewnątrz (COP jest w karcie „Pomiary”). Kafelek pompy na liście sterowników pokazuje temperaturę zbiornika, cel, moc oraz temperatury sprężarki i wody wyjściowej. Niżej karty „Pomiary” (temperatury, EEV, limit mocy, energia i czas cyklu, COP zbiornika, błędy), „Obieg” (przełączniki ze stanem przekaźników z telemetrii: zgoda na start sprężarki, obieg gorący i zimny, przepływ) i „Energia dziś” (zużycie, część z PV, koszt G12w, mini wykres mocy). Odświeża się sam po każdej wysyłce sterownika.*
+*Widok główny (HP): na górze pasek „Offline od …” z przyczyną, gdy pompa nie przysyła danych. Karta hero: temperatura w środku zbiornika na pasku zakresu od–do, stan sprężarki (z czasem i energią cyklu), cel od–do i czas odczytu oraz cztery pola: moc, PV teraz, tryb i temperatura na zewnątrz (COP jest w karcie „Pomiary”). Kafelek pompy na liście sterowników pokazuje temperaturę zbiornika, cel, moc oraz temperatury sprężarki i wody wyjściowej. Niżej karty „Pomiary” (temperatury, EEV, limit mocy, energia i czas cyklu, COP zbiornika, błędy), „Obieg” (przełączniki ze stanem przekaźników z telemetrii: zgoda na start sprężarki, obieg gorący i zimny, przepływ) i „Energia dziś” (cztery liczby: zużycie, część z PV, produkcja PV i koszt w taryfie G12w; mini wykres mocy). Odświeża się sam po każdej wysyłce sterownika.*
 
 | Telefon | Harmonogram na telefonie |
 |---|---|

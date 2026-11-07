@@ -788,6 +788,7 @@ export const pl = {
   'hp.kwhConsumed': 'kWh pobrane',
   'hp.kwhFromPv': 'kWh z PV',
   'hp.kwhPvToday': 'kWh PV dziś',
+  'hp.plnTariff': 'PLN w taryfie G12w',
   'hp.miniChartLabel': 'Pobór mocy i produkcja PV dziś',
   'hp.consumption': 'Pobór',
   'hp.consumptionLower': 'pobór',

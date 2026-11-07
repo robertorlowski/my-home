@@ -312,11 +312,13 @@ const HP: React.FC = () => {
           </ul>
         </section>
         <section className="card">
-          <header className="card-head"><h2>{t('hp.energyToday')}</h2><span className="card-hint">{today ? `G12w · ${fmt(today.costPln, 2)} PLN` : ''}</span></header>
+          <header className="card-head"><h2>{t('hp.energyToday')}</h2></header>
           <div className="energy">
             <div className="energy-num"><span>{today ? fmt(today.kwh, 2) : '---'}</span><small>{t('hp.kwhConsumed')}</small></div>
             <div className="energy-num"><span>{today ? fmt(today.pvUsedKwh, 2) : '---'}</span><small>{t('hp.kwhFromPv')}</small></div>
             <div className="energy-num"><span>{_pv?.total_prod_today !== undefined ? fmt(_pv.total_prod_today / 1000, 2) : '---'}</span><small>{t('hp.kwhPvToday')}</small></div>
+            {/* koszt zmienny dnia w taryfie G12w (serwer: energy-balance.service.ts), dawniej w nagłówku karty */}
+            <div className="energy-num"><span>{today ? fmt(today.costPln, 2) : '---'}</span><small>{t('hp.plnTariff')}</small></div>
           </div>
           <div className="chart chart-sm" aria-label={t('hp.miniChartLabel')}>
             <ResponsiveContainer width="100%" height="100%">
