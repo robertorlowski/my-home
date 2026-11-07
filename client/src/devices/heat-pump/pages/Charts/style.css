@@ -13,19 +13,8 @@
 /* dymek Recharts bez własnej ramki (wygląd daje .chart-tooltip) */
 .hp-charts .recharts-tooltip-wrapper { outline: none; }
 
-/* wartości pod kursorem nad wykresem (Tooltip z portalem do .chart-readout), w jednym wierszu, bez ramki dymka;
-   stała wysokość, żeby wykres nie skakał przy najechaniu */
-.hp-charts .chart-readout { min-height: 20px; margin: -2px 0 6px; }
-.hp-charts .chart-readout .chart-tooltip {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 14px;
-  padding: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
-  white-space: normal;
-}
-.hp-charts .chart-readout .chart-tooltip strong { margin: 0; }
-.hp-charts .chart-readout .chart-tooltip span { white-space: nowrap; }
+/* pasek nad wykresem (ChartReadout): wyśrodkowane nazwy serii, a przy kursorze nad wykresem czas i wartości;
+   stała wysokość, żeby wykres nie skakał */
+.hp-charts .chart-readout { justify-content: center; align-items: center; min-height: 24px; margin: -4px 0 6px; }
+.hp-charts .chart-readout .readout-time { font-size: 12px; color: var(--fg); margin-right: 2px; }
+.hp-charts .chart-readout b { margin-left: 5px; font-weight: 700; color: var(--fg); }

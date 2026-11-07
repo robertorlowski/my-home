@@ -2,9 +2,9 @@
 // Miesiąc / Rok, nawigacja po dacie, „Cały dzień”), cztery kafelki statystyk i karty wykresów. Dzień: karta
 // „Temperatury” i karta „Moc i produkcja PV” z GET /hp/4day, czas pracy sprężarki z rekordów, zużycie, energia
 // z sieci i koszt z bilansu serwera (GET /hp/monthly-summary, group day; do 2026-11-01 w przeglądarce). Miesiąc i Rok: karta „Energia i koszt” (słupki energii,
-// PV i koszt) z bilansu serwera (GET /hp/monthly-summary, group day/month). Legenda w nagłówku karty przełącza
-// serie. Wartości pod kursorem (dymek Recharts) w pasku .chart-readout nad wykresem, nie na danych (portal Tooltip,
-// od 2026-11-07). Dane pobierane przy zmianie okresu, daty lub filtra; oś czasu dnia bieżącego przesuwa się co minutę,
+// PV i koszt) z bilansu serwera (GET /hp/monthly-summary, group day/month). Nad każdym wykresem wyśrodkowany pasek
+// .chart-readout (od 2026-11-08 zamiast legendy w nagłówku i dymka na danych): nazwy serii zawsze, kliknięcie chowa
+// albo pokazuje serię, a po najechaniu na wykres także czas i wartości punktu. Dane pobierane przy zmianie okresu, daty lub filtra; oś czasu dnia bieżącego przesuwa się co minutę,
 // ale nowe dane nie są dociągane. Kolory wykresów z tokenów przez cc() (core/chartColors.ts).
 import '../style.css';
 import { getLang, locale, t as tr, useLang } from '../../../../core/i18n';
@@ -166,41 +166,48 @@ const energySeries = (colors: ReturnType<typeof cc>): Series[] => [
   { key: 'cost', label: tr('hp.chart.costG12w'), color: colors.s2, unit: ' PLN', digits: 2 },
 ];
 
-type ChartTooltipProps = {
+// Punkt pod kursorem: etykieta osi i wartości widocznych serii; null = kursor poza wykresem.
+type Readout = { label: string | number | undefined; values: Partial<Record<SeriesKey, number>> } | null;
+type ReporterProps = {
   active?: boolean;
-  payload?: Array<{ dataKey?: string | number; value?: unknown; color?: string }>;
+  payload?: Array<{ dataKey?: string | number; value?: unknown }>;
   label?: string | number;
-  series: Series[];
+  onChange: (readout: Readout) => void;
+};
+
+// Treść Tooltip bez własnego dymka: przekazuje punkt pod kursorem do paska nad wykresem. Stan zmienia się w efekcie
+// (nie w trakcie renderu Recharts) i tylko przy innym punkcie.
+const TooltipReporter: React.FC<ReporterProps> = ({ active, payload, label, onChange }) => {
+  const key = active && payload?.length ? `${label}|${payload.map((item) => `${item.dataKey}:${item.value}`).join(',')}` : '';
+  useEffect(() => {
+    if (!key || !payload) { onChange(null); return; }
+    const values: Partial<Record<SeriesKey, number>> = {};
+    payload.forEach((item) => { if (typeof item.value === 'number') values[String(item.dataKey) as SeriesKey] = item.value; });
+    onChange({ label, values });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return null;
+};
+
+// Pasek nad wykresem: nazwy serii (kliknięcie chowa albo pokazuje serię), a przy kursorze nad wykresem czas
+// i wartości punktu.
+const ChartReadout: React.FC<{
+  series: Series[]; hidden: Set<SeriesKey>; onToggle: (key: SeriesKey) => void; readout: Readout;
   labelFormat: (label: string | number | undefined) => string;
-};
-
-// Wartości pod kursorem: etykieta osi i wartości widocznych serii z jednostką, w jednym wierszu w pasku nad wykresem.
-const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, series, labelFormat }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="chart-tooltip">
-      <strong>{labelFormat(label)}</strong>
-      {payload.map((item) => {
-        const info = series.find((entry) => entry.key === String(item.dataKey));
-        if (!info || item.value === undefined || item.value === null) return null;
-        return (
-          <span key={info.key}><i style={{ background: info.color }} />{info.label}<b>{fmt(Number(item.value), info.digits)}{info.unit}</b></span>
-        );
-      })}
-    </div>
-  );
-};
-
-// Legenda w nagłówku karty: kliknięcie pozycji chowa albo pokazuje serię.
-const Legend: React.FC<{ series: Series[]; hidden: Set<SeriesKey>; onToggle: (key: SeriesKey) => void }> = ({ series, hidden, onToggle }) => (
-  <div className="legend">
-    {series.map((entry) => (
-      <button type="button" key={entry.key} className={`lg${hidden.has(entry.key) ? ' is-off' : ''}`}
-        aria-pressed={!hidden.has(entry.key)} title={hidden.has(entry.key) ? tr('chart.showSeries') : tr('chart.hideSeries')}
-        onClick={() => onToggle(entry.key)}>
-        <i style={{ background: entry.color }} />{entry.label}
-      </button>
-    ))}
+}> = ({ series, hidden, onToggle, readout, labelFormat }) => (
+  <div className="legend chart-readout">
+    {readout && <strong className="readout-time">{labelFormat(readout.label)}</strong>}
+    {series.map((entry) => {
+      const off = hidden.has(entry.key);
+      const value = readout?.values[entry.key];
+      return (
+        <button type="button" key={entry.key} className={`lg${off ? ' is-off' : ''}`} aria-pressed={!off}
+          title={off ? tr('chart.showSeries') : tr('chart.hideSeries')} onClick={() => onToggle(entry.key)}>
+          <i style={{ background: entry.color }} />{entry.label}
+          {!off && value !== undefined && <b>{fmt(value, entry.digits)}{entry.unit}</b>}
+        </button>
+      );
+    })}
   </div>
 );
 
@@ -210,10 +217,10 @@ const monthNames = () => Array.from({ length: 12 }, (_, month) =>
 export const HeatPumpChart: React.FC = () => {
   const { t } = useLang();
   const [filteredData, setFilteredData] = useState<ChartPoint[]>([]);
-  // paski nad wykresami, do których Recharts wstawia dymek z wartościami pod kursorem (Tooltip portal)
-  const [tempReadout, setTempReadout] = useState<HTMLDivElement | null>(null);
-  const [powerReadout, setPowerReadout] = useState<HTMLDivElement | null>(null);
-  const [energyReadout, setEnergyReadout] = useState<HTMLDivElement | null>(null);
+  // punkt pod kursorem dla paska nad każdym wykresem (ChartReadout)
+  const [tempPoint, setTempPoint] = useState<Readout>(null);
+  const [powerPoint, setPowerPoint] = useState<Readout>(null);
+  const [energyPoint, setEnergyPoint] = useState<Readout>(null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     formatDateYMD(new Date()),
@@ -456,7 +463,6 @@ export const HeatPumpChart: React.FC = () => {
           <label className="check">
             <input type="checkbox" checked={allData} onChange={(event) => setAllData(event.target.checked)} />
             <span>{t('hp.chart.wholeDay')}</span>
-            <small>{t('hp.chart.wholeDayHint')}</small>
           </label>
         )}
       </div>
@@ -475,17 +481,16 @@ export const HeatPumpChart: React.FC = () => {
           <section className="card">
             <header className="card-head">
               <h2>{t('hp.chart.temperatures')}</h2>
-              <Legend series={temps} hidden={hidden} onToggle={toggle} />
-            </header>
-            <div className="chart-readout" ref={setTempReadout} />
+                          </header>
+            <ChartReadout series={temps} hidden={hidden} onToggle={toggle} readout={tempPoint} labelFormat={dayLabel} />
             <div className="chart chart-lg">
               {loading && <div className="loading chart-loading"><ClipLoader size={32} color={colors.axis} /></div>}
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={filteredData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                <LineChart data={filteredData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }} onMouseLeave={() => setTempPoint(null)}>
                   <CartesianGrid stroke={colors.grid} vertical={false} />
                   {dayAxis}
                   <YAxis tick={axisTick} stroke={colors.line} unit=" °C" width={54} />
-                  <Tooltip portal={tempReadout} content={<ChartTooltip series={temps} labelFormat={dayLabel} />} />
+                  <Tooltip content={<TooltipReporter onChange={setTempPoint} />} />
                   {temps.map((entry) => (
                     <Line key={entry.key} type="monotone" dataKey={entry.key} stroke={entry.color} strokeWidth={2} dot={false}
                       connectNulls hide={hidden.has(entry.key)} isAnimationActive={false} />
@@ -497,16 +502,15 @@ export const HeatPumpChart: React.FC = () => {
           <section className="card">
             <header className="card-head">
               <h2>{t('hp.chart.powerAndPv')}</h2>
-              <Legend series={powers} hidden={hidden} onToggle={toggle} />
-            </header>
-            <div className="chart-readout" ref={setPowerReadout} />
+                          </header>
+            <ChartReadout series={powers} hidden={hidden} onToggle={toggle} readout={powerPoint} labelFormat={dayLabel} />
             <div className="chart chart-md">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={filteredData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                <ComposedChart data={filteredData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }} onMouseLeave={() => setPowerPoint(null)}>
                   <CartesianGrid stroke={colors.grid} vertical={false} />
                   {dayAxis}
                   <YAxis tick={axisTick} stroke={colors.line} unit=" W" width={54} />
-                  <Tooltip portal={powerReadout} content={<ChartTooltip series={powers} labelFormat={dayLabel} />} />
+                  <Tooltip content={<TooltipReporter onChange={setPowerPoint} />} />
                   <Area type="monotone" dataKey="pv" stroke="none" fill={colors.sun} fillOpacity={0.28} hide={hidden.has('pv')} isAnimationActive={false} />
                   <Bar dataKey="Watts" fill={colors.s1} barSize={allData ? 2 : undefined} hide={hidden.has('Watts')} isAnimationActive={false} />
                 </ComposedChart>
@@ -519,18 +523,17 @@ export const HeatPumpChart: React.FC = () => {
         <section className="card">
           <header className="card-head">
             <h2>{t('hp.chart.energyAndCost')}</h2>
-            <Legend series={energies} hidden={hidden} onToggle={toggle} />
-          </header>
-          <div className="chart-readout" ref={setEnergyReadout} />
+                      </header>
+          <ChartReadout series={energies} hidden={hidden} onToggle={toggle} readout={energyPoint} labelFormat={periodLabel} />
           <div className="chart chart-lg">
             {loading && <div className="loading chart-loading"><ClipLoader size={32} color={colors.axis} /></div>}
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={filteredData} margin={{ top: 8, right: 0, bottom: 0, left: -12 }}>
+              <ComposedChart data={filteredData} margin={{ top: 8, right: 0, bottom: 0, left: -12 }} onMouseLeave={() => setEnergyPoint(null)}>
                 <CartesianGrid stroke={colors.grid} vertical={false} />
                 <XAxis tick={axisTick} stroke={colors.line} dataKey="time" />
                 <YAxis yAxisId="left" tick={axisTick} stroke={colors.line} unit=" kWh" width={64} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} stroke={colors.line} unit=" zł" width={56} hide={hidden.has('cost')} />
-                <Tooltip portal={energyReadout} content={<ChartTooltip series={energies} labelFormat={periodLabel} />} />
+                <Tooltip content={<TooltipReporter onChange={setEnergyPoint} />} />
                 <Bar yAxisId="left" dataKey="Watts" fill={colors.s1} radius={[2, 2, 0, 0]} hide={hidden.has('Watts')} isAnimationActive={false} />
                 <Line yAxisId="left" dataKey="pv" stroke={colors.sun} strokeWidth={2} type="monotone" dot={{ r: 2 }} hide={hidden.has('pv')} isAnimationActive={false} />
                 <Line yAxisId="right" dataKey="cost" stroke={colors.s2} strokeWidth={2} type="monotone" dot={{ r: 2 }} hide={hidden.has('cost')} isAnimationActive={false} />

@@ -923,7 +923,6 @@ export const en: Record<keyof typeof pl, string> = {
   'hp.chart.fromPv': 'From PV',
   'hp.chart.costG12w': 'G12w cost',
   'hp.chart.wholeDay': 'Whole day',
-  'hp.chart.wholeDayHint': 'unchecked: compressor runs only',
   'hp.chart.fromGrid': 'From grid',
   'hp.chart.workTime': 'Run time',
   'hp.chart.temperatures': 'Temperatures',

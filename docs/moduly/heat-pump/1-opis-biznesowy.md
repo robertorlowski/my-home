@@ -48,7 +48,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z danymi z 13.10.2026 (wygląd 
 
 ![Wykres dnia](img/wykres-dzien.png)
 
-*Wykres dnia: przełącznik Dzień / Miesiąc / Rok, nawigacja po dacie i „Cały dzień” (bez zaznaczenia tylko praca sprężarki); kafelki pobór, z sieci, koszt G12w i czas pracy; dwa wykresy z jedną osią każdy — temperatury (zbiornik, woda wychodząca, przed i za parownikiem) oraz pobór sprężarki z produkcją PV; legenda w nagłówku karty przełącza serie.*
+*Wykres dnia: przełącznik Dzień / Miesiąc / Rok, nawigacja po dacie i „Cały dzień” (bez zaznaczenia tylko praca sprężarki); kafelki pobór, z sieci, koszt G12w i czas pracy; dwa wykresy z jedną osią każdy — temperatury (zbiornik, woda wychodząca, przed i za parownikiem) oraz pobór sprężarki z produkcją PV; nad każdym wykresem wyśrodkowany pasek z nazwami serii (kliknięcie chowa albo pokazuje serię), a po najechaniu na wykres z czasem i wartościami punktu zamiast dymka na danych.*
 
 ![Wykres miesiąca](img/wykres-miesiac.png)
 

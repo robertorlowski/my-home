@@ -923,7 +923,6 @@ export const pl = {
   'hp.chart.fromPv': 'Z PV',
   'hp.chart.costG12w': 'Koszt G12w',
   'hp.chart.wholeDay': 'Cały dzień',
-  'hp.chart.wholeDayHint': 'bez zaznaczenia tylko praca sprężarki',
   'hp.chart.fromGrid': 'Z sieci',
   'hp.chart.workTime': 'Czas pracy',
   'hp.chart.temperatures': 'Temperatury',

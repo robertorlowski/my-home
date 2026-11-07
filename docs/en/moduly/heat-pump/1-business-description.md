@@ -48,7 +48,7 @@ The user interface is in Polish; the screenshots show it as is. They come from t
 
 ![Day chart](../../../moduly/heat-pump/img/wykres-dzien.png)
 
-*Day chart: the Dzień / Miesiąc / Rok switch, date navigation and "Cały dzień" (unchecked: compressor runs only); the tiles consumption, from the grid, G12w cost and run time; two charts with one axis each — temperatures (tank, outgoing water, before and after the evaporator) and compressor draw with PV production; the legend in the card header toggles series.*
+*Day chart: the Dzień / Miesiąc / Rok switch, date navigation and "Cały dzień" (unchecked: compressor runs only); the tiles consumption, from the grid, G12w cost and run time; two charts with one axis each — temperatures (tank, outgoing water, before and after the evaporator) and compressor draw with PV production; above each chart a centred strip with the series names (a click hides or shows a series), and after hovering over the chart with the time and the values of the point instead of a tooltip over the data.*
 
 ![Month chart](../../../moduly/heat-pump/img/wykres-miesiac.png)
 
