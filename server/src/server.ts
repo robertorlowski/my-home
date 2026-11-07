@@ -32,7 +32,7 @@ const cleanPanelDetails = async () => {
 const server = http.createServer(app);
 createWsServer(server);
 
-// adres z hasłem tylko w zmiennej środowiskowej (Render: Environment, lokalnie server/.env)
+// adres z hasłem tylko w zmiennej środowiskowej (Render: Environment, lokalnie server/.env, Oracle: /etc/apps/my-home.env)
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.error("Brak MONGODB_URI: ustaw zmienną środowiskową albo server/.env (wzór w server/.env.example)");

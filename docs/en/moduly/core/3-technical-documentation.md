@@ -186,7 +186,6 @@ The device document is shared by all kinds, so `core/models/device.model.ts` imp
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | the mail account (with `MAIL_RELAY=1` handed to the boards encrypted); sender `MyHome <SMTP_USER>`, replies to `MAIL_FROM` |
 | `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL`, `AUTH_DISABLED=1` | application address in mail links, the "system" account password, the first owner, login disabled (local environment) |
 | `WEATHER_LOCATION` | home coordinates for the "Dom" weather tile |
-| `PROXY_TARGET` | proxy mode (`core/proxy.ts`): the process, without the database or schedulers, forwards HTTP and WebSocket to this address and answers 502 when the target fails |
 | `CLIENT_DIR` | directory with the client build served by the server (`core/client-static.ts`); set only by the Docker image |
 
 Values live only in environment variables: on Render in the service Environment, locally in `server/.env` (outside git, template `server/.env.example`).

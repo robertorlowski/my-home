@@ -186,7 +186,6 @@ Dokument urządzenia jest wspólny dla wszystkich rodzajów, dlatego `core/model
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | konto pocztowe (przy `MAIL_RELAY=1` przekazywane zaszyfrowane płytkom); nadawca `MyHome <SMTP_USER>`, odpowiedzi na `MAIL_FROM` |
 | `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL`, `AUTH_DISABLED=1` | adres aplikacji w linkach z maili, hasło konta „system”, pierwszy właściciel, wyłączenie logowania (środowisko lokalne) |
 | `WEATHER_LOCATION` | współrzędne domu dla kafelka pogody „Dom” |
-| `PROXY_TARGET` | tryb pośrednika (`core/proxy.ts`): proces bez bazy i schedulerów przekazuje HTTP i WebSocket na ten adres, a przy awarii celu odpowiada 502 |
 | `CLIENT_DIR` | katalog z buildem klienta podawanym przez serwer (`core/client-static.ts`); ustawia go tylko obraz Dockera |
 
 Wartości są tylko w zmiennych środowiskowych: na Render w Environment usługi, lokalnie w `server/.env` (poza gitem, wzór `server/.env.example`).
