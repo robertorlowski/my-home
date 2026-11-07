@@ -52,16 +52,16 @@ export async function heatPumpTile(rootId: string, device: Device, now = new Dat
     // w ciągu 5 min), nie odpowiada sama pompa (CHPC); inaczej brak łączności ze sterownikiem
     const contact = getHpContactAt(rootId);
     const chpcOnly = !!contact && now.getTime() - contact.getTime() <= OFFLINE_AFTER_MS;
-    note = { level: 'err', icon: 'offline', text: t(lang, chpcOnly ? 'tile.chpcNotResponding' : 'tile.notResponding', { age: formatAge(age, lang) }) };
+    note = { id: `offline:${at.getTime()}`, level: 'err', icon: 'offline', text: t(lang, chpcOnly ? 'tile.chpcNotResponding' : 'tile.notResponding', { age: formatAge(age, lang) }) };
   } else if (locked) {
     level = 'err';
-    note = { level: 'err', text: `${t(lang, 'hp.locked', { n: ERROR_LOCK_LIMIT })}${code ? t(lang, 'hp.lockedLast', { code, text: errorDescription(code) }) : ''}` };
+    note = { id: `hp-locked:${error.createdAt ? new Date(error.createdAt).getTime() : code}`, level: 'err', text: `${t(lang, 'hp.locked', { n: ERROR_LOCK_LIMIT })}${code ? t(lang, 'hp.lockedLast', { code, text: errorDescription(code) }) : ''}` };
   } else if (errorCount > 0 && code) {
     level = 'err';
-    note = { level: 'err', text: t(lang, 'hp.error', { code, text: errorDescription(code) }) };
+    note = { id: `hp-error:${error.createdAt ? new Date(error.createdAt).getTime() : code}`, level: 'err', text: t(lang, 'hp.error', { code, text: errorDescription(code) }) };
   } else if (error.error_code && error.createdAt) {
     level = 'warn';
-    note = { level: 'warn', text: t(lang, 'hp.errorPast', { code: error.error_code, text: errorDescription(error.error_code), when: formatWhen(new Date(error.createdAt), now, lang) }) };
+    note = { id: `hp-error:${new Date(error.createdAt).getTime()}`, level: 'warn', text: t(lang, 'hp.errorPast', { code: error.error_code, text: errorDescription(error.error_code), when: formatWhen(new Date(error.createdAt), now, lang) }) };
   }
 
   const side = [];

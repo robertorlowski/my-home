@@ -8,7 +8,8 @@
 // Ikony rodzajów i narzędzi to ikony makiety (ListIcon, kreska 1.8), żeby animacje .is-running z makieta.css działały.
 // Teksty w języku aplikacji (core/i18n): etykiety z serwera przychodzą już w języku żądania (Accept-Language), chipy
 // 'Online' / 'Offline' / 'Brak danych' / 'Brak uruchomień' są identyfikatorami i tłumaczy je chipText.
-import { ReactNode } from 'react';
+import { MouseEvent, ReactNode, useState } from 'react';
+import { dismissNote, isNoteDismissed } from '../dismissedNotes';
 import { DeviceTile, DeviceType, TileFact, Weather, WeatherTile } from '../types';
 import { precipitationText, weatherDescription, WeatherIcon } from './WeatherIcon';
 import { currentPlaceProblem, useCurrentPlace } from '../currentPlace';
@@ -168,9 +169,29 @@ function shapeTile(kind: TileKind, tile: DeviceTile, now: number, t: T): Shape {
 
 // Pasek błędu albo ostrzeżenia (.warn-line z makiety; błąd w kolorach błędu, Devices/style.css)
 // icon 'offline' = brak odpowiedzi sterownika: mała ikona przekreślonego sygnału jak w pasku „Offline od…” (2026-10-27)
-const WarnLine = ({ note }: { note: NonNullable<DeviceTile['note']> }) => (
-  <div className="tile-row"><span className={`warn-line${note.level === 'err' ? ' is-err' : ''}`}>{note.icon === 'offline' && <OfflineIcon />}{note.text}</span></div>
-);
+// Krzyżyk zamyka pasek w tej przeglądarce (core/dismissedNotes.ts); kafelek zostaje w kolorze stanu.
+function WarnLine({ note, rootId }: { note: NonNullable<DeviceTile['note']>; rootId?: string }) {
+  const { t } = useLang();
+  const noteId = note.id ?? note.text;
+  const [closed, setClosed] = useState<string | null>(null);
+  if (rootId && (closed === noteId || isNoteDismissed(rootId, noteId))) return null;
+  const close = (event: MouseEvent) => {
+    // kliknięcie w kafelek otwiera sterownik
+    event.preventDefault();
+    event.stopPropagation();
+    dismissNote(rootId as string, noteId);
+    setClosed(noteId);
+  };
+  return (
+    <div className="tile-row">
+      <span className={`warn-line${note.level === 'err' ? ' is-err' : ''}`}>
+        {note.icon === 'offline' && <OfflineIcon />}
+        <span className="warn-text">{note.text}</span>
+        {rootId && <button type="button" className="warn-close" aria-label={t('common.close')} title={t('common.close')} onClick={close} onKeyDown={(event) => event.stopPropagation()}>×</button>}
+      </span>
+    </div>
+  );
+}
 
 const Facts = ({ facts }: { facts: Fact[] }) => (
   <dl className="tile-facts">
@@ -190,8 +211,10 @@ function Skeleton() {
 }
 
 
-export function DeviceTileCard({ deviceType, name, tile, now, loading, hidden, tools }: {
+export function DeviceTileCard({ deviceType, rootId, name, tile, now, loading, hidden, tools }: {
   deviceType: DeviceType; name: string; tile?: DeviceTile; now: number;
+  /** sterownik kafelka: bez niego pasek błędu nie ma krzyżyka */
+  rootId?: string;
   /** dane kafelka jeszcze się ładują: zamiast wartości duszek */
   loading?: boolean;
   /** kafelek ukryty (chip „Ukryty”, stopka o ukryciu) */
@@ -264,7 +287,7 @@ export function DeviceTileCard({ deviceType, name, tile, now, loading, hidden, t
         </div>
       )}
       {shape.facts.length > 0 && <Facts facts={shape.facts} />}
-      {tile.note && <WarnLine note={tile.note} />}
+      {tile.note && <WarnLine note={tile.note} rootId={rootId} />}
       {foot && <footer className="tile-foot">{foot}</footer>}
     </>
   );

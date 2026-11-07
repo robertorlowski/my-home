@@ -34,13 +34,13 @@ export async function waterPressureTankTile(rootId: string, _device: Device, now
   let note: DeviceTile['note'];
   if (running && runningMs > LONG_RUN_MS) {
     level = 'err';
-    note = { level: 'err', text: t(lang, 'tank.longRun') };
+    note = { id: 'tank-long-run', level: 'err', text: t(lang, 'tank.longRun') };
   } else if (flow.litersPerMinute === null) {
     level = 'warn';
-    note = { level: 'warn', text: t(lang, 'tank.noFlow') };
+    note = { id: 'tank-no-flow', level: 'warn', text: t(lang, 'tank.noFlow') };
   } else if (runs.some((run) => run.timeApproximate)) {
     level = 'warn';
-    note = { level: 'warn', text: t(lang, 'tank.approximate') };
+    note = { id: 'tank-approximate', level: 'warn', text: t(lang, 'tank.approximate') };
   }
 
   return {

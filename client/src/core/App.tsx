@@ -57,7 +57,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 	if (status === 'anonymous' || !user) {
 		return (
 			<>
-				<header className="app-header"><span className="brand"><span className="brand-mark" /><span className="brand-name">My Home</span></span><h1 className="app-header-title">{t('app.loginTitle')}</h1><UserMenu /></header>
+				<header className="app-header"><span className="brand"><span className="brand-mark" /><span className="brand-name">{t('app.name')}</span></span><h1 className="app-header-title">{t('app.loginTitle')}</h1><UserMenu /></header>
 				<main className="app-main"><Login /></main>
 			</>
 		);
@@ -65,7 +65,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 	if (!user.profileComplete) {
 		return (
 			<>
-				<header className="app-header"><span className="brand"><span className="brand-mark" /><span className="brand-name">My Home</span></span><h1 className="app-header-title">{t('app.newAccount')}</h1><UserMenu /></header>
+				<header className="app-header"><span className="brand"><span className="brand-mark" /><span className="brand-name">{t('app.name')}</span></span><h1 className="app-header-title">{t('app.newAccount')}</h1><UserMenu /></header>
 				<main className="app-main">
 					<div className="account-page account-narrow">
 						<h1>{t('app.completeProfile')}</h1>
@@ -196,7 +196,7 @@ function AppContent() {
 				</header>}
 				{/* /devices: pasek z nazwą aplikacji (bez zakładek, bo nie wybrano sterownika) */}
 				{location.pathname === '/devices' && <header className="app-header">
-					<span className="brand"><span className="brand-mark" /><span className="brand-name">My Home</span></span>
+					<span className="brand"><span className="brand-mark" /><span className="brand-name">{t('app.name')}</span></span>
 					<h1 className="app-header-title">{t('app.devices')}</h1>
 					{/* miejsce na przyciski strony (trybik „Zmień układ” wstawia tu pages/Devices) */}
 					<span id={DEVICES_HEADER_ACTIONS_ID} className="app-header-actions" />

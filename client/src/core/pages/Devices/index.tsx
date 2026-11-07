@@ -38,24 +38,21 @@ import './style.css';
 
 const MB = 1024 * 1024;
 const megabytes = (bytes: number, locale: string) => (bytes / MB).toLocaleString(locale, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
-// próg ostrzeżenia o zapełnieniu bazy (żółty tekst)
-const DATABASE_WARNING_PERCENT = 80;
 
-// Zajętość bazy (dane + indeksy) względem limitu planu Atlas M0 jako procent („Baza danych 44 %”, .db-usage z makiety),
-// szczegóły w podpowiedzi po najechaniu; „nie odpowiada”, gdy serwer nie ma połączenia.
+// Rozmiar bazy na dysku w MB („Baza danych 82 MB”, .db-usage z makiety), szczegóły w podpowiedzi po najechaniu;
+// „nie odpowiada”, gdy serwer nie ma połączenia.
 function DatabaseUsage() {
   const { t, locale } = useLang();
   const [stats, setStats] = useState<DatabaseStats | null | undefined>(undefined);
   useEffect(() => { DeviceRequests.getDatabaseStats().then(setStats); }, []);
   if (stats === undefined) return <span className="db-usage">{t('devices.db')}: …</span>;
   if (!stats?.ok) return <span className="db-usage db-usage-error"><i className="dot" />{t('devices.dbDown')}</span>;
-  const percent = Math.round((stats.usedBytes / stats.limitBytes) * 100);
   const mb = (bytes: number) => megabytes(bytes, locale);
   return (
-    <span className={`db-usage${percent >= DATABASE_WARNING_PERCENT ? ' db-usage-warning' : ''}`}
-      title={t('devices.dbDetail', { used: mb(stats.usedBytes), limit: mb(stats.limitBytes), free: mb(Math.max(stats.limitBytes - stats.usedBytes, 0)), data: mb(stats.dataBytes), index: mb(stats.indexBytes), collections: stats.collections, documents: stats.documents.toLocaleString(locale), ping: stats.pingMs })}>
-      <i className={`dot${percent >= DATABASE_WARNING_PERCENT ? '' : ' dot-ok'}`} aria-hidden="true" />
-      {t('devices.db')} {percent} %
+    <span className="db-usage"
+      title={t('devices.dbDetail', { data: mb(stats.dataBytes), index: mb(stats.indexBytes), collections: stats.collections, documents: stats.documents.toLocaleString(locale), ping: stats.pingMs })}>
+      <i className="dot dot-ok" aria-hidden="true" />
+      {t('devices.db')} {Math.round(stats.usedBytes / MB).toLocaleString(locale)} MB
     </span>
   );
 }
@@ -531,7 +528,7 @@ export const Devices: React.FC = () => {
             <SimpleTile device={item.device} name={label} tile={tile} now={now} loading={!tilesLoaded} tools={tools}
               onOpen={canOpenViews(item.device) ? () => chooseDevice(item.device) : undefined} onChanged={loadTiles} />
           ) : (
-            <DeviceTileCard deviceType={item.device.deviceType} name={label} tile={tile} now={now} loading={!tilesLoaded} hidden={hidden} tools={tools} />
+            <DeviceTileCard rootId={item.device.rootId} deviceType={item.device.deviceType} name={label} tile={tile} now={now} loading={!tilesLoaded} hidden={hidden} tools={tools} />
           )
         ) : (
           <WeatherTileCard tile={item.weather} now={now} hidden={hidden} tools={tools}
@@ -616,7 +613,7 @@ export const Devices: React.FC = () => {
       {/* stopka listy (.statusbar z makiety): zajętość bazy tylko dla użytkownika systemowego, po prawej nazwa aplikacji */}
       <footer className="statusbar devices-footer">
         {isSystem ? <DatabaseUsage /> : <span />}
-        <span className="version">My Home</span>
+        <span className="version">{t('app.name')}</span>
       </footer>
     </>
   );

@@ -42,13 +42,13 @@ export async function photovoltaicTile(rootId: string, _device: Device, now = ne
   if (view.stale && isDaytime(now)) {
     const silent = silenceAge(readAt, now);
     level = offlineLevel(silent); // do godziny uwaga, potem błąd
-    note = { level: 'err', icon: 'offline', text: t(lang, 'tile.noDtu', { age: formatAge(silent, lang) }) };
+    note = { id: `offline:${now.getTime() - silent}`, level: 'err', icon: 'offline', text: t(lang, 'tile.noDtu', { age: formatAge(silent, lang) }) };
   } else if (alarmed.length > 0) {
     level = 'err';
-    note = { level: 'err', text: alarmed.length === 1 ? t(lang, 'pv.panelAlarm', { key: alarmed[0].key, code: alarmed[0].alarm_code ?? '' }) : t(lang, 'pv.panelsAlarm', { n: alarmed.length }) };
+    note = { id: `pv-alarm:${alarmed.map((panel) => panel.key).join(',')}`, level: 'err', text: alarmed.length === 1 ? t(lang, 'pv.panelAlarm', { key: alarmed[0].key, code: alarmed[0].alarm_code ?? '' }) : t(lang, 'pv.panelsAlarm', { n: alarmed.length }) };
   } else if (offline.length > 0) {
     level = 'warn';
-    note = { level: 'warn', text: offline.length === 1 ? t(lang, 'pv.panelOffline', { key: offline[0].key }) : t(lang, 'pv.panelsOffline', { n: offline.length }) };
+    note = { id: `pv-offline:${offline.map((panel) => panel.key).join(',')}`, level: 'warn', text: offline.length === 1 ? t(lang, 'pv.panelOffline', { key: offline[0].key }) : t(lang, 'pv.panelsOffline', { n: offline.length }) };
   }
 
   const side: TileFact[] = [

@@ -219,7 +219,7 @@ export function DeleteAccountConfirm() {
   return (
     <div className="auth">
       <div className="auth-card">
-        <div className="brand brand-big"><span className="brand-mark" /><span className="brand-name">My Home</span></div>
+        <div className="brand brand-big"><span className="brand-mark" /><span className="brand-name">{t('app.name')}</span></div>
         <h1>{t('account.deleteCard')}</h1>
         {state.done === undefined && !state.error && <p className="help">{t('account.deleting')}</p>}
         {state.done !== undefined && <p className="help">{t('account.deleted')}{state.done ? ` (${t('account.deletedDevices', { n: state.done })})` : ''}.</p>}

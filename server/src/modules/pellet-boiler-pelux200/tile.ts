@@ -58,17 +58,17 @@ export async function pelletBoilerTile(rootId: string, _device: Device, now = ne
     const age = now.getTime() - at.getTime();
     level = offlineLevel(age); // do godziny uwaga, potem błąd
     chip = 'Offline';
-    note = { level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(age, lang) }) };
+    note = { id: `offline:${now.getTime() - age}`, level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(age, lang) }) };
   } else if (alarm) {
     level = 'err';
     const code = activeCodes[0];
-    note = { level: 'err', text: `${t(lang, 'boiler.alarm')}${code !== undefined ? t(lang, 'boiler.alarmCode', { code }) : ''}` };
+    note = { id: `boiler-alarm:${code ?? ''}`, level: 'err', text: `${t(lang, 'boiler.alarm')}${code !== undefined ? t(lang, 'boiler.alarmCode', { code }) : ''}` };
   } else if (typeof last.fuel_level === 'number' && last.fuel_level < LOW_FUEL_PERCENT) {
     level = 'warn';
-    note = { level: 'warn', text: t(lang, 'boiler.lowFuel', { value: formatUnit(last.fuel_level, '%', 0, lang) }) };
+    note = { id: 'boiler-low-fuel', level: 'warn', text: t(lang, 'boiler.lowFuel', { value: formatUnit(last.fuel_level, '%', 0, lang) }) };
   } else if (failed?.status === 'error' && failed.doneAt && now.getTime() - new Date(failed.doneAt).getTime() < COMMAND_ERROR_WINDOW_MS) {
     level = 'warn';
-    note = { level: 'warn', text: t(lang, 'boiler.commandFailed', { label: failed.label ?? t(lang, 'boiler.parameter'), when: formatWhen(new Date(failed.doneAt), now, lang) }) };
+    note = { id: `boiler-command:${new Date(failed.doneAt).getTime()}`, level: 'warn', text: t(lang, 'boiler.commandFailed', { label: failed.label ?? t(lang, 'boiler.parameter'), when: formatWhen(new Date(failed.doneAt), now, lang) }) };
   }
 
   // pola kafla: CWU (side), temperatura mieszacza 1 i temperatura mieszacza 2;

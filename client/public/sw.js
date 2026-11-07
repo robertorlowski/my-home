@@ -14,7 +14,7 @@ const NETWORK_TIMEOUT_MS = 5000;
 const MATCH = { ignoreVary: true };
 
 const OFFLINE_HTML = `<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Home – brak połączenia</title><style>
+<title>Mój Dom – brak połączenia</title><style>
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f1f2f4;color:#1e2126;font:16px/1.5 Barlow,system-ui,sans-serif}
 main{max-width:360px;padding:32px 24px;text-align:center}h1{font-size:22px;margin:16px 0 8px}p{margin:0 0 20px;color:#5c6370}
 button{font:inherit;font-weight:600;padding:12px 20px;border:0;border-radius:8px;background:#c7791c;color:#fff;cursor:pointer}
@@ -105,7 +105,7 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : '' };
   }
-  const title = data.title || 'My Home';
+  const title = data.title || 'Mój Dom';
   const options = {
     body: data.body || '',
     icon: '/icon-192.png',

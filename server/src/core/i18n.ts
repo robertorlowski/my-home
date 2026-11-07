@@ -155,6 +155,7 @@ const pl: Record<string, string> = {
   'field.city': 'Miejscowość',
   'field.country': 'Kraj',
   // powiadomienia push
+  'push.appName': 'Mój Dom',
   'push.testBody': 'Powiadomienia działają na tym urządzeniu.',
   'push.compressorOn': 'Sprężarka ruszyła{tank}',
   'push.compressorOff': 'Sprężarka stanęła{minutes}{tank}',
@@ -289,6 +290,7 @@ const en: Record<keyof typeof pl, string> = {
   'field.postalCode': 'Postal code',
   'field.city': 'City',
   'field.country': 'Country',
+  'push.appName': 'My Home',
   'push.testBody': 'Notifications work on this device.',
   'push.compressorOn': 'Compressor started{tank}',
   'push.compressorOff': 'Compressor stopped{minutes}{tank}',

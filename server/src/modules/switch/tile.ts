@@ -73,18 +73,18 @@ export async function switchTile(rootId: string, device: Device, now = new Date(
     level = lastSeen ? offlineLevel(now.getTime() - lastSeen.getTime()) : 'err';
     offlineChip = 'Offline';
     note = lastSeen
-      ? { level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(now.getTime() - lastSeen.getTime(), lang) }) }
-      : { level, text: t(lang, 'switch.notReported') };
+      ? { id: `offline:${lastSeen.getTime()}`, level: 'err', icon: 'offline', text: t(lang, 'tile.notResponding', { age: formatAge(now.getTime() - lastSeen.getTime(), lang) }) }
+      : { id: 'switch-not-reported', level, text: t(lang, 'switch.notReported') };
   } else {
     const blockedRelay = relays.find((relay) => relay.mode === 'off' && schedules.some((schedule) => schedule.relay === relay.relay));
     const unlimited = relays.find((relay) => relay.mode === 'on' && relay.modeChangedAt
       && now.getTime() - new Date(relay.modeChangedAt).getTime() > UNLIMITED_ON_WARNING_MS);
     if (blockedRelay) {
       level = 'warn';
-      note = { level: 'warn', text: t(lang, 'switch.blocked', { name: name(blockedRelay) }) };
+      note = { id: `switch-blocked:${blockedRelay.relay}`, level: 'warn', text: t(lang, 'switch.blocked', { name: name(blockedRelay) }) };
     } else if (unlimited) {
       level = 'warn';
-      note = { level: 'warn', text: t(lang, 'switch.unlimitedDay', { name: name(unlimited) }) };
+      note = { id: `switch-unlimited:${unlimited.relay}`, level: 'warn', text: t(lang, 'switch.unlimitedDay', { name: name(unlimited) }) };
     }
   }
 

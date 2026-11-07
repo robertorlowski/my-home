@@ -60,7 +60,8 @@ describe('API with MongoDB', () => {
   it('returns database usage for the /devices footer without rootId', async () => {
     const response = await request(app).get('/api/devices/db-stats')
     expect(response.status).toBe(200)
-    expect(response.body).toMatchObject({ ok: true, limitBytes: 512 * 1024 * 1024 })
+    expect(response.body.ok).toBe(true)
+    expect(response.body.limitBytes).toBeUndefined()
     expect(response.body.usedBytes).toBe(response.body.dataBytes + response.body.indexBytes)
     expect(response.body.usedBytes).toBeGreaterThan(0)
   })

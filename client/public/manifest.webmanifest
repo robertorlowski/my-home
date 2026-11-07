@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "My Home",
-  "short_name": "My Home",
+  "name": "Mój Dom",
+  "short_name": "Mój Dom",
   "description": "Pompa ciepła, piec, fotowoltaika, hydrofor i włącznik w jednej aplikacji.",
   "lang": "pl",
   "start_url": "/devices",

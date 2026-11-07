@@ -223,6 +223,7 @@ export const pl = {
   'push.event.switch.online': 'Sterownik znów odpowiada',
   'push.event.water-pressure-tank.pump-start': 'Pompa hydroforu uruchomiona',
   // ---- wspólne (krok 2)
+  'app.name': 'Mój Dom',
   'common.close': 'Zamknij',
   'common.delete': 'Usuń',
   'common.done': 'Gotowe',
@@ -344,7 +345,7 @@ export const pl = {
   // ---- lista sterowników
   'devices.db': 'Baza danych',
   'devices.dbDown': 'Baza danych: nie odpowiada',
-  'devices.dbDetail': 'Zajęte {used} MB z {limit} MB, wolne {free} MB. Dane {data} MB, indeksy {index} MB; {collections} kolekcji, {documents} dokumentów; odpowiedź bazy {ping} ms',
+  'devices.dbDetail': 'Na dysku: dane {data} MB, indeksy {index} MB; {collections} kolekcji, {documents} dokumentów; odpowiedź bazy {ping} ms.',
   'devices.sharedBy': 'Udostępnia: {owner}.',
   'devices.loadFailed': 'Nie udało się pobrać urządzeń.',
   'devices.orderFailed': 'Nie udało się zapisać układu.',

@@ -162,8 +162,8 @@ export type PumpConfig = {
 // Pola okna „Dane sterownika” poza nazwą (PUT /devices/:rootId), zależne od rodzaju.
 export type DeviceDefinition = { pumpConfig?: PumpConfig; boilerConfig?: BoilerConfig };
 
-// GET /api/devices/db-stats (stopka strony /devices): zajętość bazy (dane + indeksy) względem limitu
-// planu Atlas M0 (512 MB) i odpowiedź bazy na ping; ok = false albo brak odpowiedzi = baza nie działa.
+// GET /api/devices/db-stats (stopka strony /devices): rozmiar bazy na dysku (dane + indeksy)
+// i odpowiedź bazy na ping; ok = false albo brak odpowiedzi = baza nie działa.
 /** pogoda z Open-Meteo pobrana przez sterownik włącznika (GET /temperature, serwer core/services/meteo.service.ts) */
 export type Weather = {
   /** temperatura z prognozy [°C] */
@@ -212,7 +212,6 @@ export type DatabaseStats = {
   usedBytes: number;
   dataBytes: number;
   indexBytes: number;
-  limitBytes: number;
   collections: number;
   documents: number;
   pingMs: number;
@@ -297,7 +296,8 @@ export type DeviceTile = {
   side?: TileFact[];
   row?: TileFact[];
   relays?: TileRelay[];
-  note?: { level: 'warn' | 'err'; text: string; icon?: 'offline' };
+  /** id: stały dla jednego zdarzenia; brak tylko w starej pamięci podręcznej kafelków */
+  note?: { id?: string; level: 'warn' | 'err'; text: string; icon?: 'offline' };
   updatedAt?: string;
   foot?: string;
   /** hydrofor: początek ostatniego uruchomienia (ISO), gdy pompa nie pracuje; kafelek pisze „ostatnie uruchomienie …” */

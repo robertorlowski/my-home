@@ -237,7 +237,7 @@ export async function sendTest(user: UserEntry, now = new Date()): Promise<numbe
   const subscriptions = await PushSubscriptionModel.find({ userId: String(user._id) }).lean<PushSubscriptionEntry[]>();
   if (!subscriptions.length) throw new PushError(texts('err.pushNoSubscriptions'), 409);
   const payload = JSON.stringify({
-    title: 'My Home', body: t(userLanguage(user), 'push.testBody'), url: '/account', tag: 'test', event: 'test', at: now.toISOString(),
+    title: t(userLanguage(user), 'push.appName'), body: t(userLanguage(user), 'push.testBody'), url: '/account', tag: 'test', event: 'test', at: now.toISOString(),
   });
   await Promise.all(subscriptions.map((subscription) => send(subscription, payload, now)));
   return subscriptions.length;

@@ -36,6 +36,10 @@ export const getLang = (): Lang => current;
 
 export function applyLang(lang: Lang) {
   document.documentElement.setAttribute('lang', lang);
+  // nazwa karty przeglądarki i skrótu na iPhonie; index.html ma polską, bo przed tym skryptem język nie jest znany
+  const name = translate(lang, 'app.name');
+  document.title = name;
+  document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', name);
 }
 
 export function setLang(lang: Lang) {
@@ -92,3 +96,6 @@ export function useLang() {
     tn: (key: string, n: number, params?: Params) => translatePlural(lang, key, n, params),
   };
 }
+
+// po definicjach translate i słowników: nazwa aplikacji w języku wybranym przy poprzedniej wizycie
+applyLang(current);

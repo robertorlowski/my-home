@@ -114,7 +114,7 @@ export function Login() {
   return (
     <div className="auth">
       <div className="auth-card">
-        <div className="brand brand-big"><span className="brand-mark" /><span className="brand-name">My Home</span></div>
+        <div className="brand brand-big"><span className="brand-mark" /><span className="brand-name">{t('app.name')}</span></div>
         <h1>{t('login.title')}</h1>
         {sentTo === null ? (
           <form className="auth-step" onSubmit={send}>

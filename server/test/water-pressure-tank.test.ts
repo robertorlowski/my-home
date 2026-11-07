@@ -108,6 +108,7 @@ describe('Hydrofor (water-pressure-tank)', () => {
       await addWaterPressureTankReport(rootId, { runId: 1, pumpRunS: 100 }, now);
       expect((await tile())?.row?.[1]?.value).toBe('1');
       expect((await tile())?.note?.text).toBeDefined(); // bez przepływu: ostrzeżenie
+      expect((await tile())?.note?.id).toBe('tank-no-flow');
       // drugie uruchomienie dziś: kafelek liczy je od razu, mimo danych w pamięci
       await addWaterPressureTankReport(rootId, { runId: 2, pumpRunS: 100 }, new Date(now.getTime() + 30_000));
       expect((await tile())?.row?.[1]?.value).toBe('2');

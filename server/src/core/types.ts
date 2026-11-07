@@ -220,7 +220,8 @@ export interface DeviceTile {
   relays?: TileRelay[];
   /** jedna linia o błędzie albo ostrzeżeniu; icon: 'offline' = brak odpowiedzi sterownika (klient rysuje przekreślony
    *  sygnał jak w pasku „Offline od…” na ekranie sterownika, tylko mniejszy) */
-  note?: { level: 'warn' | 'err'; text: string; icon?: 'offline' };
+  /** id: stały dla jednego zdarzenia, choć tekst się zmienia (np. wiek); po nim klient pamięta zamknięty pasek */
+  note?: { id: string; level: 'warn' | 'err'; text: string; icon?: 'offline' };
   /** czas ostatnich danych (ISO): klient pisze „dane sprzed …” */
   updatedAt?: string;
   /** własny tekst stopki zamiast „dane sprzed …” */

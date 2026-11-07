@@ -84,6 +84,10 @@ body .app-main:has(.device-selection) { padding-bottom: 0; margin-bottom: 0; }
 /* linia braku odpowiedzi z ikoną (OfflineIcon z OfflineBanner, mniejsza niż w pasku) */
 .warn-line { display: flex; align-items: center; gap: 8px; }
 .warn-line .ic { width: 16px; height: 16px; flex: none; }
+.warn-line .warn-text { flex: 1; min-width: 0; }
+/* krzyżyk zamykający pasek; pole kliknięcia większe niż znak (telefon) */
+.warn-close { flex: none; align-self: flex-start; min-width: 28px; min-height: 28px; margin: -4px -4px -4px 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.warn-close:hover { opacity: .7; }
 /* błąd (blokada, alarm, brak odczytów): .warn-line w kolorach błędu */
 .warn-line.is-err { background: var(--err-bg); color: var(--err-fg); border-left-color: var(--err-fg); }
 /* nazwa kafelka z globalnych nagłówków: bez marginesów i wyśrodkowania */
@@ -151,7 +155,6 @@ body .app-main:has(.device-selection) { padding-bottom: 0; margin-bottom: 0; }
 }
 .db-usage { display: inline-flex; align-items: center; }
 .db-usage .dot { width: 8px; height: 8px; }
-.db-usage-warning { color: var(--warn-fg); }
 .db-usage-error { color: var(--err-fg); font-weight: 700; }
 
 /* ---- duszek (szkielet) kafelka podczas ładowania ---- */

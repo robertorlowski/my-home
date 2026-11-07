@@ -223,6 +223,7 @@ export const en: Record<keyof typeof pl, string> = {
   'push.event.switch.online': 'Controller responds again',
   'push.event.water-pressure-tank.pump-start': 'Water pump started',
   // ---- common (step 2)
+  'app.name': 'My Home',
   'common.close': 'Close',
   'common.delete': 'Delete',
   'common.done': 'Done',
@@ -344,7 +345,7 @@ export const en: Record<keyof typeof pl, string> = {
   // ---- controller list
   'devices.db': 'Database',
   'devices.dbDown': 'Database: not responding',
-  'devices.dbDetail': 'Used {used} MB of {limit} MB, free {free} MB. Data {data} MB, indexes {index} MB; {collections} collections, {documents} documents; database response {ping} ms',
+  'devices.dbDetail': 'On disk: data {data} MB, indexes {index} MB; {collections} collections, {documents} documents; database response {ping} ms.',
   'devices.sharedBy': 'Shared by: {owner}.',
   'devices.loadFailed': 'Could not load the controllers.',
   'devices.orderFailed': 'Could not save the layout.',
