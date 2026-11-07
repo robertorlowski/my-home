@@ -153,7 +153,7 @@ Pełny opis kolekcji, pól, indeksów i retencji: [`docs/baza-danych.md`](docs/b
 
 - `devices` to sterowniki (`DeviceModel`); `rootId` w innych kolekcjach to `devices._id` jako tekst, a usunięcie konta kasuje dokumenty z `rootId` jego sterowników w każdej kolekcji z tym polem.
 - **Schematy `hp` i `pellet_boiler_pelux200` są ścisłe:** pole spoza schematu jest po cichu pomijane. Nowe pole telemetrii trzeba dodać do modelu, do typów serwera i klienta oraz do widoków.
-- `app_settings` to ustawienia aplikacji (jeden dokument, `_id` = nazwa bazy). Kolekcja `settings` to pozostałość po dawnym modelu ustawień czasowych pompy (usuniętym 2026-10-21), nie ustawienia aplikacji.
+- `app_settings` to ustawienia aplikacji (jeden dokument, `_id` = nazwa bazy). Dawna kolekcja `settings` (model ustawień czasowych pompy, usunięty z kodu 2026-10-21) została usunięta z bazy 2026-11-08.
 - Usunięcie modelu, pola albo indeksu z kodu nie zmienia bazy: kolekcje i indeksy trzeba usunąć ręcznie w `hpdb` i `hpdb_test`, po kopii.
 - Pogoda, ostatnia surowa telemetria, ręczne operacje pompy i diagnostyka sterowników są tylko w pamięci serwera.
 

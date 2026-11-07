@@ -179,7 +179,7 @@ A schedule entry: `mode` (`heat-pump` or `pellet`), `type` (`cwu` or `season`), 
 
 ## Cleanup 2026-11-08
 
-Leftovers of removed code, not used by the application:
+Removed from `hpdb` and `hpdb_test` on 8.11.2026: leftovers of removed code, not used by the application. Backup taken before removal: `/srv/apps/storage/backups/pozostalosci-20261108.tar.gz` on the server.
 
 | Item | Origin |
 |---|---|
@@ -187,5 +187,3 @@ Leftovers of removed code, not used by the application:
 | collection `tile_template` (empty) | the tile designer, removed from the code |
 | collection `migrations` (1 document) | the one-off owner migration (`INITIAL_OWNER_EMAIL`), removed from the code on 2026-11-07 |
 | `devices` indexes `{settings.rootId}` and `{hp.rootId}` | fields of the former device model |
-
-The same leftovers are in `hpdb_test`.

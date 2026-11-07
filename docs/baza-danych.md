@@ -179,7 +179,7 @@ Wpis harmonogramu: `mode` (`heat-pump` albo `pellet`), `type` (`cwu` albo `seaso
 
 ## Porządki 2026-11-08
 
-Pozostałości po usuniętym kodzie, nieużywane przez aplikację:
+Usunięte 8.11.2026 z `hpdb` i `hpdb_test` pozostałości po usuniętym kodzie, nieużywane przez aplikację. Kopia przed usunięciem: `/srv/apps/storage/backups/pozostalosci-20261108.tar.gz` na serwerze.
 
 | Element | Pochodzenie |
 |---|---|
@@ -187,5 +187,3 @@ Pozostałości po usuniętym kodzie, nieużywane przez aplikację:
 | kolekcja `tile_template` (pusta) | projektant kafelków, usunięty z kodu |
 | kolekcja `migrations` (1 dokument) | jednorazowa migracja właścicieli (`INITIAL_OWNER_EMAIL`), usunięta z kodu 2026-11-07 |
 | indeksy `devices` `{settings.rootId}` i `{hp.rootId}` | pola dawnego modelu urządzenia |
-
-Te same pozostałości są w `hpdb_test`.
