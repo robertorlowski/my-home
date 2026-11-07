@@ -190,7 +190,7 @@ Dokument urządzenia jest wspólny dla wszystkich rodzajów, dlatego `core/model
 
 Wartości są tylko w zmiennych środowiskowych: na Render w Environment usługi, lokalnie w `server/.env` (poza gitem, wzór `server/.env.example`).
 
-Klient w trybie deweloperskim łączy się z serwerem na porcie 4001 pod tym samym hostem, z którego otwarto stronę; w produkcji z adresem z `VITE_SERVER_URL`, a bez tej zmiennej z `https://chpc-web.onrender.com`. Wartość `same-origin` oznacza adres, z którego otwarto stronę. Adresy są w `client/src/core/http.ts`.
+Klient w trybie deweloperskim łączy się z serwerem na porcie 4001 pod tym samym hostem, z którego otwarto stronę; w produkcji z adresem z `VITE_SERVER_URL`, a bez tej zmiennej z `https://dom.mojeturnie.pl`. Wartość `same-origin` oznacza adres, z którego otwarto stronę. Adresy są w `client/src/core/http.ts`.
 
 ## Obraz Docker (Oracle)
 

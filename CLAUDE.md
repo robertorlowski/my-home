@@ -18,7 +18,7 @@ Repozytorium [robertorlowski/my-home](https://github.com/robertorlowski/my-home)
 
 | Katalog | Rola |
 |---|---|
-| `server/`, `client/` | serwer Express + klient React; harmonogramy, historia, ustawienia; produkcja: `https://chpc-web.onrender.com` (Render) |
+| `server/`, `client/` | serwer Express + klient React; harmonogramy, historia, ustawienia; produkcja: `https://dom.mojeturnie.pl` (Oracle, `vm-prod`) |
 | `devices/co/` | firmware `co` (ESP32, PlatformIO): odpytuje pompę i PV po RS-485, wysyła telemetrię, wykonuje operacje z chmury; licencja MIT |
 | `devices/chpc/` | firmware pompy CHPC (Arduino Pro Mini); licencja GPLv3 (`devices/chpc/docs/LICENSE`) |
 | `devices/water-pressure-tank/` | firmware hydroforu „Hydrofor” (ESP32 DevKit z WROOM-32, typ `water-pressure-tank`), punkt 5b; dokumentacja w `devices/water-pressure-tank/docs/` |
@@ -96,7 +96,7 @@ Wartości konfiguracyjne:
 - `DEMO_OWNER_EMAIL` — e-mail konta pokazywanego w wersji demo tylko do odczytu (punkt 5i); bez wartości przycisku demo nie ma;
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — powiadomienia Web Push (punkt 5g); bez kluczy powiadomienia są wyłączone (ostrzeżenie przy starcie, karta „Powiadomienia” to pokazuje). Para kluczy: `npx web-push generate-vapid-keys` w `server/`.
 - `CLIENT_DIR` — katalog z buildem klienta podawanym przez serwer (`core/client-static.ts`); ustawia go tylko obraz Dockera;
-- `VITE_SERVER_URL` — adres serwera wbudowywany w klienta przy buildzie; bez wartości `https://chpc-web.onrender.com`, `same-origin` to adres, z którego otwarto stronę (obraz Dockera).
+- `VITE_SERVER_URL` — adres serwera wbudowywany w klienta przy buildzie; bez wartości `https://dom.mojeturnie.pl`, `same-origin` to adres, z którego otwarto stronę (obraz Dockera).
 
 **Obraz Docker (tylko Oracle).** Jeden obraz z serwerem i klientem (`deploy/oracle/Dockerfile`), budowany na ARM przez GitHub Actions (`.github/workflows/obraz-docker.yml`) i publikowany w `ghcr.io/robertorlowski/my-home`: `main` to kanał `prod`, `develop` to kanał `test`, tagi `<kanał>` i `<kanał>-<commit>`, w każdym kanale aktualna wersja i 2 poprzednie. Workflow tylko publikuje; instalację na `vm-prod` uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh`. Render i praca lokalna działają bez Dockera.
 

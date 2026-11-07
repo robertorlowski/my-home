@@ -190,7 +190,7 @@ The device document is shared by all kinds, so `core/models/device.model.ts` imp
 
 Values live only in environment variables: on Render in the service Environment, locally in `server/.env` (outside git, template `server/.env.example`).
 
-In development the client talks to the server on port 4001 of the same host the page was opened from; in production to the address from `VITE_SERVER_URL`, and without this variable to `https://chpc-web.onrender.com`. The value `same-origin` means the address the page was opened from. The addresses are in `client/src/core/http.ts`.
+In development the client talks to the server on port 4001 of the same host the page was opened from; in production to the address from `VITE_SERVER_URL`, and without this variable to `https://dom.mojeturnie.pl`. The value `same-origin` means the address the page was opened from. The addresses are in `client/src/core/http.ts`.
 
 ## Docker image (Oracle)
 

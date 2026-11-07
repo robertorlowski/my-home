@@ -33,7 +33,7 @@ const devServerPort = () => import.meta.env.VITE_API_PORT ?? '4001';
 // Adres serwera w buildzie produkcyjnym, ze zmiennej VITE_SERVER_URL. „same-origin” (obraz Dockera na Oracle, serwer
 // podaje też klienta): adres, z którego otwarto stronę, więc ten sam obraz działa jako produkcja i jako test.
 const productionServerUrl = () => {
-  const url = import.meta.env.VITE_SERVER_URL ?? 'https://chpc-web.onrender.com';
+  const url = import.meta.env.VITE_SERVER_URL ?? 'https://dom.mojeturnie.pl';
   return (url === 'same-origin' ? window.location.origin : url).replace(/\/+$/, '');
 };
 
