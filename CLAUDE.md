@@ -20,7 +20,7 @@ Repozytorium [robertorlowski/my-home](https://github.com/robertorlowski/my-home)
 |---|---|
 | `server/`, `client/` | serwer Express + klient React; harmonogramy, historia, ustawienia; produkcja: `https://chpc-web.onrender.com` (Render) |
 | `devices/co/` | firmware `co` (ESP32, PlatformIO): odpytuje pompę i PV po RS-485, wysyła telemetrię, wykonuje operacje z chmury; licencja MIT |
-| `devices/chpc/` | firmware pompy CHPC (Arduino Pro Mini, fork gonzho000/chpc); licencja GPLv3 (`devices/chpc/docs/LICENSE`) |
+| `devices/chpc/` | firmware pompy CHPC (Arduino Pro Mini); licencja GPLv3 (`devices/chpc/docs/LICENSE`) |
 | `devices/water-pressure-tank/` | firmware hydroforu „Hydrofor” (ESP32 DevKit z WROOM-32, typ `water-pressure-tank`), punkt 5b; dokumentacja w `devices/water-pressure-tank/docs/` |
 | `devices/switch/` | firmware włącznika „Włącznik” (płytka „ESP32 Relay AC X1” z ESP32-WROOM-32E i przekaźnikiem 30 A, typ `switch`), punkt 5d; dokumentacja w `devices/switch/docs/` |
 | `devices/pellet-boiler-pelux200/` | firmware sterownika pieca „Piec Pellux 200” (ESP32-C3 SuperMini z modułem RS-485 HW-519, typ `pellet-boiler-pelux200`): na magistrali ecoMAX kotła udaje moduł ecoNET, czyta dane i ustawienia (bez zapisu), punkt 5c; instrukcja w `README.md`, podłączenie i protokół w `docs/` |
@@ -874,7 +874,7 @@ Na tej samej magistrali (9600 8N1, półdupleks) są: CHPC `0x41`, DTU `0x69` (M
 
 ## 14. Firmware CHPC (Pro Mini, `devices/chpc`)
 
-Fork [gonzho000/chpc](https://github.com/gonzho000/chpc) (GPLv3) na Arduino Pro Mini (ATmega328P). Cały firmware to jeden plik `devices/chpc/src/CHPC_firmware.ino`. Dokumentacja: `devices/chpc/docs/` (trzy części, PL i EN); szczegóły dla agenta: `devices/chpc/CLAUDE.md`. Firmware nie wysyła klucza z wersją (`FW`) i nigdy go nie miał w żadnym commicie.
+Firmware na Arduino Pro Mini (ATmega328P). Cały firmware to jeden plik `devices/chpc/src/CHPC_firmware.ino`. Dokumentacja: `devices/chpc/docs/` (trzy części, PL i EN); szczegóły dla agenta: `devices/chpc/CLAUDE.md`. Firmware nie wysyła klucza z wersją (`FW`) i nigdy go nie miał w żadnym commicie.
 
 - Steruje sprężarką, pompami strony gorącej i zimnej, grzałką karteru (przy Tsump < 5 °C, w `OFF` tylko na wymuszenie `0x0B`; od 2026-10-24) i zaworem 4-drogowym; sprężarka rusza przy Tsump 1–85 °C i staje po 60 s pracy przy Tsump < 1 °C (kod 12); prowadzi silnik krokowy EEV, czyta czujniki DS18B20 i mierzy moc przekładnikiem prądowym. Ma wyświetlacz 1602 i przyciski.
 - Zabezpieczenia i ich kody błędów opisuje punkt 5 („Błędy sterownika”). Po 5 błędach sterownik się blokuje: odpowiada po RS-485, ale nie steruje, do czasu `0x10` albo `0x11`.

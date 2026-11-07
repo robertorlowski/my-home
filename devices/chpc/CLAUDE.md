@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-CHPC (Cheap Heat Pump Controller) is an Arduino firmware for an AVR board that runs a heat pump. It switches the compressor, the hot-side and cold-side circulating pumps, the sump (compressor) heater and a 4-way valve. It drives a stepper EEV, reads DS18B20 temperature sensors on OneWire, measures compressor power with a current transformer, and is controlled from a 1602 I2C LCD with buttons and/or RS-485. This is a fork of github.com/gonzho000/chpc (GPLv3). The fork adds changes on this branch, such as COP calculation, RS-485 commands and wattage limits stored in EEPROM. Commit messages and some code comments are in Polish.
+CHPC (Cheap Heat Pump Controller) is an Arduino firmware for an AVR board that runs a heat pump. It switches the compressor, the hot-side and cold-side circulating pumps, the sump (compressor) heater and a 4-way valve. It drives a stepper EEV, reads DS18B20 temperature sensors on OneWire, measures compressor power with a current transformer, and is controlled from a 1602 I2C LCD with buttons and/or RS-485. Changes on this branch include COP calculation, RS-485 commands and wattage limits stored in EEPROM. Commit messages and some code comments are in Polish.
 
 The entire firmware is one file: [src/CHPC_firmware.ino](src/CHPC_firmware.ino), about 2200 lines. [archiwum/](archiwum/) holds old snapshots of the firmware and is not built. Do not read, search or use it as a reference (access is denied in `.claude/settings.json`). [docs/](docs/) holds the PCB files (Gerber, BOM, schematic) and photos.
 

@@ -15,7 +15,7 @@ The controller:
 - shows its state on a **1602 display** and lets you change settings with buttons;
 - answers the `co` controller over **RS-485** and accepts its commands.
 
-The firmware is a fork of the open project [gonzho000/chpc](https://github.com/gonzho000/chpc) (GPLv3), adapted to one installation: a ground-source pump feeding floor heating and a domestic hot water (CWU) tank.
+The firmware is adapted to one installation: a ground-source pump feeding floor heating and a domestic hot water (CWU) tank.
 
 ![Installation](../m_CHPC_i2.jpg)
 

@@ -15,7 +15,7 @@ Sterownik:
 - pokazuje stan na **wyświetlaczu 1602** i pozwala zmieniać ustawienia przyciskami;
 - odpowiada sterownikowi `co` po **RS-485** i przyjmuje od niego polecenia.
 
-Firmware jest odgałęzieniem otwartego projektu [gonzho000/chpc](https://github.com/gonzho000/chpc) (licencja GPLv3), dostosowanym do jednej instalacji: pompa gruntowa zasilająca ogrzewanie podłogowe i zbiornik CWU.
+Firmware jest dostosowany do jednej instalacji: pompa gruntowa zasilająca ogrzewanie podłogowe i zbiornik CWU.
 
 ![Instalacja](m_CHPC_i2.jpg)
 
