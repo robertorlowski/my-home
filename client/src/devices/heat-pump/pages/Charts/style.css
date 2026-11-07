@@ -12,3 +12,20 @@
 
 /* dymek Recharts bez własnej ramki (wygląd daje .chart-tooltip) */
 .hp-charts .recharts-tooltip-wrapper { outline: none; }
+
+/* wartości pod kursorem nad wykresem (Tooltip z portalem do .chart-readout), w jednym wierszu, bez ramki dymka;
+   stała wysokość, żeby wykres nie skakał przy najechaniu */
+.hp-charts .chart-readout { min-height: 20px; margin: -2px 0 6px; }
+.hp-charts .chart-readout .chart-tooltip {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  white-space: normal;
+}
+.hp-charts .chart-readout .chart-tooltip strong { margin: 0; }
+.hp-charts .chart-readout .chart-tooltip span { white-space: nowrap; }

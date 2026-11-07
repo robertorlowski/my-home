@@ -3,7 +3,8 @@
 // „Temperatury” i karta „Moc i produkcja PV” z GET /hp/4day, czas pracy sprężarki z rekordów, zużycie, energia
 // z sieci i koszt z bilansu serwera (GET /hp/monthly-summary, group day; do 2026-11-01 w przeglądarce). Miesiąc i Rok: karta „Energia i koszt” (słupki energii,
 // PV i koszt) z bilansu serwera (GET /hp/monthly-summary, group day/month). Legenda w nagłówku karty przełącza
-// serie. Dane pobierane przy zmianie okresu, daty lub filtra; oś czasu dnia bieżącego przesuwa się co minutę,
+// serie. Wartości pod kursorem (dymek Recharts) w pasku .chart-readout nad wykresem, nie na danych (portal Tooltip,
+// od 2026-11-07). Dane pobierane przy zmianie okresu, daty lub filtra; oś czasu dnia bieżącego przesuwa się co minutę,
 // ale nowe dane nie są dociągane. Kolory wykresów z tokenów przez cc() (core/chartColors.ts).
 import '../style.css';
 import { getLang, locale, t as tr, useLang } from '../../../../core/i18n';
@@ -173,7 +174,7 @@ type ChartTooltipProps = {
   labelFormat: (label: string | number | undefined) => string;
 };
 
-// Dymek w kolorach karty: etykieta osi i wartości widocznych serii z jednostką.
+// Wartości pod kursorem: etykieta osi i wartości widocznych serii z jednostką, w jednym wierszu w pasku nad wykresem.
 const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, series, labelFormat }) => {
   if (!active || !payload?.length) return null;
   return (
@@ -209,6 +210,10 @@ const monthNames = () => Array.from({ length: 12 }, (_, month) =>
 export const HeatPumpChart: React.FC = () => {
   const { t } = useLang();
   const [filteredData, setFilteredData] = useState<ChartPoint[]>([]);
+  // paski nad wykresami, do których Recharts wstawia dymek z wartościami pod kursorem (Tooltip portal)
+  const [tempReadout, setTempReadout] = useState<HTMLDivElement | null>(null);
+  const [powerReadout, setPowerReadout] = useState<HTMLDivElement | null>(null);
+  const [energyReadout, setEnergyReadout] = useState<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     formatDateYMD(new Date()),
@@ -472,6 +477,7 @@ export const HeatPumpChart: React.FC = () => {
               <h2>{t('hp.chart.temperatures')}</h2>
               <Legend series={temps} hidden={hidden} onToggle={toggle} />
             </header>
+            <div className="chart-readout" ref={setTempReadout} />
             <div className="chart chart-lg">
               {loading && <div className="loading chart-loading"><ClipLoader size={32} color={colors.axis} /></div>}
               <ResponsiveContainer width="100%" height="100%">
@@ -479,7 +485,7 @@ export const HeatPumpChart: React.FC = () => {
                   <CartesianGrid stroke={colors.grid} vertical={false} />
                   {dayAxis}
                   <YAxis tick={axisTick} stroke={colors.line} unit=" °C" width={54} />
-                  <Tooltip content={<ChartTooltip series={temps} labelFormat={dayLabel} />} />
+                  <Tooltip portal={tempReadout} content={<ChartTooltip series={temps} labelFormat={dayLabel} />} />
                   {temps.map((entry) => (
                     <Line key={entry.key} type="monotone" dataKey={entry.key} stroke={entry.color} strokeWidth={2} dot={false}
                       connectNulls hide={hidden.has(entry.key)} isAnimationActive={false} />
@@ -493,13 +499,14 @@ export const HeatPumpChart: React.FC = () => {
               <h2>{t('hp.chart.powerAndPv')}</h2>
               <Legend series={powers} hidden={hidden} onToggle={toggle} />
             </header>
+            <div className="chart-readout" ref={setPowerReadout} />
             <div className="chart chart-md">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={filteredData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
                   <CartesianGrid stroke={colors.grid} vertical={false} />
                   {dayAxis}
                   <YAxis tick={axisTick} stroke={colors.line} unit=" W" width={54} />
-                  <Tooltip content={<ChartTooltip series={powers} labelFormat={dayLabel} />} />
+                  <Tooltip portal={powerReadout} content={<ChartTooltip series={powers} labelFormat={dayLabel} />} />
                   <Area type="monotone" dataKey="pv" stroke="none" fill={colors.sun} fillOpacity={0.28} hide={hidden.has('pv')} isAnimationActive={false} />
                   <Bar dataKey="Watts" fill={colors.s1} barSize={allData ? 2 : undefined} hide={hidden.has('Watts')} isAnimationActive={false} />
                 </ComposedChart>
@@ -514,6 +521,7 @@ export const HeatPumpChart: React.FC = () => {
             <h2>{t('hp.chart.energyAndCost')}</h2>
             <Legend series={energies} hidden={hidden} onToggle={toggle} />
           </header>
+          <div className="chart-readout" ref={setEnergyReadout} />
           <div className="chart chart-lg">
             {loading && <div className="loading chart-loading"><ClipLoader size={32} color={colors.axis} /></div>}
             <ResponsiveContainer width="100%" height="100%">
@@ -522,7 +530,7 @@ export const HeatPumpChart: React.FC = () => {
                 <XAxis tick={axisTick} stroke={colors.line} dataKey="time" />
                 <YAxis yAxisId="left" tick={axisTick} stroke={colors.line} unit=" kWh" width={64} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} stroke={colors.line} unit=" zł" width={56} hide={hidden.has('cost')} />
-                <Tooltip content={<ChartTooltip series={energies} labelFormat={periodLabel} />} />
+                <Tooltip portal={energyReadout} content={<ChartTooltip series={energies} labelFormat={periodLabel} />} />
                 <Bar yAxisId="left" dataKey="Watts" fill={colors.s1} radius={[2, 2, 0, 0]} hide={hidden.has('Watts')} isAnimationActive={false} />
                 <Line yAxisId="left" dataKey="pv" stroke={colors.sun} strokeWidth={2} type="monotone" dot={{ r: 2 }} hide={hidden.has('pv')} isAnimationActive={false} />
                 <Line yAxisId="right" dataKey="cost" stroke={colors.s2} strokeWidth={2} type="monotone" dot={{ r: 2 }} hide={hidden.has('cost')} isAnimationActive={false} />
