@@ -95,6 +95,11 @@ Wartości konfiguracyjne:
 - `MAIL_RELAY=1` — maile wysyłają sterowniki zamiast serwera (punkt 5f); na Render obowiązkowe, bo darmowy plan blokuje SMTP. `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN`, `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL` — konta użytkowników i poczta (`server/.env.example`);
 - `DEMO_OWNER_EMAIL` — e-mail konta pokazywanego w wersji demo tylko do odczytu (punkt 5i); bez wartości przycisku demo nie ma;
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` — powiadomienia Web Push (punkt 5g); bez kluczy powiadomienia są wyłączone (ostrzeżenie przy starcie, karta „Powiadomienia” to pokazuje). Para kluczy: `npx web-push generate-vapid-keys` w `server/`.
+- `PROXY_TARGET` — tryb pośrednika (`core/proxy.ts`): proces bez bazy i schedulerów przekazuje HTTP i WebSocket na ten adres, a przy awarii celu odpowiada 502. Render przekazuje tak ruch sterowników ze starym adresem po przeniesieniu serwera na Oracle;
+- `CLIENT_DIR` — katalog z buildem klienta podawanym przez serwer (`core/client-static.ts`); ustawia go tylko obraz Dockera;
+- `VITE_SERVER_URL` — adres serwera wbudowywany w klienta przy buildzie; bez wartości `https://chpc-web.onrender.com`, `same-origin` to adres, z którego otwarto stronę (obraz Dockera).
+
+**Obraz Docker (tylko Oracle).** Jeden obraz z serwerem i klientem (`deploy/oracle/Dockerfile`), budowany na ARM przez GitHub Actions (`.github/workflows/obraz-docker.yml`) i publikowany w `ghcr.io/robertorlowski/my-home`: `main` to kanał `prod`, `develop` to kanał `test`, tagi `<kanał>` i `<kanał>-<commit>`, w każdym kanale aktualna wersja i 2 poprzednie. Workflow tylko publikuje; instalację na `vm-prod` uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh`. Render i praca lokalna działają bez Dockera.
 
 Wartości są tylko w zmiennych środowiskowych: na Render w Environment usługi, lokalnie w `server/.env` (poza gitem, wzór w [`server/.env.example`](server/.env.example)). W kodzie nie ma wartości domyślnych. Do 2026-09-27 adres z hasłem użytkownika `hp` był wpisany w `server.ts` i jest w historii publicznego repozytorium; ten użytkownik został usunięty w Atlasie (2026-09-27), produkcja łączy się jako `driver`.
 

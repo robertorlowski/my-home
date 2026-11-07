@@ -30,21 +30,27 @@ const devServerHost = () => window.location.hostname;
 // VITE_API_PORT: inny port serwera w trybie dev (np. podgląd na bazie produkcyjnej obok środowiska lokalnego)
 const devServerPort = () => import.meta.env.VITE_API_PORT ?? '4001';
 
+// Adres serwera w buildzie produkcyjnym, ze zmiennej VITE_SERVER_URL. „same-origin” (obraz Dockera na Oracle, serwer
+// podaje też klienta): adres, z którego otwarto stronę, więc ten sam obraz działa jako produkcja i jako test.
+const productionServerUrl = () => {
+  const url = import.meta.env.VITE_SERVER_URL ?? 'https://chpc-web.onrender.com';
+  return (url === 'same-origin' ? window.location.origin : url).replace(/\/+$/, '');
+};
+
 // Adres WebSocket serwera; ?rootId=… dopisuje wywołujący (widok główny pompy), bez niego serwer
 // zamyka połączenie. Serwer przyjmuje dowolną ścieżkę, klient łączy się na ścieżkę główną.
-// Produkcja: stały adres Render; build nie ma konfiguracji adresu przez zmienne środowiskowe.
 export const wsAddressServer = () => {
   if (import.meta.env.DEV)
     return  `ws://${devServerHost()}:${devServerPort()}`
   else
-    return  "wss://chpc-web.onrender.com/";
+    return  `${productionServerUrl().replace(/^http/, 'ws')}/`;
 }
 
 function prefixMocks(path: string) {
   if (import.meta.env.DEV)
     return  `http://${devServerHost()}:${devServerPort()}/api`.concat(path)
   else
-    return  "https://chpc-web.onrender.com/api".concat(path);
+    return  `${productionServerUrl()}/api`.concat(path);
 
 }
 

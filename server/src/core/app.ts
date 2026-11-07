@@ -6,6 +6,7 @@ import compression from 'compression'
 import apiRoute from './routes'
 import { resolveDeviceContext } from './middleware/device-context'
 import { authenticate, authorize } from './middleware/session'
+import { serveClient } from './client-static'
 
 const app = express()
 // Za proxy Render: req.protocol ma być https (adres pliku firmware w ofercie dla sterowników).
@@ -37,5 +38,7 @@ app.use('/api', authenticate)
 app.use('/api', resolveDeviceContext)
 app.use('/api', authorize)
 app.use('/api', apiRoute)
+
+if (process.env.CLIENT_DIR) serveClient(app, process.env.CLIENT_DIR)
 
 export default app

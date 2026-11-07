@@ -186,10 +186,23 @@ Dokument urządzenia jest wspólny dla wszystkich rodzajów, dlatego `core/model
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | konto pocztowe (przy `MAIL_RELAY=1` przekazywane zaszyfrowane płytkom); nadawca `MyHome <SMTP_USER>`, odpowiedzi na `MAIL_FROM` |
 | `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL`, `AUTH_DISABLED=1` | adres aplikacji w linkach z maili, hasło konta „system”, pierwszy właściciel, wyłączenie logowania (środowisko lokalne) |
 | `WEATHER_LOCATION` | współrzędne domu dla kafelka pogody „Dom” |
+| `PROXY_TARGET` | tryb pośrednika (`core/proxy.ts`): proces bez bazy i schedulerów przekazuje HTTP i WebSocket na ten adres, a przy awarii celu odpowiada 502 |
+| `CLIENT_DIR` | katalog z buildem klienta podawanym przez serwer (`core/client-static.ts`); ustawia go tylko obraz Dockera |
 
 Wartości są tylko w zmiennych środowiskowych: na Render w Environment usługi, lokalnie w `server/.env` (poza gitem, wzór `server/.env.example`).
 
-Klient w trybie deweloperskim łączy się z serwerem na porcie 4001 pod tym samym hostem, z którego otwarto stronę; w produkcji z `https://chpc-web.onrender.com`. Adresy są w `client/src/core/http.ts`.
+Klient w trybie deweloperskim łączy się z serwerem na porcie 4001 pod tym samym hostem, z którego otwarto stronę; w produkcji z adresem z `VITE_SERVER_URL`, a bez tej zmiennej z `https://chpc-web.onrender.com`. Wartość `same-origin` oznacza adres, z którego otwarto stronę. Adresy są w `client/src/core/http.ts`.
+
+## Obraz Docker (Oracle)
+
+Na `vm-prod` serwer i klient działają w jednym obrazie (`deploy/oracle/Dockerfile`). Render i praca lokalna nie używają Dockera.
+
+| Gałąź | Kanał | Tagi w `ghcr.io/robertorlowski/my-home` |
+|---|---|---|
+| `main` | produkcja | `prod`, `prod-<commit>` |
+| `develop` | test | `test`, `test-<commit>` |
+
+GitHub Actions (`.github/workflows/obraz-docker.yml`) buduje obraz na ARM po pushu ze zmianami w `server`, `client`, `deploy/oracle` albo zależnościach. W każdym kanale zostaje aktualna wersja i 2 poprzednie. Workflow tylko publikuje; instalację na serwerze uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh`. Sekrety są tylko w plikach środowiskowych na serwerze, nie w obrazie.
 
 ## Środowisko lokalne i dane demonstracyjne
 

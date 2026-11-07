@@ -1,0 +1,10 @@
+# Do obrazu trafia tylko to, czego potrzebuje deploy/oracle/Dockerfile.
+**
+!package.json
+!package-lock.json
+!server/**
+!client/**
+**/node_modules
+**/dist
+**/.env
+**/.env.*

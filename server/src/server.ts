@@ -2,10 +2,12 @@
 // połączenie z MongoDB (MONGODB_URI), scheduler pompy ciepła, czyszczenie
 // szczegółów paneli PV i temperatura zewnętrzna z czujnika kotła. Aplikacja Express
 // jest w core/app.ts (osobno, żeby testy mogły jej użyć bez nasłuchu i bazy).
+// Z PROXY_TARGET proces tylko przekazuje ruch na tamten serwer (core/proxy.ts), bez bazy i schedulerów.
 import 'dotenv/config';
 import http from 'http';
 import app from './core/app'
 import { createWsServer } from './core/websocket';
+import { createProxyServer } from './core/proxy';
 import mongoose from 'mongoose';
 import { restoreOutdoorTemperature } from './modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200.service';
 import { startScheduler } from './modules/heat-pump/services/scheduler.service';
@@ -28,17 +30,6 @@ const cleanPanelDetails = async () => {
   }
 };
 
-
-const server = http.createServer(app);
-createWsServer(server);
-
-// adres z hasłem tylko w zmiennej środowiskowej (Render: Environment, lokalnie server/.env)
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  console.error("Brak MONGODB_URI: ustaw zmienną środowiskową albo server/.env (wzór w server/.env.example)");
-  process.exit(1);
-}
-
 const PORT = Number(process.env.PORT ?? 3001);
 
 // Sprawdzanie serwerów bazy raz na minutę, jednym zapytaniem (poll). Domyślnie sterownik MongoDB co 10 s
@@ -48,7 +39,17 @@ const PORT = Number(process.env.PORT ?? 3001);
 // serwera głównego jest wykrywana przy pierwszym nieudanym zapytaniu, nie po minucie.
 const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'poll' } as const;
 
-(async () => {
+const startServer = async () => {
+  const server = http.createServer(app);
+  createWsServer(server);
+
+  // adres z hasłem tylko w zmiennej środowiskowej (Render: Environment, lokalnie server/.env, Oracle: /etc/apps/my-home.env)
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) {
+    console.error("Brak MONGODB_URI: ustaw zmienną środowiskową albo server/.env (wzór w server/.env.example)");
+    process.exit(1);
+  }
+
   await mongoose.connect(MONGODB_URI, MONGO_OPTIONS);
   console.log("Mongo connected");
 
@@ -88,6 +89,13 @@ const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'pol
   await ensureHomeWeatherTile().catch((error) => console.error('[weather-tiles] error:', error));
 
   server.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
-})();
+};
+
+const PROXY_TARGET = process.env.PROXY_TARGET?.trim();
+if (PROXY_TARGET) {
+  createProxyServer(PROXY_TARGET).listen(PORT, () => console.log(`Tryb pośrednika: port ${PORT} -> ${PROXY_TARGET}`));
+} else {
+  void startServer();
+}
 
 
