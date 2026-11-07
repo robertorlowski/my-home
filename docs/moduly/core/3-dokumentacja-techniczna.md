@@ -198,12 +198,12 @@ Klient w trybie deweloperskim łączy się z serwerem na porcie 4001 pod tym sam
 
 Na `vm-prod` serwer i klient działają w jednym obrazie (`deploy/oracle/Dockerfile`). Praca lokalna nie używa Dockera.
 
-| Gałąź | Kanał | Tagi w `ghcr.io/robertorlowski/my-home` |
+| Gałąź | Kanał | Obraz na `vm-prod` |
 |---|---|---|
-| `main` | produkcja | `prod`, `prod-<commit>` |
-| `develop` | test | `test`, `test-<commit>` |
+| `main` | produkcja | `my-home:prod-<commit>` |
+| `develop` | test | `my-home:test-<commit>` |
 
-GitHub Actions (`.github/workflows/obraz-docker.yml`) buduje obraz na ARM po pushu ze zmianami w `server`, `client`, `deploy/oracle` albo zależnościach. W każdym kanale zostaje aktualna wersja i 2 poprzednie. Workflow tylko publikuje; instalację na serwerze uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh`. Sekrety są tylko w plikach środowiskowych na serwerze, nie w obrazie.
+Od 2026-11-08 obraz buduje sam serwer: `oracle-cloud/vm-prod/deploy-my-home.sh prod|test [commit]` wysyła `git archive` wybranego commitu (domyślnie `origin/main` albo `origin/develop`) przez ssh do `docker build` na `vm-prod` i instaluje go. Do repozytorium trafiają więc tylko pliki z gita. W każdym kanale zostaje aktualna wersja i 2 poprzednie. Wcześniej obraz budował GitHub Actions i publikował w `ghcr.io`. Sekrety są tylko w plikach środowiskowych na serwerze, nie w obrazie.
 
 ## Środowisko lokalne i dane demonstracyjne
 

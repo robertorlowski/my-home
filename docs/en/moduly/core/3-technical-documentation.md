@@ -198,12 +198,12 @@ In development the client talks to the server on port 4001 of the same host the 
 
 On `vm-prod` the server and client run in one image (`deploy/oracle/Dockerfile`). Local development does not use Docker.
 
-| Branch | Channel | Tags in `ghcr.io/robertorlowski/my-home` |
+| Branch | Channel | Image on `vm-prod` |
 |---|---|---|
-| `main` | production | `prod`, `prod-<commit>` |
-| `develop` | test | `test`, `test-<commit>` |
+| `main` | production | `my-home:prod-<commit>` |
+| `develop` | test | `my-home:test-<commit>` |
 
-GitHub Actions (`.github/workflows/obraz-docker.yml`) builds the image on ARM after a push with changes in `server`, `client`, `deploy/oracle` or the dependencies. Each channel keeps the current version and the 2 previous ones. The workflow only publishes; installation on the server is started by `oracle-cloud/vm-prod/deploy-my-home.sh`. Secrets live only in environment files on the server, not in the image.
+Since 2026-11-08 the server builds the image itself: `oracle-cloud/vm-prod/deploy-my-home.sh prod|test [commit]` sends a `git archive` of the chosen commit (by default `origin/main` or `origin/develop`) over ssh to `docker build` on `vm-prod` and installs it. Only files from git go into the image. Each channel keeps the current version and 2 previous ones. Before that, GitHub Actions built the image and published it to `ghcr.io`.
 
 ## Local environment and demo data
 
