@@ -4,12 +4,13 @@
 .hp-home .hero-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .hp-home .hp-mode-value { font-size: 16px; overflow-wrap: anywhere; }
 
-/* dzwonek przy błędzie w „Pomiarach” w jednej linii z tekstem */
-.hp-home .measures .danger-text { display: inline-flex; align-items: center; gap: 4px; }
-.hp-home .measures .danger-text .ic { width: 16px; height: 16px; }
+/* „Błędy” w „Pomiarach”: czerwony chip z dzwonkiem i licznik obok, wyrównane w jednej linii */
+.hp-home .measures dd.hp-errors { display: inline-flex; align-items: center; gap: 8px; }
+.hp-home .measures .hp-errors .chip { gap: 4px; }
+.hp-home .measures .hp-errors .chip .ic { width: 14px; height: 14px; }
 
-/* data i opis ostatniego błędu pod listą pomiarów */
-.hp-home .hp-error-line { margin: 0; color: var(--danger); }
+/* opis i chwila ostatniego błędu pod listą pomiarów */
+.hp-home .hp-error-alert { margin-top: 12px; }
 
 /* trzecia liczba w „Energii dziś” mieści się na telefonie: liczby zawijają się w wierszu */
 .hp-home .energy { flex-wrap: wrap; }

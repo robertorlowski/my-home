@@ -39,6 +39,11 @@ const fmt = (value: unknown, digits = 1): string => {
 const fmtInt = (value: unknown): string => fmt(value, 0);
 const minutes = (seconds?: number) => (seconds ? `${Math.floor(seconds / 60)} min` : '---');
 const timeOfDay = (time?: string) => time?.split(' ')[1]?.slice(0, 5) ?? '';
+// chwila błędu z co ("YYYY.MM.DD HH:MM:SS", czas polski) jako "07.11.2026 12:03"
+const errorWhen = (time?: string) => {
+  const match = time?.match(/^(\d{4})\.(\d{2})\.(\d{2}) (\d{2}):(\d{2})/);
+  return match ? `${match[3]}.${match[2]}.${match[1]} ${match[4]}:${match[5]}` : time ?? '';
+};
 
 // co od 1.2.0: MANUAL / AUTO / OFF; starsze co: M, A, PV, CWU
 const modeLabel = (mode?: string): string => (
@@ -273,15 +278,24 @@ const HP: React.FC = () => {
           <div><dt title={t('hp.copTip')}>{t('hp.cop')}</dt><dd>{fmt(_data?.cop)} <small>{fmt(_data?.t_min)}–{fmt(_data?.t_max)} °C</small></dd></div>
           <div>
             <dt>{t('hp.errors')}</dt>
-            <dd>
+            <dd className="hp-errors">
               {errorText || locked
-                ? <span className="danger-text"><BellIcon /> {locked ? t('hp.controlLockedLower') : `${t('hp.errorLower')} ${_lastError?.error_code}`}</span>
+                ? <span className="chip chip-err"><BellIcon /> {locked ? t('hp.controlLockedLower') : `${t('hp.errorLower')} ${_lastError?.error_code}`}</span>
                 : <span className="ok-text">{t('wx.none')}</span>}
-              {' '}<small>{t('hp.counter')} {_hp?.ERRc ?? '---'}/{ERROR_LOCK_LIMIT}</small>
+              <small>{t('hp.counter')} {_hp?.ERRc ?? '---'}/{ERROR_LOCK_LIMIT}</small>
             </dd>
           </div>
         </dl>
-        {errorText && <p className="help hp-error-line">{_lastError?.time} · {errorText}</p>}
+        {/* ostatni błąd z ostatniej doby: opis i chwila w ramce jak w Ustawieniach pompy */}
+        {errorText && (
+          <div className="alert alert-err hp-error-alert">
+            <BellIcon />
+            <div>
+              <strong>{t('hp.set.errorWord')} {_lastError?.error_code} · {errorText}</strong>
+              <span>{errorWhen(_lastError?.time)}</span>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="grid-2">
