@@ -25,7 +25,7 @@ Water tank, pellet boiler, switch (ESP32) ⇄ HTTPS ⇄ server
 | `server/` | Express, TypeScript, Mongoose, WebSocket, schedulers |
 | `client/` | React, TypeScript, Vite |
 | `devices/co/` | ESP32 firmware between the heat pump, the PV system and the cloud (MIT) |
-| `devices/chpc/` | heat pump controller firmware, a fork of [gonzho000/chpc](https://github.com/gonzho000/chpc) (GPLv3) |
+| `devices/chpc/` | heat pump controller firmware |
 | `devices/water-pressure-tank/`, `devices/switch/`, `devices/pellet-boiler-pelux200/` | firmware of the other controllers |
 | `docs/` | system and module documentation |
 | `test/e2e/` | end-to-end test of the whole chain |
