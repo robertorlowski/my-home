@@ -6,6 +6,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthRequests } from '../../api';
+import { SystemAccount } from './system';
 import { ProfileForm } from '../../components/ProfileForm';
 import { PushSettingsCard } from '../../components/PushSettingsCard';
 import { useAuth, userDisplayName } from '../../context/AuthContext';
@@ -169,6 +170,7 @@ export function Account() {
     );
   }
 
+  if (user.isSystem) return <SystemAccount />;
   return (
     <div className="page page-narrow account-page">
       <section className="card">

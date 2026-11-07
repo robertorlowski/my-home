@@ -11,7 +11,7 @@ The system controls a domestic heat pump (CHPC) from the cloud, collects data fr
 - **Water pressure tank.** At every start of the water pump the tank controller runs the air compressor for a while and sends the run times to the cloud. From that the application calculates water consumption: pump run time × pump flow derived from manual water meter readings.
 - **Switch.** An ESP32 controller with a relay (the first one controls a water heater element) reports the relay states every 5 s and receives a command in the reply: on for a time, on without a limit, or off. The command follows from the mode chosen in the application and from the schedule (days as for the heat pump, no temperatures). The application shows the state and the activation history.
 - **Pellet boiler.** A separate boiler controller (ESP32-C3 with an RS-485 module, [devices/pellet-boiler-pelux200](../../devices/pellet-boiler-pelux200/README.md), Polish) acts as an ecoNET module on the bus of the ecoMAX controller of a Plum Pellux 200 boiler: it receives the state, temperatures, fuel and outputs of the boiler (to the cloud every few minutes), reads the controller settings and, on request from the application, changes parameters (Heat pump / Pellet mode, season, DHW and mixer set points, switching the controller on and off). The application also has a DHW and boiler-operation schedule, separate for both modes. Until 2026-10-02 the boiler was served by the `co` controller (its second role).
-- **Weather and mail.** The switch fetches the Open-Meteo weather for the home and the weather tiles over the home connection (the server on Render cannot), and clicking a tile opens a page with the forecast. The same switch (with `co` as a fallback) sends the application's mails — login codes and invitations — because Render's free plan blocks SMTP.
+- **Weather and mail.** The switch fetches the Open-Meteo weather for the home and the weather tiles over the home connection (a leftover from hosting on Render), and clicking a tile opens a page with the forecast. Since 2026-11-07 the server sends the application's mails, that is login codes and invitations; sending through controllers remains an option in Settings.
 
 ## System diagram
 
@@ -24,8 +24,8 @@ flowchart LR
     PEL["Boiler<br/>controller (ESP32-C3 + RS-485)"]
     HYD["Water pressure tank<br/>controller (ESP32)"]
     SW["Switch<br/>controller (ESP32 + relay)"]
-    SRV["My Home — server<br/>(Node.js, Render)"]
-    DB[("MongoDB Atlas")]
+    SRV["My Home — server<br/>(Node.js, Docker, Oracle Cloud)"]
+    DB[("MongoDB in Docker")]
     WEB["My Home — web application<br/>(browser, phone)"]
     IMGW["IMGW<br/>outdoor temperature"]
 
@@ -75,7 +75,7 @@ Code comments (in Polish) exist on two levels: a **file header** (what it is for
 ## Rules for working on the whole system
 
 - **The contract** means telemetry fields, operation keys, API paths and RS-485 commands. Changing it covers every part it affects (server, client, firmware), ideally in one commit.
-- **Deployment order:** first the server (`main` branch, Render build started manually), then the `co`, tank or switch firmware, CHPC last. The server has to know a new field or path before a controller sends it.
+- **Deployment order:** first the server (`main` branch, GitHub builds the image, install with `deploy-my-home.sh prod`), then the `co`, tank or switch firmware, CHPC last. The server has to know a new field or path before a controller sends it.
 - **Branches:** work on `develop`; merging to `main` only on explicit request.
 - **A new controller kind:** a folder in `server/src/modules/` and `client/src/devices/`, an entry in both registries (`server/src/core/device-types.ts`, `client/src/core/device-types.tsx`) and a value in `DeviceType`. Details in the [core module](moduly/core/3-technical-documentation.md).
 
@@ -93,4 +93,4 @@ pio test -d devices/water-pressure-tank -e native
 pio test -d devices/switch -e native
 ```
 
-Production server: `https://dom.mojeturnie.pl`. Server environment variables (`MONGODB_URI`, `PORT` and others) are described in the [core module](moduly/core/3-technical-documentation.md).
+Application and production server: `https://dom.mojeturnie.pl`. Server environment variables (`MONGODB_URI`, `PORT` and others) are described in the [core module](moduly/core/3-technical-documentation.md).

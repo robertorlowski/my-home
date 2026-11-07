@@ -162,6 +162,10 @@ export type PumpConfig = {
 // Pola okna „Dane sterownika” poza nazwą (PUT /devices/:rootId), zależne od rodzaju.
 export type DeviceDefinition = { pumpConfig?: PumpConfig; boilerConfig?: BoilerConfig };
 
+// GET, PUT /api/settings (konto systemowe): sekret nie ma pola value, tylko isSet
+export type SettingGroup = 'mail' | 'app' | 'push' | 'server';
+export type AppSetting = { key: string; group: SettingGroup; kind: string; isSet: boolean; value?: string };
+
 // GET /api/devices/db-stats (stopka strony /devices): rozmiar bazy na dysku (dane + indeksy)
 // i odpowiedź bazy na ping; ok = false albo brak odpowiedzi = baza nie działa.
 /** pogoda z Open-Meteo pobrana przez sterownik włącznika (GET /temperature, serwer core/services/meteo.service.ts) */

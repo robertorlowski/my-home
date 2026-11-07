@@ -37,7 +37,7 @@ npm install
 npm run local    # local MongoDB, server on port 4001, web app on port 5173
 ```
 
-The server reads its configuration from environment variables. A template is in `server/.env.example`.
+In production the server runs in Docker on Oracle Cloud (https://dom.mojeturnie.pl). It reads `MONGODB_URI` and `SYSTEM_PASSWORD` from the environment and the remaining settings from the database, changed on the system account screen. For local work, a template is in `server/.env.example`.
 
 ## Documentation
 

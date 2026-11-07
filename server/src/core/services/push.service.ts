@@ -9,6 +9,7 @@
 // dla tego sterownika i nadal mają do niego dostęp. Cisza nocna (quietFrom–quietTo, czas warszawski) wstrzymuje
 // wszystko poza zdarzeniami pilnymi (błąd, alarm). To samo zdarzenie tego samego sterownika nie idzie do jednej
 // osoby częściej niż co THROTTLE_MS. Render dopuszcza wychodzące HTTPS, więc wysyłka działa także na darmowym planie.
+import { setting } from './settings.service';
 import webpush from 'web-push';
 import { formatInTimeZone } from 'date-fns-tz';
 import { DeviceType } from '../types';
@@ -66,14 +67,14 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 let configured: boolean | null = null;
 
-/** klucze VAPID ze środowiska; ustawiane raz, wynik zapamiętany (testy: resetPushConfig) */
+/** klucze VAPID z ustawień; ustawiane raz, wynik zapamiętany do zmiany ustawień (resetPushConfig) */
 export function pushConfigured(): boolean {
   if (configured !== null) return configured;
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const publicKey = setting('VAPID_PUBLIC_KEY');
+  const privateKey = setting('VAPID_PRIVATE_KEY');
   if (!publicKey || !privateKey) return (configured = false);
   try {
-    webpush.setVapidDetails(process.env.VAPID_SUBJECT || 'mailto:admin@example.com', publicKey, privateKey);
+    webpush.setVapidDetails(setting('VAPID_SUBJECT') || 'mailto:admin@example.com', publicKey, privateKey);
     configured = true;
   } catch (error) {
     console.error('[push] nieprawidłowe klucze VAPID:', error);
@@ -82,7 +83,7 @@ export function pushConfigured(): boolean {
   return configured;
 }
 
-export const pushPublicKey = () => (pushConfigured() ? process.env.VAPID_PUBLIC_KEY ?? null : null);
+export const pushPublicKey = () => (pushConfigured() ? setting('VAPID_PUBLIC_KEY') ?? null : null);
 export const resetPushConfig = () => { configured = null; };
 
 // ------------------------------------------------------------------ subskrypcje

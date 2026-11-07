@@ -10,6 +10,7 @@
 // raz w odpowiedzi na zgłoszenie i w GET /mail/config (płytka trzyma je tylko w RAM, bez zapisu w NVS) oraz każdy
 // mail w GET /mail/next (niesie kody logowania). Wynik (POST /mail/result) jest przyjmowany tylko z potwierdzeniem
 // (receipt) z odszyfrowanego zadania.
+import { setting } from './settings.service';
 import crypto from 'crypto';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { DeviceDocument, DeviceModel } from '../models/device.model';
@@ -34,7 +35,7 @@ export const MAIL_TTL_MS = 15 * 60_000;
 export const MAX_ATTEMPTS = 3;
 const KDF_LABEL = 'chpc-mail-v1';
 
-export const relayEnabled = () => process.env.MAIL_RELAY === '1';
+export const relayEnabled = () => setting('MAIL_RELAY') === '1';
 export const isRelayType = (type: DeviceType) => RELAY_PRIORITY[type] !== undefined;
 
 export class MailRelayError extends Error {
@@ -170,11 +171,11 @@ export function decryptWith(privateKey: Buffer, sealed: Sealed, aad: string): un
 // ------------------------------------------------------------------ dane SMTP
 
 const smtpSettings = () => {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const host = setting('SMTP_HOST');
+  const user = setting('SMTP_USER');
+  const pass = setting('SMTP_PASS');
   if (!host || !user || !pass) return null;
-  return { host, port: Number(process.env.SMTP_PORT ?? 587), user, pass };
+  return { host, port: Number(setting('SMTP_PORT') ?? 587), user, pass };
 };
 
 /** część odpowiedzi na zgłoszenie i GET /mail/config: stan klucza i zaszyfrowane dane SMTP */
@@ -228,9 +229,10 @@ interface OutgoingMail {
 
 /** składa wiadomość MIME tak, jak wysłałby ją nodemailer: nadawca = konto SMTP, odpowiedzi na MAIL_FROM */
 async function composeRaw(mail: OutgoingMail): Promise<string> {
-  const user = process.env.SMTP_USER ?? '';
-  const replyTo = process.env.MAIL_FROM && process.env.MAIL_FROM !== user ? process.env.MAIL_FROM : undefined;
-  const message = new MailComposer({ from: `MyHome <${user}>`, ...(replyTo ? { replyTo } : {}), ...mail }).compile();
+  const user = setting('SMTP_USER') ?? '';
+  const mailFrom = setting('MAIL_FROM');
+  const replyTo = mailFrom && mailFrom !== user ? mailFrom : undefined;
+  const message = new MailComposer({ from: `Mój Dom <${user}>`, ...(replyTo ? { replyTo } : {}), ...mail }).compile();
   message.keepBcc = false;
   const raw: Buffer = await new Promise((resolve, reject) => message.build((error, out) => (error ? reject(error) : resolve(out))));
   return raw.toString('utf8');
@@ -282,7 +284,7 @@ export async function nextMailFor(device: DeviceDocument, now = Date.now()): Pro
     const id = String(claimed._id);
     return {
       id,
-      mail: encryptFor(device.mailKey.publicKey, { to: claimed.to, from: process.env.SMTP_USER ?? '', raw: claimed.raw, receipt }, `mail:${id}`),
+      mail: encryptFor(device.mailKey.publicKey, { to: claimed.to, from: setting('SMTP_USER') ?? '', raw: claimed.raw, receipt }, `mail:${id}`),
     };
   }
   return null;

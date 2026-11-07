@@ -121,7 +121,7 @@ describe('Przekaźnik poczty przez sterowniki', () => {
     const mail = decryptWith(switchKey.privateKey, job.mail, `mail:${job.id}`) as { to: string[]; from: string; raw: string; receipt: string };
     expect(mail.to).toEqual(['jan@example.pl']);
     expect(mail.from).toBe('raporty@example.pl');
-    expect(mail.raw).toMatch(/^From: MyHome <raporty@example.pl>/m);
+    expect(mail.raw).toMatch(/^From: =\?UTF-8\?Q\?M=C3=B3j_Dom\?= <raporty@example.pl>/m);
     expect(mail.raw).toMatch(/^Reply-To: robert@example.pl/m);
     expect(mail.raw).toMatch(/^To: jan@example.pl/m);
     expect(JSON.stringify(job)).not.toContain('jan@example.pl');

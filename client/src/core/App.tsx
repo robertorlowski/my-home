@@ -9,6 +9,7 @@ import { BottomNav, Header, viewLabel } from './components/Header';
 import { DEVICES_HEADER_ACTIONS_ID, Devices } from './pages/Devices';
 import Weather from './pages/Weather';
 import { WeatherBottomNav, WeatherHeader } from './pages/Weather/nav';
+import { SystemAccountBottomNav, SystemAccountHeader } from './pages/Account/system';
 import { Firmware } from './pages/Firmware';
 import { useDevice } from './context/DeviceContext';
 import { DEMO_BLOCKED_EVENT } from './auth';
@@ -184,10 +185,16 @@ function AppContent() {
 	const isWeather = location.pathname.startsWith('/weather/');
 	const isDeviceSelection = location.pathname === '/devices' || location.pathname.startsWith('/firmware') || location.pathname.startsWith('/account');
 	const isDevice = !isDeviceSelection && !isWeather;
+	// konto systemowe: panele w bocznym menu jak widoki sterownika (pages/Account/system.tsx)
+	const { user } = useAuth();
+	const isSystemAccount = location.pathname === '/account' && !!user?.isSystem;
 
 	return (
 		<DeviceGuard>
-			<div className={`app-container${isDeviceSelection ? '' : ' has-side'}`}>
+			<div className={`app-container${isDeviceSelection && !isSystemAccount ? '' : ' has-side'}`}>
+				{isSystemAccount && <header className="app-header">
+					<SystemAccountHeader />
+				</header>}
 				{isDevice && <header className="app-header">
 					<Header />
 				</header>}
@@ -202,7 +209,7 @@ function AppContent() {
 					<span id={DEVICES_HEADER_ACTIONS_ID} className="app-header-actions" />
 					<UserMenu />
 				</header>}
-				{(location.pathname.startsWith('/account') || location.pathname.startsWith('/firmware')) && <header className="app-header">
+				{!isSystemAccount && (location.pathname.startsWith('/account') || location.pathname.startsWith('/firmware')) && <header className="app-header">
 					<Link to="/devices" className="nav-back" title={t('nav.deviceList')} aria-label={t('nav.backToList')}><BackIcon /></Link>
 					<h1 className="app-header-title">{location.pathname.startsWith('/account') ? t('menu.myData') : 'Firmware'}</h1>
 					<UserMenu />
@@ -228,6 +235,7 @@ function AppContent() {
 				{/* telefon: dolna nawigacja na stronach sterownika i pogody (CSS ukrywa ją od 900 px) */}
 				{isDevice && <BottomNav />}
 				{isWeather && <WeatherBottomNav />}
+				{isSystemAccount && <SystemAccountBottomNav />}
 			</div>
 		</DeviceGuard>
 );

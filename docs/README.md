@@ -11,7 +11,7 @@ System steruje domową pompą ciepła (CHPC) z chmury, zbiera dane z instalacji 
 - **Hydrofor.** Sterownik hydroforu przy każdym uruchomieniu pompy wody włącza na chwilę kompresor, a do chmury wysyła czasy pracy. Aplikacja liczy z tego zużycie wody: czas pracy pompy × przepływ pompy wyliczony z ręcznych odczytów wodomierza.
 - **Włącznik.** Sterownik ESP32 z przekaźnikiem (pierwszy steruje grzałką bojlera) co 5 s zgłasza stan przekaźników i w odpowiedzi dostaje polecenie: włącz na czas, włącz bez limitu albo wyłącz. Polecenie wynika z trybu wybranego w aplikacji i z harmonogramu (dni jak w pompie ciepła, bez temperatur). Aplikacja pokazuje stan i historię włączeń.
 - **Kocioł pelletowy.** Osobny sterownik pieca (ESP32-C3 z modułem RS-485, [devices/pellet-boiler-pelux200](../devices/pellet-boiler-pelux200/README.md)) udaje na magistrali regulatora ecoMAX kotła Plum Pellux 200 moduł ecoNET: odbiera stan, temperatury, paliwo i wyjścia kotła (co kilka minut do chmury), czyta ustawienia regulatora i na zlecenie z aplikacji zmienia parametry (tryb Pompa ciepła / Pellet, sezon, zadane CWU i mieszaczy, włączenie i wyłączenie regulatora). Aplikacja ma też harmonogram CWU i pracy kotła osobno dla obu trybów. Do 2026-10-02 kocioł obsługiwał sterownik `co` (jego druga rola).
-- **Pogoda i poczta.** Włącznik pobiera z domowego łącza pogodę Open-Meteo dla domu i kafelków pogody (serwer na Render nie może), a kliknięcie kafelka otwiera stronę z prognozą. Ten sam włącznik (zapasowo `co`) wysyła maile aplikacji — kody logowania i zaproszenia — bo darmowy plan Render blokuje SMTP.
+- **Pogoda i poczta.** Włącznik pobiera z domowego łącza pogodę Open-Meteo dla domu i kafelków pogody (tak zostało po hostingu na Renderze), a kliknięcie kafelka otwiera stronę z prognozą. Maile aplikacji, czyli kody logowania i zaproszenia, wysyła od 2026-11-07 serwer; wysyłka przez sterowniki zostaje jako opcja w Ustawieniach.
 
 ## Schemat systemu
 
@@ -24,8 +24,8 @@ flowchart LR
     PEL["Piec<br/>sterownik (ESP32-C3 + RS-485)"]
     HYD["Hydrofor<br/>sterownik (ESP32)"]
     SW["Włącznik<br/>sterownik (ESP32 + przekaźnik)"]
-    SRV["My Home — serwer<br/>(Node.js, Render)"]
-    DB[("MongoDB Atlas")]
+    SRV["My Home — serwer<br/>(Node.js, Docker, Oracle Cloud)"]
+    DB[("MongoDB w Dockerze")]
     WEB["My Home — aplikacja WWW<br/>(przeglądarka, telefon)"]
     IMGW["IMGW<br/>temperatura zewnętrzna"]
 
@@ -76,7 +76,7 @@ Kod ma komentarze na dwóch poziomach: **nagłówek pliku** (do czego służy, k
 ## Zasady pracy nad całym systemem
 
 - **Kontrakt** to pola telemetrii, klucze operacji, adresy API i komendy RS-485. Jego zmiana obejmuje wszystkie części, których dotyczy (serwer, klient, firmware), najlepiej w jednym commicie.
-- **Kolejność wdrożenia:** najpierw serwer (gałąź `main`, build na Render uruchamiany ręcznie), potem firmware `co`, hydroforu albo włącznika, na końcu CHPC. Serwer musi znać nowe pole lub adres, zanim wyśle je sterownik.
+- **Kolejność wdrożenia:** najpierw serwer (gałąź `main`, GitHub buduje obraz, instalacja `deploy-my-home.sh prod`), potem firmware `co`, hydroforu albo włącznika, na końcu CHPC. Serwer musi znać nowe pole lub adres, zanim wyśle je sterownik.
 - **Gałęzie:** praca na `develop`; scalanie do `main` tylko na wyraźne polecenie.
 - **Nowy rodzaj sterownika:** katalog w `server/src/modules/` i `client/src/devices/`, wpis w obu rejestrach (`server/src/core/device-types.ts`, `client/src/core/device-types.tsx`) i wartość w `DeviceType`. Szczegóły w [module core](moduly/core/).
 
@@ -94,7 +94,7 @@ pio test -d devices/water-pressure-tank -e native
 pio test -d devices/switch -e native
 ```
 
-Lokalna baza jest w `.local-db/` (poza gitem). Serwer produkcyjny: `https://dom.mojeturnie.pl`. Zmienne środowiskowe serwera (`MONGODB_URI`, `PORT` i pozostałe) są opisane w [module core](moduly/core/).
+Lokalna baza jest w `.local-db/` (poza gitem). Aplikacja i serwer produkcyjny: `https://dom.mojeturnie.pl`. Zmienne środowiskowe serwera (`MONGODB_URI`, `PORT` i pozostałe) są opisane w [module core](moduly/core/).
 
 ## Inne dokumenty
 

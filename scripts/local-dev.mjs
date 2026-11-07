@@ -28,7 +28,7 @@ export function startServer(extraEnv = {}) {
     cwd: root,
     shell: true,
     stdio: 'inherit',
-    env: { ...process.env, MONGODB_URI: LOCAL_DB_URI, PORT: '4001', ...extraEnv },
+    env: { ...process.env, MONGODB_URI: LOCAL_DB_URI, PORT: '4001', BACKGROUND_JOBS: 'on', ...extraEnv },
   });
 }
 

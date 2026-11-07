@@ -13,6 +13,7 @@ import {
 } from './controllers/auth.controller'
 import { deleteFirmware, downloadFirmware, getFirmware, updateFirmwareOffer, uploadFirmware } from './controllers/firmware.controller'
 import { getTemperature } from './controllers/meteo.controller'
+import { putSettings, readSettings } from './controllers/settings.controller'
 import { approveDeviceMailKey, getMailConfig, getNextMail, postMailResult, revokeDeviceMailKey } from './controllers/mail-relay.controller'
 import { getOperations } from './controllers/operation-log.controller'
 import { deletePushSubscription, getPushSettings, postPushSubscription, postPushTest, putPushRules } from './controllers/push.controller'
@@ -85,6 +86,10 @@ router.put('/firmware/:deviceType', updateFirmwareOffer)
 router.put('/firmware/:deviceType/:version', express.raw({ type: 'application/octet-stream', limit: '2mb' }), uploadFirmware)
 router.get('/firmware/:deviceType/:version', downloadFirmware)
 router.delete('/firmware/:deviceType/:version', deleteFirmware)
+
+// ustawienia aplikacji: konto systemowe (middleware/session.ts) i hasło ustawień; odczyt przez POST, bo hasło jest w treści
+router.post('/settings/read', readSettings)
+router.put('/settings', putSettings)
 
 router.get('/temperature', getTemperature)
 

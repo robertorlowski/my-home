@@ -22,7 +22,7 @@ import { UserModel } from '../src/core/models/user.model'
 import { SessionModel } from '../src/core/models/auth.model'
 import { HpEntryModel } from '../src/modules/heat-pump/models/hp.model'
 import { outbox } from '../src/core/services/mail.service'
-import { migrateOwners, SESSION_REMEMBER_MS } from '../src/core/services/auth.service'
+import { ensureSystemUser, SESSION_REMEMBER_MS } from '../src/core/services/auth.service'
 import { INTERNAL_TOKEN } from '../src/core/internal'
 import { DeviceType } from '../src/core/types'
 
@@ -51,11 +51,13 @@ describe('Konta użytkowników', () => {
     delete process.env.SMTP_HOST;
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
-    // sterowniki sprzed kont, kolejność kafelków: kocioł, pompa
+    // sterowniki konta robert@infotower.pl, kolejność kafelków: kocioł, pompa
     pumpRootId = String((await DeviceModel.create({ deviceType: DeviceType.HP, deviceId: 'AA0000000001', name: 'Pompa', sortOrder: 1 }))._id);
     boilerRootId = String((await DeviceModel.create({ deviceType: DeviceType.PELLET_BOILER_PELUX200, deviceId: 'AA0000000002', name: 'Kocioł', sortOrder: 0 }))._id);
     await HpEntryModel.create({ rootId: pumpRootId, deviceType: DeviceType.HP, deviceId: 'AA0000000001', HP: { Ttarget: 40 } });
-    await migrateOwners();
+    const robert = await UserModel.create({ email: 'robert@infotower.pl', deviceOrder: [boilerRootId, pumpRootId] });
+    await DeviceModel.updateMany({ _id: { $in: [pumpRootId, boilerRootId] } }, { $set: { ownerId: String(robert._id) } });
+    await ensureSystemUser();
   });
 
   afterAll(async () => {
@@ -73,11 +75,8 @@ describe('Konta użytkowników', () => {
     expect((await DeviceModel.findOne({ deviceId: 'AA0000000009' }).lean())?.ownerId ?? null).toBeNull();
   });
 
-  it('migracja: sterowniki sprzed kont należą do robert@infotower.pl z kolejnością kafelków; raz', async () => {
-    const robert = await UserModel.findOne({ email: 'robert@infotower.pl' }).lean();
-    expect(robert?.deviceOrder).toEqual([boilerRootId, pumpRootId]);
-    expect(await DeviceModel.countDocuments({ ownerId: String(robert?._id) })).toBe(2);
-    expect(await migrateOwners()).toBe(0);
+  it('konto system: kolejne wywołanie nie zakłada drugiego', async () => {
+    await ensureSystemUser();
     expect(await UserModel.countDocuments({ isSystem: true })).toBe(1);
   });
 

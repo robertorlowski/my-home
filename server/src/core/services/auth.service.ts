@@ -1,7 +1,7 @@
 // Konta użytkowników (2026-10-11): logowanie i rejestracja kodem albo linkiem z maila (jeden przebieg),
 // sesje (token w nagłówku Authorization, bo klient i API są na różnych domenach), użytkownik systemowy
-// (hasło SYSTEM_PASSWORD), dane konta, zmiana e-maila, usunięcie konta z danymi sterowników i jednorazowe
-// przypisanie sterowników istniejących przed kontami do INITIAL_OWNER_EMAIL (domyślnie robert@infotower.pl).
+// (hasło SYSTEM_PASSWORD), dane konta, zmiana e-maila i usunięcie konta z danymi sterowników.
+import { setting } from './settings.service';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { both, DEFAULT_LANG, isLang, Lang, t, Texts, texts } from '../i18n';
@@ -273,10 +273,10 @@ export async function systemLogin(password: unknown) {
 // (core/middleware/session.ts), a dane wrażliwe ukrywają kontrolery (SN, IP, współrzędne, imiona).
 const demoAttempts = new Map<string, number[]>();
 
-export const demoAvailable = () => !!process.env.DEMO_OWNER_EMAIL;
+export const demoAvailable = () => !!setting('DEMO_OWNER_EMAIL');
 
 export async function demoOwner(): Promise<UserEntry | null> {
-  const email = process.env.DEMO_OWNER_EMAIL?.trim().toLowerCase();
+  const email = setting('DEMO_OWNER_EMAIL')?.trim().toLowerCase();
   if (!email) return null;
   return UserModel.findOne({ email }).lean<UserEntry>();
 }
@@ -412,28 +412,4 @@ export async function deleteUserAndData(userId: string) {
   await UserModel.deleteOne({ _id: userId });
   forgetUserSessions(userId);
   return { devices: ids.length };
-}
-
-// ------------------------------------------------------------------ migracja
-
-const OWNERS_MIGRATION = 'device-owners-2026-10';
-
-// Raz (znacznik w kolekcji migrations): sterowniki bez właściciela → konto INITIAL_OWNER_EMAIL, z kolejnością
-// kafelków z dotychczasowego pola urządzeń (sortOrder). Później zgłoszone sterowniki
-// zostają bez właściciela (decyzja 2026-10-11: nowymi sterownikami zajmiemy się osobno). Zawsze: konto system.
-export async function migrateOwners() {
-  await ensureSystemUser();
-  const migrations = mongoose.connection.collection<{ _id: string; at: Date }>('migrations');
-  if (await migrations.findOne({ _id: OWNERS_MIGRATION })) return 0;
-  const email = normalizeEmail(process.env.INITIAL_OWNER_EMAIL ?? 'robert@infotower.pl') as string;
-  const owner = (await UserModel.findOneAndUpdate({ email }, { $setOnInsert: { email } }, { upsert: true, new: true }).lean<UserEntry>()) as UserEntry;
-  const devices = await DeviceModel.find({ $or: [{ ownerId: null }, { ownerId: { $exists: false } }] })
-    .select('_id sortOrder').lean<{ _id: mongoose.Types.ObjectId; sortOrder?: number }[]>();
-  await DeviceModel.updateMany({ _id: { $in: devices.map((device) => device._id) } }, { $set: { ownerId: String(owner._id) } });
-  const order = devices.filter((device) => device.sortOrder !== undefined)
-    .sort((a, b) => (a.sortOrder as number) - (b.sortOrder as number)).map((device) => String(device._id));
-  if (order.length) await UserModel.updateOne({ _id: owner._id }, { $set: { deviceOrder: order } });
-  await migrations.insertOne({ _id: OWNERS_MIGRATION, at: new Date() });
-  console.log(`[konta] ${devices.length} sterowników przypisano do ${email}`);
-  return devices.length;
 }

@@ -420,3 +420,8 @@ button.icon-button.theme-toggle[type]:hover {
 .push-quiet-fields .link-btn {
   padding-bottom: 12px;
 }
+
+/* ---- ustawienia konta systemowego (pages/Account/system.tsx) ---- */
+.settings-form { display: flex; flex-direction: column; gap: var(--gap); }
+.settings-form .field > small { display: block; margin-top: 4px; }
+.settings-clear { align-self: flex-start; padding: 0; }

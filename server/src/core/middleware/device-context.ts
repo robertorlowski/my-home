@@ -8,7 +8,7 @@ import { DeviceType } from '../types';
 
 // ścieżki względem /api (req.path w routerze montowanym pod /api)
 // /temperature: temperatura zewnętrzna nad kafelkami listy urządzeń (żadne nie jest wtedy wybrane)
-const publicPaths = new Set(['/devices', '/devices/register', '/temperature', '/weather-tiles']);
+const publicPaths = new Set(['/devices', '/devices/register', '/temperature', '/weather-tiles', '/settings', '/settings/read']);
 
 // Endpointy sterownika: urządzenie wskazuje rootId albo sam deviceId (SN),
 // więc sterownik bez zapisanego rootId też może wysyłać dane. Ten sam SN może

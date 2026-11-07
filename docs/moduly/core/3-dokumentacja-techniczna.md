@@ -180,21 +180,22 @@ Dokument urządzenia jest wspólny dla wszystkich rodzajów, dlatego `core/model
 |---|---|
 | `MONGODB_URI` | połączenie z MongoDB; wymagane, bez niego serwer kończy start błędem |
 | `PORT` | port HTTP i WebSocket (domyślnie 3001) |
-| `MAIL_RELAY=1` | maile wysyłają sterowniki (przekaźnik poczty) zamiast serwera; na Render obowiązkowe, bo darmowy plan blokuje SMTP (porty 25, 465, 587) |
+| ustawienia w bazie | od 2026-11-07 wiersze `MAIL_RELAY`, `SMTP_*`, `MAIL_*`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*` i `BACKGROUND_JOBS` (domyślnie wyłączone, zmiana po restarcie) są w kolekcji `app_settings` i na ekranie konta systemowego (`POST /api/settings/read`, `PUT /api/settings`, z hasłem: `SYSTEM_PASSWORD` i polska nazwa dnia tygodnia); zmienna środowiskowa działa tylko bez wartości w bazie (praca lokalna, testy) |
+| `MAIL_RELAY=1` | maile wysyłają sterowniki (przekaźnik poczty) zamiast serwera; od 2026-11-07 wyłączone, serwer łączy się z pocztą na porcie 587 |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | powiadomienia Web Push; bez kluczy wyłączone (para: `npx web-push generate-vapid-keys` w `server/`) |
 | `DEMO_OWNER_EMAIL` | e-mail konta pokazywanego w wersji demo tylko do odczytu; bez wartości przycisku „Zobacz wersję demo” nie ma |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | konto pocztowe (przy `MAIL_RELAY=1` przekazywane zaszyfrowane płytkom); nadawca `MyHome <SMTP_USER>`, odpowiedzi na `MAIL_FROM` |
-| `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL`, `AUTH_DISABLED=1` | adres aplikacji w linkach z maili, hasło konta „system”, pierwszy właściciel, wyłączenie logowania (środowisko lokalne) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | konto pocztowe (przy `MAIL_RELAY=1` przekazywane zaszyfrowane płytkom); nadawca `Mój Dom <SMTP_USER>`, odpowiedzi na `MAIL_FROM` |
+| `CLIENT_URL`, `SYSTEM_PASSWORD`, `AUTH_DISABLED=1` | adres aplikacji w linkach z maili, hasło konta „system”, wyłączenie logowania (środowisko lokalne) |
 | `WEATHER_LOCATION` | współrzędne domu dla kafelka pogody „Dom” |
 | `CLIENT_DIR` | katalog z buildem klienta podawanym przez serwer (`core/client-static.ts`); ustawia go tylko obraz Dockera |
 
-Wartości są tylko w zmiennych środowiskowych: na Render w Environment usługi, lokalnie w `server/.env` (poza gitem, wzór `server/.env.example`).
+Na serwerze w zmiennych środowiskowych są tylko `MONGODB_URI` i `SYSTEM_PASSWORD`, reszta jest w kolekcji `app_settings`. Lokalnie wartości są w `server/.env` (poza gitem, wzór `server/.env.example`).
 
 Klient w trybie deweloperskim łączy się z serwerem na porcie 4001 pod tym samym hostem, z którego otwarto stronę; w produkcji z adresem z `VITE_SERVER_URL`, a bez tej zmiennej z `https://dom.mojeturnie.pl`. Wartość `same-origin` oznacza adres, z którego otwarto stronę. Adresy są w `client/src/core/http.ts`.
 
 ## Obraz Docker (Oracle)
 
-Na `vm-prod` serwer i klient działają w jednym obrazie (`deploy/oracle/Dockerfile`). Render i praca lokalna nie używają Dockera.
+Na `vm-prod` serwer i klient działają w jednym obrazie (`deploy/oracle/Dockerfile`). Praca lokalna nie używa Dockera.
 
 | Gałąź | Kanał | Tagi w `ghcr.io/robertorlowski/my-home` |
 |---|---|---|
@@ -229,7 +230,7 @@ node test/e2e/run-layout.mjs
 
 ## Wdrożenie
 
-Serwer i klient wdraża się razem z gałęzi `main` na Render (build uruchamiany ręcznie). Zmiana w core, która zmienia API, wymaga, by serwer był wdrożony przed firmware.
+Serwer i klient wdraża się razem z gałęzi `main`: GitHub buduje obraz, a instalację uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh prod`. Zmiana w core, która zmienia API, wymaga, by serwer był wdrożony przed firmware.
 
 ## Znane problemy
 

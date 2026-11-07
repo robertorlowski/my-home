@@ -13,7 +13,8 @@ import { ensureHomeWeatherTile } from './core/services/weather-tile.service';
 import { startPelletBoilerScheduler } from './modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-schedule.service';
 import { removeExpiredPanelDetails } from './modules/heat-pump/services/pv.service';
 import { assignDefaultPumpConfigs } from './core/services/device.service';
-import { migrateOwners } from './core/services/auth.service';
+import { ensureSystemUser } from './core/services/auth.service';
+import { loadSettings, setting } from './core/services/settings.service';
 import { pushConfigured } from './core/services/push.service';
 import { startPushWatchdog } from './core/services/push-watchdog.service';
 
@@ -52,17 +53,20 @@ const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'pol
   await mongoose.connect(MONGODB_URI, MONGO_OPTIONS);
   console.log("Mongo connected");
 
-  // konta użytkowników: użytkownik systemowy i (raz) właściciel sterowników sprzed kont
-  await migrateOwners().catch((error) => console.error('[konta] migracja:', error));
+  // ustawienia aplikacji z bazy, przed wszystkim, co z nich korzysta
+  await loadSettings().catch((error) => console.error('[ustawienia] odczyt:', error));
+
+  // konta użytkowników: użytkownik systemowy
+  await ensureSystemUser().catch((error) => console.error('[konta] konto system:', error));
   if (process.env.AUTH_DISABLED === '1') console.warn('[konta] AUTH_DISABLED=1: API bez logowania (tylko do testów)');
   if (!process.env.SYSTEM_PASSWORD) console.warn('[konta] brak SYSTEM_PASSWORD: logowanie systemowe wyłączone');
-  if (!process.env.SMTP_HOST) console.warn('[konta] brak SMTP_HOST: maile tylko w logu');
+  if (!setting('SMTP_HOST')) console.warn('[konta] brak SMTP_HOST: maile tylko w logu');
   if (!pushConfigured()) console.warn('[push] brak VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY: powiadomienia Web Push wyłączone');
 
-  // BACKGROUND_JOBS=off: podgląd lokalny na bazie produkcyjnej bez schedulerów i czyszczenia PV
-  // (inaczej drugi serwer zlecałby zmiany kotłu i kasował dane obok produkcji)
-  if (process.env.BACKGROUND_JOBS === 'off') {
-    console.log('BACKGROUND_JOBS=off: schedulery i czyszczenie PV wyłączone');
+  // Zadania w tle tylko przy BACKGROUND_JOBS=on w ustawieniach: domyślnie wyłączone, bo drugi serwer zlecałby
+  // zmiany kotłu i kasował dane obok produkcji. Zmiana działa po restarcie serwera.
+  if (setting('BACKGROUND_JOBS') !== 'on') {
+    console.log('BACKGROUND_JOBS wyłączone: schedulery i czyszczenie PV nie działają');
   } else {
     // scheduler działa w procesie serwera: operacje ręczne i wyliczone są tylko w pamięci,
     // więc restart serwera je kasuje (pierwszy przebieg od razu po starcie)

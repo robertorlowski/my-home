@@ -2,7 +2,7 @@
 // i /api/device/properties (ustawienia wybranego urządzenia). Używane przez App, stronę Devices,
 // popup DeviceEditModal, Harmonogramy pompy oraz widoki hydroforu.
 import { Requests } from './http';
-import { DatabaseStats, Device, DeviceDefinition, DeviceProperties, DeviceShare, DeviceTiles, DeviceType, FirmwareSummary, FirmwareUpdateRequest, MailKeyInfo, OperationsDay, OutdoorConditions, PushRule, PushSettings, PushSubscriptionInfo, User, WeatherTile } from './types';
+import { AppSetting, DatabaseStats, Device, DeviceDefinition, DeviceProperties, DeviceShare, DeviceTiles, DeviceType, FirmwareSummary, FirmwareUpdateRequest, MailKeyInfo, OperationsDay, OutdoorConditions, PushRule, PushSettings, PushSubscriptionInfo, User, WeatherTile } from './types';
 
 // Urządzenia wszystkich rodzajów: lista, nazwa, sterownik domyślny i ustawienia (properties).
 export class DeviceRequests {
@@ -111,6 +111,12 @@ export class FirmwareRequests {
 // Konta użytkowników (/api/auth/*, 2026-10-11): logowanie kodem lub linkiem z maila, system, „Zapamiętaj 90 dni”,
 // dane konta, zmiana e-maila, usunięcie konta. Błędy jako ApiError z komunikatem serwera.
 type Session = { token: string; created: boolean; user: User };
+// ustawienia aplikacji, tylko konto systemowe
+export const SettingsRequests = {
+  read: (password: string) => Requests.json<AppSetting[]>('POST', '/settings/read', { password }),
+  save: (password: string, values: Record<string, string | null>) => Requests.json<AppSetting[]>('PUT', '/settings', { password, values }),
+};
+
 export const AuthRequests = {
   start: (email: string) => Requests.json<{ email: string; resendAfterSeconds: number }>('POST', '/auth/start', { email }),
   verifyCode: (email: string, code: string) => Requests.json<Session>('POST', '/auth/verify', { email, code }),

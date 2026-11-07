@@ -5,6 +5,7 @@
 // MAIL_RELAY=1: serwer nie łączy się z pocztą, mail idzie do kolejki i wysyła go sterownik (mail-relay.service.ts).
 // Office 365 wysyła tylko z adresu konta SMTP_USER, chyba że ma ono uprawnienie „Send As” do MAIL_FROM
 // (próba 2026-10-11: inny nadawca = 5.2.252 SendAsDenied), dlatego przy odmowie mail idzie z SMTP_USER.
+import { setting } from './settings.service';
 import nodemailer, { Transporter } from 'nodemailer';
 import { enqueueMail, relayEnabled } from './mail-relay.service';
 import { DEFAULT_LANG, Lang, locale } from '../i18n';
@@ -21,13 +22,13 @@ export const outbox: OutgoingMail[] = [];
 
 let transport: Transporter | null = null;
 const smtpTransport = () => {
-  if (!process.env.SMTP_HOST) return null;
+  if (!setting('SMTP_HOST')) return null;
   transport ??= nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
+    host: setting('SMTP_HOST'),
+    port: Number(setting('SMTP_PORT') ?? 587),
     secure: false,
     requireTLS: true,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    auth: { user: setting('SMTP_USER'), pass: setting('SMTP_PASS') },
     // limity czasu (ms): bez nich zwlekający serwer pocztowy trzymał żądanie logowania bez końca
     // (2026-10-17: przycisk „Wyślij kod” wisiał), a użytkownik nie dostawał żadnego błędu
     connectionTimeout: 10_000,
@@ -37,7 +38,10 @@ const smtpTransport = () => {
   return transport;
 };
 
-export const adminEmail = () => process.env.MAIL_ADMIN ?? '';
+/** po zmianie ustawień poczty w bazie */
+export const resetMailTransport = () => { transport = null; };
+
+export const adminEmail = () => setting('MAIL_ADMIN') ?? '';
 
 export async function sendMail(mail: OutgoingMail): Promise<void> {
   // MAIL_RELAY=1 (Render na darmowym planie blokuje SMTP): mail wysyła sterownik z domowego łącza
@@ -51,14 +55,14 @@ export async function sendMail(mail: OutgoingMail): Promise<void> {
     console.log(`[mail] (bez SMTP) do ${mail.to}: ${mail.subject}`);
     return;
   }
-  const user = process.env.SMTP_USER ?? '';
-  const from = process.env.MAIL_FROM || user;
+  const user = setting('SMTP_USER') ?? '';
+  const from = setting('MAIL_FROM') || user;
   try {
-    await smtp.sendMail({ from: `MyHome <${from}>`, ...mail });
+    await smtp.sendMail({ from: `Mój Dom <${from}>`, ...mail });
   } catch (error) {
     // brak „Send As” do MAIL_FROM: wysyłka z adresu konta, odpowiedzi na MAIL_FROM
     if (from === user || !/SendAsDenied|5\.2\.252/.test(String((error as { response?: string }).response ?? error))) throw error;
-    await smtp.sendMail({ from: `MyHome <${user}>`, replyTo: from, ...mail });
+    await smtp.sendMail({ from: `Mój Dom <${user}>`, replyTo: from, ...mail });
   }
 }
 
@@ -67,7 +71,7 @@ export async function sendMail(mail: OutgoingMail): Promise<void> {
 // Obcy Origin nie trafia do linku (link z tokenem logowania prowadziłby na cudzą stronę).
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?$/;
 export function clientBaseUrl(origin?: string): string {
-  const allowed = (process.env.CLIENT_URL ?? '').split(',').map((url) => url.trim().replace(/\/$/, '')).filter(Boolean);
+  const allowed = (setting('CLIENT_URL') ?? '').split(',').map((url) => url.trim().replace(/\/$/, '')).filter(Boolean);
   if (origin && (allowed.includes(origin) || LOCAL_ORIGIN.test(origin))) return origin;
   return allowed[0] ?? 'http://localhost:5173';
 }

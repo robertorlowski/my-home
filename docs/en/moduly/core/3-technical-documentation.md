@@ -180,21 +180,22 @@ The device document is shared by all kinds, so `core/models/device.model.ts` imp
 |---|---|
 | `MONGODB_URI` | MongoDB connection; required, the server stops without it |
 | `PORT` | HTTP and WebSocket port (default 3001) |
-| `MAIL_RELAY=1` | the controllers send the mail (mail relay) instead of the server; mandatory on Render, whose free plan blocks SMTP (ports 25, 465, 587) |
+| settings in the database | since 2026-11-07 `MAIL_RELAY`, `SMTP_*`, `MAIL_*`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*` and `BACKGROUND_JOBS` (off by default, changes apply after a restart) are in the `app_settings` collection and on the system account screen (`POST /api/settings/read`, `PUT /api/settings`, with a password: `SYSTEM_PASSWORD` plus the Polish weekday name); an environment variable only applies when the database has no value (local work, tests) |
+| `MAIL_RELAY=1` | the controllers send the mail (mail relay) instead of the server; off since 2026-11-07, the server reaches the mail server on port 587 |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push notifications; disabled without the keys (pair: `npx web-push generate-vapid-keys` in `server/`) |
 | `DEMO_OWNER_EMAIL` | e-mail of the account shown read-only in demo mode; without a value there is no "Zobacz wersję demo" button |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | the mail account (with `MAIL_RELAY=1` handed to the boards encrypted); sender `MyHome <SMTP_USER>`, replies to `MAIL_FROM` |
-| `CLIENT_URL`, `SYSTEM_PASSWORD`, `INITIAL_OWNER_EMAIL`, `AUTH_DISABLED=1` | application address in mail links, the "system" account password, the first owner, login disabled (local environment) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_ADMIN` | the mail account (with `MAIL_RELAY=1` handed to the boards encrypted); sender `Mój Dom <SMTP_USER>`, replies to `MAIL_FROM` |
+| `CLIENT_URL`, `SYSTEM_PASSWORD`, `AUTH_DISABLED=1` | application address in mail links, the "system" account password, login disabled (local environment) |
 | `WEATHER_LOCATION` | home coordinates for the "Dom" weather tile |
 | `CLIENT_DIR` | directory with the client build served by the server (`core/client-static.ts`); set only by the Docker image |
 
-Values live only in environment variables: on Render in the service Environment, locally in `server/.env` (outside git, template `server/.env.example`).
+On the server only `MONGODB_URI` and `SYSTEM_PASSWORD` are environment variables, the rest is in the `app_settings` collection. Locally the values are in `server/.env` (outside git, template `server/.env.example`).
 
 In development the client talks to the server on port 4001 of the same host the page was opened from; in production to the address from `VITE_SERVER_URL`, and without this variable to `https://dom.mojeturnie.pl`. The value `same-origin` means the address the page was opened from. The addresses are in `client/src/core/http.ts`.
 
 ## Docker image (Oracle)
 
-On `vm-prod` the server and client run in one image (`deploy/oracle/Dockerfile`). Render and local development do not use Docker.
+On `vm-prod` the server and client run in one image (`deploy/oracle/Dockerfile`). Local development does not use Docker.
 
 | Branch | Channel | Tags in `ghcr.io/robertorlowski/my-home` |
 |---|---|---|
@@ -229,7 +230,7 @@ node test/e2e/run-layout.mjs
 
 ## Deployment
 
-The server and the client are deployed together from the `main` branch to Render (build started manually). A core change that alters the API needs the server to be deployed before the firmware.
+The server and the client are deployed together from the `main` branch: GitHub builds the image and `oracle-cloud/vm-prod/deploy-my-home.sh prod` installs it. A core change that alters the API needs the server to be deployed before the firmware.
 
 ## Known issues
 

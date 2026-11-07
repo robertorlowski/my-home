@@ -75,7 +75,7 @@ function isPublic(req: Request) {
 // Ścieżki bez rootId tylko dla użytkownika systemowego: pliki firmware, zajętość bazy, ręczne dodanie urządzenia.
 function systemOnly(req: Request) {
   if (req.path.startsWith('/firmware/') && req.method !== 'GET') return true;
-  if (req.path === '/devices/db-stats') return true;
+  if (req.path === '/devices/db-stats' || req.path === '/settings' || req.path === '/settings/read') return true;
   return req.method === 'POST' && req.path === '/devices';
 }
 
