@@ -194,18 +194,35 @@ export const getHpLastData = async (rootId: string) => {
   return lastData;
 }
 
-// GET /hp/all: rekordy od 1 stycznia bieżącego roku. Granica roku liczona w strefie
-// serwera (na Render UTC), nie w czasie warszawskim.
-// Dane od początku bieżącego roku w czasie warszawskim (do 2026-10-21: rok w strefie serwera, czyli UTC na Render).
-export const getHpAllData = async (rootId: string) => {
+// GET /hp/all: dane od początku bieżącego roku w czasie warszawskim (do 2026-10-21: rok w strefie serwera, czyli UTC na Render).
+// Kursor zamiast tablicy: 420 tys. rekordów (7.11.2026) w tablicy i jeden JSON zajmowały 2,1-2,5 GB pamięci.
+export const hpAllDataCursor = (rootId: string) => {
   const currentYear = formatInTimeZone(new Date(), TIME_ZONE, 'yyyy');
   const startOfCurrentYear = warsawDayBoundsUTC(`${currentYear}-01-01`).startUTC;
 
-  const doc = await HpEntryModel
+  return HpEntryModel
     .find({ rootId, createdAt: { $gte: startOfCurrentYear } })
     .sort({ createdAt: -1 })
-    .lean<HpEntry>();
-  return doc;
+    .lean<HpEntry>()
+    .cursor({ batchSize: 1000 });
+}
+
+// Tablica JSON kawałkami, po `batch` rekordów. Pierwszy rekord osobno, bo kontroler odczytuje go przed wysłaniem nagłówków.
+export async function* jsonArrayChunks(first: unknown, rest: AsyncIterable<unknown>, batch = 500) {
+  if (first === null) {
+    yield '[]';
+    return;
+  }
+  let chunk = `[${JSON.stringify(first)}`;
+  let count = 1;
+  for await (const record of rest) {
+    chunk += `,${JSON.stringify(record)}`;
+    if (++count % batch === 0) {
+      yield chunk;
+      chunk = '';
+    }
+  }
+  yield `${chunk}]`;
 }
 
 // CHPC podaje kod ostatniego błędu (ERR) i numer kolejny zdarzenia (ERRn).

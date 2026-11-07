@@ -48,7 +48,7 @@
 |---|---|---|
 | `POST /hp/add` | `co` | telemetry; reply `{operation, t_out}`; `deviceId` alone is enough (404/409 as in core) |
 | `GET /hp` | application | latest telemetry from memory + full PV summary |
-| `GET /hp/all` | application | data since the start of the year (CSV) |
+| `GET /hp/all` | application | data since the start of the year (CSV), streamed from a database cursor |
 | `GET /hp/dates` | application | days with data (`YYYY.MM.DD`) |
 | `GET /hp/4day?date=` or `?startDate=&endDate=` | application | records of a day / a range of days (Warsaw time) |
 | `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day\|hour` | application | hourly balance as on the utility meter (eLicznik): pump energy, PV from the inverter counters, grid import and export, G12w cost (`services/energy-balance.service.ts`) |
@@ -129,4 +129,5 @@ The whole-chain test (`test/e2e`, a bridge with the real `co` code and a simulat
 - **The balance covers the pump only**: `monthly-summary` computes grid import and export per hour like the utility, but only from the pump draw and PV production; eLicznik shows the whole house, so its import is higher (comparison 24–31.10.2026: about 0.1–0.2 kWh/h for the rest of the house). G12w rates and zone hours are hard-coded.
 - **An `hp` record is created only for a non-zero `HP.Ttarget`** — on purpose: the tank is never cooled down to 0 °C, so 0 means no reading from CHPC.
 - **Never join `hp` with `pv` in an aggregation** (32 MB Atlas sort limit, no `allowDiskUse`).
+- Export 2026-11-07: `GET /hp/all` sends the same JSON as a stream from a database cursor. Previously an array of 420,000 records and one JSON string took 2.1-2.5 GB of server memory.
 - Clean-up 2026-10-21: `GET /hp/all` computes the start of the year in Warsaw time; a new schedule shows its save error (`Requests.json`); the client calls `/hp/4day`; removed the unused `getSchedulesForDate`, `getHpDataForDay`, `assignLegacyHpData`, `/operation/getAndClear`, `utils/energy.ts`, `components/ResourceBlock.tsx` and the legacy time settings model (`settings` collection, `GET /settings`, `POST /settings/set`, the `devices.settings` field; old documents keep the field, the schema ignores it). `setOperationData` stays (used by `onPropertiesSaved`).

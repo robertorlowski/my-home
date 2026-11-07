@@ -567,7 +567,7 @@ Trasy składa [`server/src/core/routes.ts`](server/src/core/routes.ts): urządze
 | `GET /api/device/properties` | wartości domyślne urządzenia |
 | `PUT /api/device/properties` | zapis wartości domyślnych |
 | `GET /api/hp` | ostatnia telemetria (z bieżącym PV) |
-| `GET /api/hp/all` | dane od początku bieżącego roku (czas warszawski) |
+| `GET /api/hp/all` | dane od początku bieżącego roku (czas warszawski), strumieniem z kursora bazy |
 | `GET /api/hp/dates` | dni, dla których są dane |
 | `GET /api/hp/4day?date=...` | dane dla jednego dnia |
 | `GET /api/hp/monthly-summary?startDate=&endDate=&group=month\|day\|hour` | bilans energii w godzinach (pompa, PV z liczników, pobór i oddanie, koszt G12w) w miesiącach, dobach albo godzinach |

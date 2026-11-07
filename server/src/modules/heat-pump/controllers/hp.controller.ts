@@ -2,7 +2,9 @@
 // oraz odczyty dla klienta: bieżący stan, dni z danymi, dane dnia, podsumowanie
 // energii i kosztów G12w, ostatni błąd. Dane w kolekcji hp (models/hp.model.ts).
 import { Request, Response } from 'express'
-import { addHpData, getHpContactAt, getHpDiagnostics, getHpDiagRequest, HpDiagRequest, markHpContact, noteHpDiagnostics, setHpDiagRequest, getHpLastData, getHpAllData, getHpAvailableDates as getCachedHpAvailableDates, getHpLastError } from '../services/hp.service'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import { addHpData, getHpContactAt, getHpDiagnostics, getHpDiagRequest, HpDiagRequest, markHpContact, noteHpDiagnostics, setHpDiagRequest, getHpLastData, hpAllDataCursor, jsonArrayChunks, getHpAvailableDates as getCachedHpAvailableDates, getHpLastError } from '../services/hp.service'
 import { HpEntry, OperationEntry } from '../types'
 import { clearOperation, consumeManualForceOnStart, getOperationData, takeOperationActions } from '../services/operation.service'
 import { HpEntryModel } from '../models/hp.model'
@@ -41,14 +43,22 @@ export async function getHp(req: Request, res: Response) {
   }
 }
 
+// Eksport strumieniem, żeby pamięć serwera nie zależała od liczby rekordów. Odczyt pierwszego rekordu przed
+// nagłówkami: błąd bazy daje jeszcze 500, a późniejszy tylko przerywa odpowiedź, więc klient nie dostanie uciętego JSON-u jako poprawnego.
 export async function getHpAll(req: Request, res: Response) {
+  let cursor: ReturnType<typeof hpAllDataCursor> | undefined
   try {
-    const result = await getHpAllData(req.deviceRootId as string)
+    cursor = hpAllDataCursor(req.deviceRootId as string)
+    const first = await cursor.next()
     console.log("Get HP all data");
-    return res.status(200).send(result)
+    res.status(200).type('application/json')
+    await pipeline(Readable.from(jsonArrayChunks(first, cursor)), res)
   } catch (error) {
     console.log(error)
-    return res.status(500).send({ message: error })
+    if (!res.headersSent) return res.status(500).send({ message: String(error) })
+    res.destroy()
+  } finally {
+    await cursor?.close().catch(() => undefined)
   }
 }
 

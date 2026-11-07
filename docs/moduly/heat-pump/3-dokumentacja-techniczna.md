@@ -48,7 +48,7 @@
 |---|---|---|
 | `POST /hp/add` | `co` | telemetria; odpowiedź `{operation, t_out}`; sam `deviceId` wystarcza (404/409 jak w core) |
 | `GET /hp` | aplikacja | ostatnia telemetria z pamięci + pełne podsumowanie PV |
-| `GET /hp/all` | aplikacja | dane od początku roku (CSV) |
+| `GET /hp/all` | aplikacja | dane od początku roku (CSV), strumieniem z kursora bazy |
 | `GET /hp/dates` | aplikacja | dni z danymi (`YYYY.MM.DD`) |
 | `GET /hp/4day?date=` albo `?startDate=&endDate=` | aplikacja | rekordy dnia / zakresu dni (czas warszawski) |
 | `GET /hp/monthly-summary?startDate=&endDate=&group=month\|day\|hour` | aplikacja | bilans godzinowy jak w eLiczniku: energia pompy, PV z liczników falowników, pobór i oddanie, koszt G12w (`services/energy-balance.service.ts`) |
@@ -129,4 +129,5 @@ Test całego łańcucha (`test/e2e`, most z prawdziwym kodem `co` i symulowanym 
 - **Bilans to sama pompa**: `monthly-summary` liczy pobór i oddanie w godzinach jak dystrybutor, ale tylko z poboru pompy i produkcji PV; eLicznik pokazuje cały dom, więc jego pobór jest większy (porównanie 24–31.10.2026: ok. 0,1–0,2 kWh/h reszty domu). Stawki i godziny stref G12w są wpisane w kod.
 - **Rekord `hp` powstaje tylko przy niezerowym `HP.Ttarget`** — celowo: zbiornik nigdy nie jest chłodzony do 0 °C, więc 0 oznacza brak odczytu z CHPC.
 - **Nie łączyć `hp` z `pv` w agregacji** (limit 32 MB sortowania w Atlasie, brak `allowDiskUse`).
+- Eksport 2026-11-07: `GET /hp/all` wysyła ten sam JSON strumieniem z kursora bazy. Wcześniej tablica 420 tys. rekordów i jeden JSON zajmowały 2,1-2,5 GB pamięci serwera.
 - Porządki 2026-10-21: `GET /hp/all` liczy początek roku w czasie warszawskim; nowy harmonogram pokazuje błąd zapisu (`Requests.json`); klient woła `/hp/4day`; usunięte nieużywane `getSchedulesForDate`, `getHpDataForDay`, `assignLegacyHpData`, `/operation/getAndClear`, `utils/energy.ts`, `components/ResourceBlock.tsx` oraz starszy model ustawień czasowych (kolekcja `settings`, `GET /settings`, `POST /settings/set`, pole `devices.settings`; stare dokumenty zachowują to pole, schemat je pomija). `setOperationData` zostaje (używa go `onPropertiesSaved`).
