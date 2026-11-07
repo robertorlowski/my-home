@@ -74,14 +74,15 @@ With the adapter connected, "Brownout detected" and a start in programming mode 
 | `src/protocol.*` | `buildStateReport`, `applyStateResponse`, `buildModeBody`, `parseDefaultMinutes` |
 | `src/ota.*` | `parseOtaOffer` (`{version, url, sha256, request}`), `otaKey` (`version#request`), `shouldUpdate` (one attempt per request) |
 | `src/secrets.example.h` | template of `secrets.h` (outside git): `AP_PASSWORD` (empty = open AP; the firmware builds the network name `MyHome-Switch-XXXX` from the SN, the old `AP_SSID` is unused), `INSTALL_USER`, `INSTALL_PASSWORD`, `WIFI_SSID`, `WIFI_PASSWORD` |
-| `test/test_logic/test_main.cpp` | 12 `native` tests |
+| `src/net_recovery.*` | `NetRecovery`: time since the last server response and the next connection recovery step (`NetAction`) |
+| `test/test_logic/test_main.cpp` | 18 `native` tests |
 
 ## Constants
 
 | Constant | Value | Location |
 |---|---|---|
 | `DEVICE_TYPE` / `DEVICE_NAME` | `switch` / "Włącznik" | `firmware.hpp` |
-| `FW_VERSION` | `1.3.4` | `firmware.hpp` |
+| `FW_VERSION` | `1.3.7` | `firmware.hpp` |
 | `RELAY_PINS` / `RELAY_ACTIVE_HIGH` | `{2}` / `true` | `firmware.hpp` |
 | `DEFAULT_ON_MINUTES` / `MAX_ON_MINUTES` | 30 / 10080 | `firmware.hpp` |
 | `CLOUD_URL` | `https://dom.mojeturnie.pl/api/` (`esp32dev-local`: `http://192.168.55.9:4001/api/`) | `firmware.hpp`, `platformio.ini` |
@@ -93,6 +94,7 @@ With the adapter connected, "Brownout detected" and a start in programming mode 
 | `HTTP_TIMEOUT_MS` / `REGISTER_TIMEOUT_MS` / `OTA_TIMEOUT_MS` | 4 s / 8 s / 15 s | `switch.cpp` |
 | `STATUS_LOG_MS` | 30 s | `switch.cpp` |
 | `AP_ADDRESS` | `10.10.10.1` | `switch.cpp` |
+| `NetRecoveryTimes` | new connection 2 min, Wi-Fi again 5 min and every 5 min, restart 15 min (after a restart for lack of connection 60 min) | `net_recovery.hpp` |
 
 ## NVS (namespace `sw`)
 
@@ -102,6 +104,7 @@ With the adapter connected, "Brownout detected" and a start in programming mode 
 | `root_id` | Root ID from the registration reply (cleared on 404/409) |
 | `def_min` | default "Turn on" time on the controller page, from the cloud [min] |
 | `ota_tried` | the offer key `version#request` (`otaKey()`) after whose download the controller last restarted (one attempt per request, protection against an update loop; up to 1.0.3 the version alone) |
+| `net_rst` | restart for lack of connection (since 1.3.7): set just before it, cleared after the first server response; after such a start the reason is `no_cloud` |
 
 The relay state is not stored: after start the relays are off and the cloud restores the state.
 
@@ -185,7 +188,7 @@ pio device monitor -d devices/switch            # console 115200 through the P1 
 
 **Console log.** Lines `[ms since start] text` on UART0 115200 (P1 header): start (version, SN, Root ID, number of relays, cloud address), AP, Wi-Fi, registration with the reply and the OTA offer, every relay change with its cause (cloud, controller page, end of time), local changes sent to the cloud, HTTP errors, OTA steps. Every 30 s a `stan:` line (Wi-Fi with RSSI, registration, cloud, last HTTP, AP, relay 1). A 2 KB transmit buffer keeps the log from delaying the loop.
 
-**`native` tests** (`test/test_logic`): a timed on command from the cloud switches off by itself; a refreshed command extends the countdown without a state change; on without a limit; a local change wins over the cloud until confirmed (including the change number); a local timer and the minutes to send; a local "Schedule" switches off only without the cloud; state report JSON; applying the reply; `PUT switch/mode` JSON; default time from `settings`; OTA offer; one attempt per request (`version#request`). **Wi-Fi, HTTP, WebSocket and the pages have no automatic tests** — without a board use the server-side simulator: `node scripts/simulate-switch.mjs [--relays N] [--history]` with `npm run local`.
+**`native` tests** (`test/test_logic`): a timed on command from the cloud switches off by itself; a refreshed command extends the countdown without a state change; on without a limit; a local change wins over the cloud until confirmed (including the change number); a local timer and the minutes to send; a local "Schedule" switches off only without the cloud; state report JSON; applying the reply; `PUT switch/mode` JSON; default time from `settings`; OTA offer; one attempt per request (`version#request`); connection recovery: order of steps, counting from the server response, no restart with a relay on, 60 min after a restart for lack of connection, `millis()` wrap-around. **Wi-Fi, HTTP, WebSocket and the pages have no automatic tests** — without a board use the server-side simulator: `node scripts/simulate-switch.mjs [--relays N] [--history]` with `npm run local`.
 
 ## Known issues and notes
 

@@ -74,14 +74,15 @@ Przy podłączonej przejściówce zaobserwowano „Brownout detected” i start 
 | `src/protocol.*` | `buildStateReport`, `applyStateResponse`, `buildModeBody`, `parseDefaultMinutes` |
 | `src/ota.*` | `parseOtaOffer` (`{version, url, sha256, request}`), `otaKey` (`wersja#request`), `shouldUpdate` (jedna próba na zlecenie) |
 | `src/secrets.example.h` | wzór `secrets.h` (poza gitem): `AP_PASSWORD` (puste = AP otwarty; nazwę sieci `MyHome-Switch-XXXX` firmware składa z SN, dawne `AP_SSID` nie jest używane), `INSTALL_USER`, `INSTALL_PASSWORD`, `WIFI_SSID`, `WIFI_PASSWORD` |
-| `test/test_logic/test_main.cpp` | 12 testów `native` |
+| `src/net_recovery.*` | `NetRecovery`: czas od ostatniej odpowiedzi serwera i kolejny krok naprawy łączności (`NetAction`) |
+| `test/test_logic/test_main.cpp` | 18 testów `native` |
 
 ## Stałe
 
 | Stała | Wartość | Miejsce |
 |---|---|---|
 | `DEVICE_TYPE` / `DEVICE_NAME` | `switch` / „Włącznik” | `firmware.hpp` |
-| `FW_VERSION` | `1.3.4` | `firmware.hpp` |
+| `FW_VERSION` | `1.3.7` | `firmware.hpp` |
 | `RELAY_PINS` / `RELAY_ACTIVE_HIGH` | `{2}` / `true` | `firmware.hpp` |
 | `DEFAULT_ON_MINUTES` / `MAX_ON_MINUTES` | 30 / 10080 | `firmware.hpp` |
 | `CLOUD_URL` | `https://dom.mojeturnie.pl/api/` (`esp32dev-local`: `http://192.168.55.9:4001/api/`) | `firmware.hpp`, `platformio.ini` |
@@ -93,6 +94,7 @@ Przy podłączonej przejściówce zaobserwowano „Brownout detected” i start 
 | `HTTP_TIMEOUT_MS` / `REGISTER_TIMEOUT_MS` / `OTA_TIMEOUT_MS` | 4 s / 8 s / 15 s | `switch.cpp` |
 | `STATUS_LOG_MS` | 30 s | `switch.cpp` |
 | `AP_ADDRESS` | `10.10.10.1` | `switch.cpp` |
+| `NetRecoveryTimes` | nowe połączenie 2 min, Wi-Fi od nowa 5 min i co 5 min, restart 15 min (po restarcie z braku łączności 60 min) | `net_recovery.hpp` |
 
 ## NVS (przestrzeń `sw`)
 
@@ -102,6 +104,7 @@ Przy podłączonej przejściówce zaobserwowano „Brownout detected” i start 
 | `root_id` | Root ID z odpowiedzi na zgłoszenie (kasowany przy 404/409) |
 | `def_min` | domyślny czas „Turn on” na stronie sterownika, z chmury [min] |
 | `ota_tried` | klucz oferty `wersja#request` (`otaKey()`), po której pobraniu sterownik ostatnio się zrestartował (jedna próba na zlecenie, ochrona przed pętlą aktualizacji; do 1.0.3 sama wersja) |
+| `net_rst` | restart z braku łączności (od 1.3.7): ustawiany tuż przed nim, kasowany po pierwszej odpowiedzi serwera; po takim starcie przyczyna `no_cloud` |
 
 Stan przekaźników nie jest zapisywany: po starcie są wyłączone, a stan przywraca chmura.
 
@@ -185,7 +188,7 @@ pio device monitor -d devices/switch            # konsola 115200 przez złącze 
 
 **Dziennik na konsoli.** Linie `[ms od startu] treść` na UART0 115200 (złącze P1): start (wersja, SN, Root ID, liczba przekaźników, adres chmury), AP, Wi-Fi, zgłoszenie z odpowiedzią i ofertą OTA, każda zmiana przekaźnika z przyczyną (chmura, strona sterownika, koniec czasu), zmiany lokalne wysłane do chmury, błędy HTTP, kroki OTA. Co 30 s linia `stan:` (Wi-Fi z RSSI, zgłoszenie, chmura, ostatni HTTP, AP, przekaźnik 1). Bufor nadawania 2 KB, więc dziennik nie opóźnia pętli.
 
-**Testy `native`** (`test/test_logic`): włączenie na czas z chmury wyłącza się samo; odświeżenie polecenia przedłuża odliczanie bez zmiany stanu; włączenie bez limitu; zmiana lokalna wygrywa z chmurą do potwierdzenia (także numer zmiany); timer lokalny i minuty do wysłania; „Schedule” lokalny wyłącza tylko bez chmury; JSON zgłoszenia stanu; stosowanie odpowiedzi; JSON `PUT switch/mode`; domyślny czas z `settings`; oferta OTA; jedna próba na zlecenie (`wersja#request`). **Wi-Fi, HTTP, WebSocket i strony nie mają testów automatycznych** — bez płytki służy symulator po stronie serwera: `node scripts/simulate-switch.mjs [--relays N] [--history]` przy `npm run local`.
+**Testy `native`** (`test/test_logic`): włączenie na czas z chmury wyłącza się samo; odświeżenie polecenia przedłuża odliczanie bez zmiany stanu; włączenie bez limitu; zmiana lokalna wygrywa z chmurą do potwierdzenia (także numer zmiany); timer lokalny i minuty do wysłania; „Schedule” lokalny wyłącza tylko bez chmury; JSON zgłoszenia stanu; stosowanie odpowiedzi; JSON `PUT switch/mode`; domyślny czas z `settings`; oferta OTA; jedna próba na zlecenie (`wersja#request`); naprawa łączności: kolejność kroków, liczenie od odpowiedzi serwera, brak restartu przy włączonym przekaźniku, 60 min po restarcie z braku łączności, przekręcenie `millis()`. **Wi-Fi, HTTP, WebSocket i strony nie mają testów automatycznych** — bez płytki służy symulator po stronie serwera: `node scripts/simulate-switch.mjs [--relays N] [--history]` przy `npm run local`.
 
 ## Znane problemy i uwagi
 

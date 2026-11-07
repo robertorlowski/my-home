@@ -266,6 +266,32 @@ describe('Włącznik (switch)', () => {
       expect(diag.heapFree).toBe(60000);
       expect(diag.weather).toBeUndefined();
     });
+
+    it('zapisuje naprawę łączności bez restartu i restart z braku łączności (firmware 1.3.7)', async () => {
+      const { body } = await register('4CC382C52107');
+      const api = (path: string) => `/api/${path}?rootId=${body.rootId}`;
+      const state = (uptimeS: number, diag: object) => request(app).post(api('switch/state'))
+        .send({ uptimeS, relays: [{ on: false, changedS: uptimeS }], diag }).expect(200);
+      await state(600, { reset: 'power_on', boot: 3, net: { http: 0, wifi: 0 } });
+      // ta sama płytka, liczniki wzrosły: łączność wróciła bez restartu
+      await state(1200, { reset: 'power_on', boot: 3, net: { http: 1, wifi: 2 } });
+      let diag = (await request(app).get(api('switch/diagnostics')).expect(200)).body;
+      expect(diag.net).toEqual({ http: 1, wifi: 2 });
+      // bez zmiany liczników bez wpisu
+      await state(1205, { reset: 'power_on', boot: 3, net: { http: 1, wifi: 2 } });
+      await state(5, { reset: 'no_cloud', boot: 4, net: { http: 0, wifi: -1 } });
+      const day = (await request(app).get(api('operations')).expect(200)).body;
+      const fixes = day.done.filter((entry: { action: string }) => entry.action === 'Naprawa łączności');
+      expect(fixes).toHaveLength(1);
+      expect(fixes[0].conditions).toBe('przerwa w zgłoszeniach: 0 min; nowe połączenie z serwerem: 1, ponowne łączenie z Wi-Fi: 2');
+      const restarts = day.done.filter((entry: { action: string }) => entry.action === 'Restart sterownika');
+      expect(restarts).toHaveLength(1);
+      expect(restarts[0].reason).toContain('restart po braku łączności z serwerem');
+      expect(restarts[0].conditions).toBe('start nr 4');
+      // błędne net jest pomijane
+      diag = (await request(app).get(api('switch/diagnostics')).expect(200)).body;
+      expect(diag.net).toBeUndefined();
+    });
   });
 
   describe('pogoda z Open-Meteo (firmware 1.1.3)', () => {

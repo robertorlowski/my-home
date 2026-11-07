@@ -24,6 +24,9 @@ struct ControllerDiag {
   uint32_t heapFree = 0;
   uint32_t heapMin = 0;
   uint32_t heapBlock = 0;
+  // od 1.3.7 (net_recovery.hpp): od startu nowe połączenia z serwerem i ponowne łączenia z Wi-Fi z braku łączności
+  uint32_t netHttpResets = 0;
+  uint32_t netWifiReconnects = 0;
   // pogoda: liczba miejsc z chmury, udane i nieudane pobrania od startu, wynik ostatniej próby (kod HTTP albo ujemny
   // błąd HTTPClient, 0 = jeszcze nie było), błąd mbedtls z WiFiClientSecure (0 = brak), największy blok sterty tuż
   // przed próbą i chwila próby (millis, 0 = nie było)

@@ -13,10 +13,11 @@ import { SwitchRelayModel } from '../models/switch-relay.model';
 // HTTPClient, 1 = 200 z nieczytelną odpowiedzią, 0 = brak próby), błąd mbedtls, największy blok sterty przed próbą,
 // sekundy od próby.
 export type ControllerWeatherDiag = { places: number; ok: number; fail: number; code: number; tls: number; heapBlock: number; agoS?: number };
-// heapFree, heapMin, heapBlock (od 1.3.2): pamięć sterty sterownika w bajtach.
+// heapFree, heapMin, heapBlock (od 1.3.2): pamięć sterty sterownika w bajtach. net (od 1.3.7): od startu nowe połączenia
+// z serwerem (http) i ponowne łączenia z Wi-Fi (wifi) z braku odpowiedzi serwera (firmware net_recovery.hpp).
 export type ControllerDiag = {
   reset: string; boot: number; wifiDrops?: number; rssi?: number; httpMs?: number;
-  heapFree?: number; heapMin?: number; heapBlock?: number; weather?: ControllerWeatherDiag;
+  heapFree?: number; heapMin?: number; heapBlock?: number; net?: { http: number; wifi: number }; weather?: ControllerWeatherDiag;
 };
 
 // nazwy jak esp_reset_reason w firmware (switch.cpp, resetReasonName)
@@ -31,6 +32,7 @@ const RESET_NAMES: Record<string, string> = {
   deepsleep: 'wybudzenie z uśpienia',
   brownout: 'spadek napięcia zasilania (brownout)',
   sdio: 'reset SDIO',
+  no_cloud: 'restart po braku łączności z serwerem (sterownik, od 1.3.7)',
   unknown: 'nieznana',
 };
 export const resetReasonText = (reset: string) => RESET_NAMES[reset] ?? reset;
@@ -57,6 +59,12 @@ function parseWeatherDiag(input: unknown): ControllerWeatherDiag | undefined {
   };
 }
 
+function parseNetDiag(input: unknown): { http: number; wifi: number } | undefined {
+  const value = input as Record<string, unknown> | undefined;
+  if (!value || typeof value !== 'object' || !isCount(value.http) || !isCount(value.wifi)) return undefined;
+  return { http: value.http as number, wifi: value.wifi as number };
+}
+
 // Pole diag ze zgłoszenia; brak albo błędne = undefined (stan przekaźników jest przyjmowany i tak).
 export function parseControllerDiag(body: unknown): ControllerDiag | undefined {
   const diag = ((body ?? {}) as { diag?: unknown }).diag as Record<string, unknown> | undefined;
@@ -71,18 +79,38 @@ export function parseControllerDiag(body: unknown): ControllerDiag | undefined {
     ...(isCount(diag.heapFree) ? { heapFree: diag.heapFree as number } : {}),
     ...(isCount(diag.heapMin) ? { heapMin: diag.heapMin as number } : {}),
     ...(isCount(diag.heapBlock) ? { heapBlock: diag.heapBlock as number } : {}),
+    ...(parseNetDiag(diag.net) ? { net: parseNetDiag(diag.net) } : {}),
     ...(parseWeatherDiag(diag.weather) ? { weather: parseWeatherDiag(diag.weather) } : {}),
   };
 }
 
 const label = (relay: { name?: string; relay: number }) => relay.name?.trim() || `Przekaźnik ${relay.relay}`;
 
+// Naprawa łączności bez restartu (firmware 1.3.7): liczniki net wzrosły w tym samym starcie, więc sterownik odzyskał
+// łączność nowym połączeniem albo ponownym łączeniem z Wi-Fi. Przerwa = czas od poprzedniego zgłoszenia.
+async function noteNetRecovery(rootId: string, previous: Saved, diag: ControllerDiag, now: Date) {
+  if (!previous.net || !diag.net) return;
+  const http = diag.net.http - previous.net.http;
+  const wifi = diag.net.wifi - previous.net.wifi;
+  if (http <= 0 && wifi <= 0) return;
+  const minutes = Math.round((now.getTime() - previous.at.getTime()) / 60000);
+  const steps = [http > 0 ? `nowe połączenie z serwerem: ${http}` : '', wifi > 0 ? `ponowne łączenie z Wi-Fi: ${wifi}` : '']
+    .filter(Boolean).join(', ');
+  await logOperation(rootId, {
+    ...controllerMeta('Sterownik', 'Brak odpowiedzi serwera, sterownik sam przywrócił łączność.'),
+    conditions: `przerwa w zgłoszeniach: ${minutes} min; ${steps}`,
+  }, 'Naprawa łączności', { at: now });
+}
+
 export async function noteControllerDiag(rootId: string, diag: ControllerDiag, uptimeS: number | undefined, now = new Date()) {
   const previous = lastDiag.get(rootId);
   const bootAt = uptimeS !== undefined ? new Date(now.getTime() - uptimeS * 1000) : undefined;
   lastDiag.set(rootId, { ...diag, at: now, uptimeS, bootAt });
   const newBoot = previous ? previous.boot !== diag.boot : uptimeS !== undefined && uptimeS < FRESH_BOOT_S;
-  if (!newBoot) return;
+  if (!newBoot) {
+    if (previous) await noteNetRecovery(rootId, previous, diag, now);
+    return;
+  }
 
   // włączenie przekaźnika tuż przed startem: historia ma je z czasem ze sterownika (switch.service.ts)
   const at = bootAt ?? now;

@@ -72,11 +72,12 @@ In every `loop()` pass: web pages, WebSocket and the relay countdown. Every 1 s 
 
 1. Access point: off after 1 min connected to Wi-Fi, on after 1 min without Wi-Fi.
 2. Every 30 s a status line on the console.
-3. No Wi-Fi — done.
-4. Not registered in this start → `POST devices/register` (every 30 s until it succeeds); not registered — done.
-5. Unsent local changes → `PUT switch/mode` (every 5 s or immediately).
-6. State exchange every 5 s or immediately after a change.
-7. OTA: when there is an offer (a request from the application), the cloud replies, all relays are off and there are no unsent changes; one attempt per request.
+3. Connection recovery when the server has not responded for 2 min (section below).
+4. No Wi-Fi — done.
+5. Not registered in this start → `POST devices/register` (every 30 s until it succeeds); not registered — done.
+6. Unsent local changes → `PUT switch/mode` (every 5 s or immediately).
+7. State exchange every 5 s or immediately after a change.
+8. OTA: when there is an offer (a request from the application), the cloud replies, all relays are off and there are no unsent changes; one attempt per request.
 
 There is one persistent HTTPS connection (keep-alive), request timeout 4 s, registration 8 s. A failed state exchange is not retried — a new one follows in 5 s.
 
@@ -94,6 +95,22 @@ stateDiagram-v2
 ```
 
 The `MyHome-Switch-XXXX` AP is open by default (password shorter than 8 characters or empty). It does not run permanently, because the `/` page lets anyone switch the relay without a login. One minute after connecting is enough for the phone to see the result of saving Wi-Fi on `/install`. With the AP off, the pages are at the controller's IP address in the home network.
+
+## Connection recovery
+
+Since 1.3.7 (`net_recovery.hpp`). The time without a connection counts from the last HTTP response of the server, any response, including an error, because a response means the network works. Before the first response it counts from the board start. The steps run in order:
+
+| No response for | Step |
+|---|---|
+| 2 min | close the persistent connection to the server; the next request opens a new one |
+| 5 min, then every 5 min | disconnect from the router and connect to Wi-Fi again (new address from DHCP) |
+| 15 min | restart the board, only when all relays are off and there are no unsent changes |
+
+- A restart turns the relays off, and without the cloud nothing restores their state. With a relay on the board does not restart, it keeps reconnecting to the router every 5 min.
+- Before the restart the board stores `net_rst` in NVS. After such a start it reports the reason `no_cloud`, and the next restart happens only after 60 min without a connection. The first server response clears `net_rst`.
+- Without a saved Wi-Fi network, and while someone is connected to the board's AP (setup on `/install`), the steps are not run.
+- In the state report `diag.net` gives the number of new connections (`http`) and Wi-Fi reconnects (`wifi`) since the start. The server adds them to the "Controller restart" entry of the operation log.
+- The controller cannot unblock a hung router. The steps help when the connection on the board side hangs.
 
 ## Over-the-air update (OTA)
 

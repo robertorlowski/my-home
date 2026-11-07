@@ -1,13 +1,15 @@
 // Testy native (pio test -e native) logiki włącznika niezależnej od sprzętu: przekaźniki
 // (polecenia chmury, odliczanie, zmiany ze strony i ich pierwszeństwo), JSON wymiany z
-// chmurą i oferta OTA. Pliki .cpp z src są dołączane bezpośrednio (native nie buduje src).
+// chmurą, oferta OTA i naprawa łączności. Pliki .cpp z src są dołączane bezpośrednio (native nie buduje src).
 #include <unity.h>
 
 #include <string>
 
+#include <net_recovery.hpp>
 #include <ota.hpp>
 #include <protocol.hpp>
 #include <relays.hpp>
+#include "../../src/net_recovery.cpp"
 #include "../../src/ota.cpp"
 #include "../../src/protocol.cpp"
 #include "../../src/relays.cpp"
@@ -113,6 +115,8 @@ void test_state_report_with_diag()
   diag.heapFree = 61000;
   diag.heapMin = 30500;
   diag.heapBlock = 40000;
+  diag.netHttpResets = 1;
+  diag.netWifiReconnects = 4;
   diag.weatherPlaces = 2;
   diag.weatherOk = 3;
   diag.weatherFail = 5;
@@ -123,7 +127,7 @@ void test_state_report_with_diag()
   const std::string json = buildStateReport(bank, 4000, &diag);
   TEST_ASSERT_EQUAL_STRING("{\"uptimeS\":4,\"relays\":[{\"on\":false,\"changedS\":4}],"
     "\"diag\":{\"reset\":\"brownout\",\"boot\":7,\"wifiDrops\":2,\"rssi\":-63,\"httpMs\":840,"
-    "\"heapFree\":61000,\"heapMin\":30500,\"heapBlock\":40000,\"weather\":{\"places\":2,\"ok\":3,\"fail\":5,"
+    "\"heapFree\":61000,\"heapMin\":30500,\"heapBlock\":40000,\"net\":{\"http\":1,\"wifi\":4},\"weather\":{\"places\":2,\"ok\":3,\"fail\":5,"
     "\"code\":-1,\"tls\":-32512,\"heapBlock\":12000,\"agoS\":3}}}", json.c_str());
 }
 
@@ -199,6 +203,71 @@ void test_ota_offer_per_request()
   TEST_ASSERT_FALSE(parseOtaOffer(document.as<JsonVariantConst>(), offer));
 }
 
+// od 1.3.7: naprawa łączności (net_recovery.hpp), czasy w minutach od startu bez odpowiedzi serwera
+constexpr uint32_t MIN = 60000;
+
+void test_net_recovery_steps()
+{
+  NetRecovery net;
+  net.begin(0, false);
+  TEST_ASSERT_TRUE(net.next(2 * MIN - 1, true) == NetAction::None);
+  TEST_ASSERT_TRUE(net.next(2 * MIN, true) == NetAction::ResetHttp);
+  TEST_ASSERT_TRUE(net.next(3 * MIN, true) == NetAction::None);
+  TEST_ASSERT_TRUE(net.next(5 * MIN, true) == NetAction::ReconnectWifi);
+  TEST_ASSERT_TRUE(net.next(9 * MIN, true) == NetAction::None);
+  TEST_ASSERT_TRUE(net.next(10 * MIN, true) == NetAction::ReconnectWifi);
+  TEST_ASSERT_TRUE(net.next(15 * MIN, true) == NetAction::Restart);
+  TEST_ASSERT_EQUAL_UINT32(1, net.httpResets());
+  TEST_ASSERT_EQUAL_UINT32(2, net.wifiReconnects());
+}
+
+void test_net_recovery_online_resets_clock()
+{
+  NetRecovery net;
+  net.begin(0, false);
+  TEST_ASSERT_TRUE(net.next(2 * MIN, true) == NetAction::ResetHttp);
+  net.online(4 * MIN);
+  TEST_ASSERT_TRUE(net.next(5 * MIN, true) == NetAction::None);
+  TEST_ASSERT_TRUE(net.next(6 * MIN, true) == NetAction::ResetHttp);
+  TEST_ASSERT_TRUE(net.next(9 * MIN, true) == NetAction::ReconnectWifi);
+}
+
+// włączony przekaźnik: bez restartu, dalej ponowne łączenie z Wi-Fi co 5 min
+void test_net_recovery_no_restart_with_relay_on()
+{
+  NetRecovery net;
+  net.begin(0, false);
+  net.next(2 * MIN, false);
+  net.next(5 * MIN, false);
+  net.next(10 * MIN, false);
+  TEST_ASSERT_TRUE(net.next(15 * MIN, false) == NetAction::ReconnectWifi);
+  TEST_ASSERT_TRUE(net.next(16 * MIN, false) == NetAction::None);
+  TEST_ASSERT_TRUE(net.next(16 * MIN, true) == NetAction::Restart);
+}
+
+// po restarcie z braku łączności kolejny dopiero po 60 min; odpowiedź serwera wraca do 15 min
+void test_net_recovery_after_net_restart()
+{
+  NetRecovery net;
+  net.begin(0, true);
+  TEST_ASSERT_TRUE(net.afterNetRestart());
+  TEST_ASSERT_TRUE(net.next(15 * MIN, true) == NetAction::ReconnectWifi);
+  TEST_ASSERT_TRUE(net.next(59 * MIN, true) == NetAction::ReconnectWifi);
+  TEST_ASSERT_TRUE(net.next(60 * MIN, true) == NetAction::Restart);
+  net.online(61 * MIN);
+  TEST_ASSERT_FALSE(net.afterNetRestart());
+  TEST_ASSERT_TRUE(net.next(76 * MIN, true) == NetAction::Restart);
+}
+
+// millis() przekręca się po ok. 49 dniach
+void test_net_recovery_millis_wrap()
+{
+  NetRecovery net;
+  net.begin(0xFFFFFFFFUL - MIN + 1, false);
+  TEST_ASSERT_TRUE(net.next(MIN - 1, true) == NetAction::None);
+  TEST_ASSERT_TRUE(net.next(MIN, true) == NetAction::ResetHttp);
+}
+
 int main()
 {
   UNITY_BEGIN();
@@ -215,5 +284,10 @@ int main()
   RUN_TEST(test_default_minutes_from_settings);
   RUN_TEST(test_ota_offer);
   RUN_TEST(test_ota_offer_per_request);
+  RUN_TEST(test_net_recovery_steps);
+  RUN_TEST(test_net_recovery_online_resets_clock);
+  RUN_TEST(test_net_recovery_no_restart_with_relay_on);
+  RUN_TEST(test_net_recovery_after_net_restart);
+  RUN_TEST(test_net_recovery_millis_wrap);
   return UNITY_END();
 }

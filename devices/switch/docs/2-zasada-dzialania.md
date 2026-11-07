@@ -72,11 +72,12 @@ W każdym obiegu `loop()`: strony WWW, WebSocket i odliczanie przekaźników. Co
 
 1. Punkt dostępowy: wyłączenie po 1 min połączenia z Wi-Fi, włączenie po 1 min bez Wi-Fi.
 2. Co 30 s linia stanu na konsoli.
-3. Bez Wi-Fi — koniec.
-4. Brak zgłoszenia w tym starcie → `POST devices/register` (co 30 s do skutku); bez zgłoszenia — koniec.
-5. Niewysłane zmiany lokalne → `PUT switch/mode` (co 5 s albo od razu).
-6. Wymiana stanu co 5 s albo od razu po zmianie.
-7. OTA: gdy jest oferta (zlecenie z aplikacji), chmura odpowiada, wszystkie przekaźniki są wyłączone i nie ma niewysłanych zmian; jedna próba na zlecenie.
+3. Naprawa łączności, gdy serwer nie odpowiada od 2 min (sekcja niżej).
+4. Bez Wi-Fi — koniec.
+5. Brak zgłoszenia w tym starcie → `POST devices/register` (co 30 s do skutku); bez zgłoszenia — koniec.
+6. Niewysłane zmiany lokalne → `PUT switch/mode` (co 5 s albo od razu).
+7. Wymiana stanu co 5 s albo od razu po zmianie.
+8. OTA: gdy jest oferta (zlecenie z aplikacji), chmura odpowiada, wszystkie przekaźniki są wyłączone i nie ma niewysłanych zmian; jedna próba na zlecenie.
 
 Połączenie HTTPS jest jedno i stałe (keep-alive), limit zapytania 4 s, zgłoszenia 8 s. Nieudana wymiana stanu nie jest ponawiana — za 5 s idzie nowa.
 
@@ -94,6 +95,22 @@ stateDiagram-v2
 ```
 
 AP `MyHome-Switch-XXXX` jest domyślnie otwarty (hasło krótsze niż 8 znaków albo puste). Nie działa stale, bo strona `/` pozwala przełączać przekaźnik bez logowania. Minuta po połączeniu wystarcza, żeby telefon zobaczył wynik zapisu Wi-Fi na `/install`. Przy wyłączonym AP strony są pod adresem IP sterownika w sieci domowej.
+
+## Naprawa łączności
+
+Od 1.3.7 (`net_recovery.hpp`). Czas braku łączności liczy się od ostatniej odpowiedzi HTTP serwera, dowolnej, także z błędem, bo odpowiedź oznacza, że sieć działa. Przed pierwszą odpowiedzią liczy się od startu płytki. Kroki są wykonywane kolejno:
+
+| Brak odpowiedzi | Krok |
+|---|---|
+| 2 min | zamknięcie stałego połączenia z serwerem; następne zapytanie otwiera nowe |
+| 5 min, potem co 5 min | rozłączenie z routerem i ponowne łączenie z Wi-Fi (nowy adres z DHCP) |
+| 15 min | restart płytki, tylko gdy wszystkie przekaźniki są wyłączone i nie ma niewysłanych zmian |
+
+- Restart wyłącza przekaźniki, a bez chmury nikt nie przywróci ich stanu. Przy włączonym przekaźniku płytka nie restartuje się, tylko dalej co 5 min łączy się z routerem od nowa.
+- Przed restartem płytka zapisuje w NVS `net_rst`. Po takim starcie wysyła przyczynę `no_cloud`, a kolejny restart następuje dopiero po 60 min bez łączności. Pierwsza odpowiedź serwera kasuje `net_rst`.
+- Bez zapisanej sieci Wi-Fi i wtedy, gdy ktoś jest połączony z AP płytki (konfiguracja na `/install`), kroki nie są wykonywane.
+- W zgłoszeniu stanu `diag.net` podaje liczbę nowych połączeń (`http`) i ponownych łączeń z Wi-Fi (`wifi`) od startu. Serwer dopisuje je do wpisu „Restart sterownika” w dzienniku operacji.
+- Zablokowanego routera sterownik nie odblokuje. Kroki pomagają, gdy zawiesiło się połączenie po stronie płytki.
 
 ## Aktualizacja przez sieć (OTA)
 

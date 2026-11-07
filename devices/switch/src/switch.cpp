@@ -14,6 +14,7 @@
 // Od 1.3.0 przekaźnik poczty (devices/common/mail_relay): klucz płytki w zgłoszeniu (mailKey), komunikat WebSocket
 // „mail” budzi zadanie, które wysyła maile chmury z domowego łącza (dane SMTP z chmury, tylko w RAM).
 // Od 1.3.1 kod pogody jest współdzielony z `co` przez devices/common/weather.
+// Od 1.3.7 naprawa łączności bez odpowiedzi serwera: nowe połączenie, ponowne Wi-Fi, restart (net_recovery.hpp).
 #include <Arduino.h>
 #include <cstdarg>
 #include <HTTPClient.h>
@@ -29,6 +30,7 @@
 
 #include <firmware.hpp>
 #include <mail_relay.hpp>
+#include <net_recovery.hpp>
 #include <ota.hpp>
 #include <protocol.hpp>
 #include <relays.hpp>
@@ -45,6 +47,8 @@ constexpr const char *KEY_DEFAULT_MINUTES = "def_min";
 // klucz oferty (wersja#zlecenie, ota.hpp), po której pobraniu sterownik ostatnio się zrestartował
 // (ochrona przed pętlą OTA)
 constexpr const char *KEY_OTA_TRIED = "ota_tried";
+// restart z braku łączności (net_recovery.hpp): ustawiany tuż przed nim, kasowany po pierwszej odpowiedzi serwera
+constexpr const char *KEY_NET_RESTART = "net_rst";
 
 constexpr uint32_t TICK_MS = 1000;
 constexpr uint32_t EXCHANGE_INTERVAL_MS = 5000;
@@ -113,6 +117,9 @@ WeatherPlaces weatherPlaces;
 
 // Przekaźnik poczty (od 1.3.0): własne zadanie FreeRTOS, pętla podaje mu Root ID, odpowiedź na zgłoszenie i „mail”.
 mail_relay::MailRelay mailRelay;
+
+// Naprawa łączności (od 1.3.7): czas od ostatniej odpowiedzi serwera i kolejne kroki.
+NetRecovery netRecovery;
 
 OtaOffer otaOffer;
 bool otaOfferReceived = false;
@@ -235,6 +242,11 @@ bool send(const char *method, const String &url, const String &body, String *res
   if (!(secure ? http.begin(secureClient, url) : http.begin(plainClient, url))) return false;
   http.addHeader("Content-Type", "application/json");
   lastHttpStatus = http.sendRequest(method, body);
+  // dowolna odpowiedź HTTP (także błąd serwera) znaczy, że sieć działa
+  if (lastHttpStatus > 0) {
+    if (netRecovery.afterNetRestart()) preferences.remove(KEY_NET_RESTART);
+    netRecovery.online(millis());
+  }
   const bool ok = lastHttpStatus >= 200 && lastHttpStatus < 300;
   if (ok && response) *response = http.getString();
   http.end();
@@ -374,6 +386,8 @@ void exchangeState(uint32_t nowMs)
   diag.heapMin = ESP.getMinFreeHeap();
   diag.heapBlock = ESP.getMaxAllocHeap();
   diag.weatherPlaces = weatherPlaces.size();
+  diag.netHttpResets = netRecovery.httpResets();
+  diag.netWifiReconnects = netRecovery.wifiReconnects();
   const std::string body = buildStateReport(bank, nowMs, &diag, &weatherPlaces);
   const uint32_t sentMs = millis();
   const bool sent = send("POST", requestUrl("switch/state"), body.c_str(), &response);
@@ -548,7 +562,41 @@ void logStatus(uint32_t nowMs)
     bank.relay(0).on ? "ON" : "off");
 }
 
-// Co 1 s z loop(): AP, zgłoszenie (co 30 s do skutku), zmiany lokalne, wymiana stanu
+// Naprawa łączności (net_recovery.hpp): bez odpowiedzi serwera kolejno nowe połączenie (2 min), ponowne łączenie
+// z routerem (5 min, potem co 5 min) i restart płytki (15 min, tylko przy wyłączonych przekaźnikach). Nie działa bez
+// zapisanej sieci ani wtedy, gdy ktoś jest połączony z AP płytki (konfiguracja na /install).
+void recoverNetwork(uint32_t nowMs)
+{
+  if (wifiSsid.length() == 0 || (accessPointOn && WiFi.softAPgetStationNum() > 0)) return;
+  const NetAction action = netRecovery.next(nowMs, allRelaysOff() && !bank.anyPending());
+  const unsigned long minutes = netRecovery.offlineMs(nowMs) / 60000;
+  switch (action) {
+  case NetAction::None:
+    return;
+  case NetAction::ResetHttp:
+    logf("łączność: brak odpowiedzi serwera od %lu min, nowe połączenie", minutes);
+    http.end();
+    secureClient.stop();
+    plainClient.stop();
+    return;
+  case NetAction::ReconnectWifi:
+    logf("łączność: brak odpowiedzi serwera od %lu min, ponowne łączenie z Wi-Fi %s", minutes, wifiSsid.c_str());
+    http.end();
+    secureClient.stop();
+    plainClient.stop();
+    WiFi.disconnect();
+    delay(100);
+    WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
+    return;
+  case NetAction::Restart:
+    logf("łączność: brak odpowiedzi serwera od %lu min, restart płytki", minutes);
+    preferences.putBool(KEY_NET_RESTART, true);
+    delay(100);
+    ESP.restart();
+  }
+}
+
+// Co 1 s z loop(): AP, naprawa łączności, zgłoszenie (co 30 s do skutku), zmiany lokalne, wymiana stanu
 // (co 5 s albo od razu po zmianie), OTA.
 void fetchWeather(size_t index, uint32_t nowMs);
 
@@ -556,6 +604,7 @@ void tick(uint32_t nowMs)
 {
   updateAccessPoint(nowMs);
   logStatus(nowMs);
+  recoverNetwork(nowMs);
   if (WiFi.status() != WL_CONNECTED) return;
 
   if (!registeredThisBoot) {
@@ -890,6 +939,11 @@ void setup()
   diag.reset = resetReasonName(esp_reset_reason());
   diag.boot = preferences.getUInt(KEY_BOOTS, 0) + 1;
   preferences.putUInt(KEY_BOOTS, diag.boot);
+  // restart z braku łączności (net_recovery.hpp) widać w chmurze jako osobną przyczynę
+  const bool netRestart = preferences.getBool(KEY_NET_RESTART, false) && esp_reset_reason() == ESP_RST_SW;
+  if (netRestart) diag.reset = "no_cloud";
+  else if (preferences.isKey(KEY_NET_RESTART)) preferences.remove(KEY_NET_RESTART);
+  netRecovery.begin(millis(), netRestart);
   loadConfig();
   parseCloudUrl();
   serial = readSerial();

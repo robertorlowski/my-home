@@ -25,6 +25,9 @@ std::string buildStateReport(const RelayBank &bank, uint32_t nowMs, const Contro
     item["heapFree"] = diag->heapFree;
     item["heapMin"] = diag->heapMin;
     item["heapBlock"] = diag->heapBlock;
+    JsonObject net = item["net"].to<JsonObject>();
+    net["http"] = diag->netHttpResets;
+    net["wifi"] = diag->netWifiReconnects;
     JsonObject weatherDiag = item["weather"].to<JsonObject>();
     weatherDiag["places"] = diag->weatherPlaces;
     weatherDiag["ok"] = diag->weatherOk;

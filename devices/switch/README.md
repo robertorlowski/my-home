@@ -25,6 +25,7 @@ Pierwsze wgranie tylko przez złącze P1 i przejściówkę USB-TTL (płytka nie 
 | `src/relays.*` | `RelayBank`: polecenia chmury, odliczanie włączeń na czas, zmiany lokalne czekające na wysłanie (`pending`, `pendingSeq`) |
 | `src/protocol.*` | JSON zgłoszenia stanu, odpowiedzi z poleceniami, `PUT switch/mode` i ustawienia z chmury |
 | `src/ota.*` | ocena oferty OTA (ta sama logika co w hydroforze) |
+| `src/net_recovery.*` | naprawa łączności bez odpowiedzi serwera: nowe połączenie, ponowne Wi-Fi, restart (od 1.3.7) |
 | `src/secrets.example.h` | wzór `secrets.h` (poza gitem) |
 | `test/test_logic` | testy `native` powyższej logiki |
 
