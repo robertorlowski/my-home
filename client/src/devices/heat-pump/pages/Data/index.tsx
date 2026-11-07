@@ -2,13 +2,14 @@
 // z danymi, „Wszystkie odczyty”, CSV) i karta „Odczyty dnia” z tabelą telemetrii jednego dnia (GET /hp/4day przez
 // fetchData). Domyślnie tylko praca sprężarki i rekordy z błędem; wiersz z error_code jest podświetlony i ma chip
 // z kodem błędu (opis w podpowiedzi). Eksport CSV obejmuje cały bieżący rok (GET /hp/all). Bez automatycznego
-// odświeżania. Przewijanie w poziomie tylko w .table-wrap.
+// odświeżania. Przewijanie w poziomie tylko w .table-wrap. Od 2026-11-07 bez podpisów pod filtrem, w nagłówku karty
+// i pod tabelą (decyzja użytkownika).
 import '../style.css';
 import './style.css';
 import { HpRequests } from '../../api';
 import { THPL } from '../../types';
 import React, { useEffect, useState } from 'react';
-import { compressorSeconds, fetchData, formatDateYMD, formatDuration } from '../../utils/utils';
+import { fetchData, formatDateYMD } from '../../utils/utils';
 import { errorDescription } from '../../utils/errors';
 import { ClipLoader } from 'react-spinners';
 import { cc } from '../../../../core/chartColors';
@@ -49,7 +50,6 @@ export const HeatPumpTable: React.FC = () => {
 	const [allData, setAllData] = useState<boolean>(false);
 	const [downloading, setDownloading] = useState(false);
 	// czas pracy sprężarki w dniu (z pełnych rekordów, niezależnie od filtra)
-	const [workSeconds, setWorkSeconds] = useState(0);
 	// dni z danymi; start od dzisiejszej daty przeglądarki, bez danych dziś hook przełącza na najnowszy dzień
 	const dates = useHpDates(selectedDate, setSelectedDate);
 
@@ -101,7 +101,6 @@ export const HeatPumpTable: React.FC = () => {
 					if (!active) return;
 					const dayRows = data.filter(d => d.time?.startsWith(selectedDate));
 					setRows(dayRows);
-					setWorkSeconds(compressorSeconds(allData ? dayRows : await fetchData(true, selectedDate)));
 				} catch (err) {
 					if (active) setError((err as Error).message);
 				} finally {
@@ -128,7 +127,6 @@ export const HeatPumpTable: React.FC = () => {
         <label className="check">
           <input type="checkbox" name="allData" checked={allData} onChange={(e) => setAllData(e.target.checked)} />
           <span>{t('hp.data.allReadings')}</span>
-          <small>{t('hp.data.allReadingsHint')}</small>
         </label>
         <button type="button" className="btn btn-ghost btn-sm" disabled={downloading} onClick={handleDownloadCsv}
           title={t('hp.data.csvTip')}>
@@ -139,9 +137,6 @@ export const HeatPumpTable: React.FC = () => {
       <section className="card card-table">
         <header className="card-head">
           <h2>{t('hp.data.title')}</h2>
-          <span className="card-hint">
-            {loading ? t('common.loading') : t('hp.data.summary', { n: rows.length, time: formatDuration(workSeconds) })}
-          </span>
         </header>
         {loading && <div className="loading"><ClipLoader size={32} color={cc().axis} /></div>}
         {!loading && rows.length === 0 && <p className="help">{allData ? t('hp.data.noneDay') : t('hp.data.noneCompressor')}</p>}
@@ -174,7 +169,6 @@ export const HeatPumpTable: React.FC = () => {
             </table>
           </div>
         )}
-        <footer className="table-foot">{t('hp.data.foot')}</footer>
       </section>
     </div>
   );

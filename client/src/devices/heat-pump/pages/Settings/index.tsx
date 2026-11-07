@@ -225,7 +225,6 @@ export const Settings: React.FC = () => {
 								on={(valueOpration.sump_heater ?? defaultOperation.sump_heater) === "1"} onChange={toggle('sump_heater')} />
 						</li>
 					</ul>
-					<p className="help">{t('hp.set.help')}</p>
 					{error && <p className="field-error">{t('hp.set.error')}</p>}
 					<div className="actions">
 						<button type="button" className="btn btn-primary" data-action="send-operation" disabled={!enableSave || busy} onClick={handleSave}>{t('hp.set.change')}</button>

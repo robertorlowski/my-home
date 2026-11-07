@@ -44,7 +44,7 @@ The user interface is in Polish; the screenshots show it as is. They come from t
 
 ![Data](../../../moduly/heat-pump/img/dane.png)
 
-*Data: the filter bar (a day with data via the ‹ › arrows or from a list after clicking the date, "Wszystkie odczyty" — by default only compressor runs and errors, the CSV button) and the "Odczyty dnia" card with the number of readings and the compressor run time; a row with a controller error is highlighted and has a chip with the code. The table scrolls horizontally in its own container.*
+*Data: the filter bar (a day with data via the ‹ › arrows or from a list after clicking the date, "Wszystkie odczyty" — by default only compressor runs and errors, the CSV button) and the "Odczyty dnia" card (since 2026-11-07 without captions: the number of readings, the compressor run time and the notes under the table); a row with a controller error is highlighted and has a chip with the code. The table scrolls horizontally in its own container.*
 
 ![Day chart](../../../moduly/heat-pump/img/wykres-dzien.png)
 

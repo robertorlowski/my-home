@@ -44,7 +44,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z danymi z 13.10.2026 (wygląd 
 
 ![Dane](img/dane.png)
 
-*Dane: pasek filtrów (dzień z danymi strzałkami ‹ › albo z listy po kliknięciu daty, „Wszystkie odczyty” — domyślnie tylko praca sprężarki i błędy, przycisk CSV) i karta „Odczyty dnia” z liczbą odczytów i czasem pracy sprężarki; wiersz z błędem sterownika jest podświetlony i ma chip z kodem. Tabela przewija się w poziomie we własnym kontenerze.*
+*Dane: pasek filtrów (dzień z danymi strzałkami ‹ › albo z listy po kliknięciu daty, „Wszystkie odczyty” — domyślnie tylko praca sprężarki i błędy, przycisk CSV) i karta „Odczyty dnia” (od 2026-11-07 bez podpisów: liczby odczytów, czasu pracy sprężarki i objaśnień pod tabelą); wiersz z błędem sterownika jest podświetlony i ma chip z kodem. Tabela przewija się w poziomie we własnym kontenerze.*
 
 ![Wykres dnia](img/wykres-dzien.png)
 
