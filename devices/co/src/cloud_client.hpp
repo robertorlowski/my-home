@@ -7,7 +7,7 @@
 #include <mail_relay.hpp>
 #include <ota.hpp>
 
-// Klient chmury chpc-web (https://chpc-web.onrender.com/api/): POST JSON
+// Klient chmury chpc-web (https://dom.mojeturnie.pl/api/): POST JSON
 // (hp/add, pv/add) z ?deviceId=<SN>[&rootId=<id>], rejestracja
 // (devices/register) i WebSocket /ws?rootId=… Komunikat {type:"operation"}
 // tylko ustawia flagę; POST wykonuje main.cpp, gdy magistrala jest wolna.

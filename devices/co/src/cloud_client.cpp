@@ -14,8 +14,8 @@
 #include <mbedtls/sha256.h>
 
 namespace {
-constexpr const char *CLOUD_HOST = "chpc-web.onrender.com";
-constexpr const char *CLOUD_BASE_URL = "https://chpc-web.onrender.com/api/";
+constexpr const char *CLOUD_HOST = "dom.mojeturnie.pl";
+constexpr const char *CLOUD_BASE_URL = "https://dom.mojeturnie.pl/api/";
 
 // The main loop is blocked for the whole request, so the timeouts must cover
 // a TLS handshake plus a slow response without stalling the pump bus for

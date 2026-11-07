@@ -35,7 +35,8 @@ struct DeviceConfig {
 // 1.3.2: zapasowa pogoda zwykłym HTTP zamiast HTTPS (TLS nie dostawał pamięci, weather.hpp) i liczniki
 // weather_ok, weather_fail, weather_code w telemetrii (widoczne w GET /hp/diagnostics).
 // 1.3.3: strony i ekran sterownika po angielsku (T. out zamiast T. zew, MANUAL zamiast RECZNY).
-constexpr const char *FW_VERSION = "1.3.3";
+// 1.3.4: adres chmury dom.mojeturnie.pl (Oracle) zamiast chpc-web.onrender.com.
+constexpr const char *FW_VERSION = "1.3.4";
 
 // Wspólna przestrzeń NVS; main.cpp trzyma w niej też tryb sterownika ("mode").
 constexpr const char *PREFERENCES_NAMESPACE = "hp";

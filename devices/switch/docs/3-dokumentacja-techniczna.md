@@ -84,7 +84,7 @@ Przy podłączonej przejściówce zaobserwowano „Brownout detected” i start 
 | `FW_VERSION` | `1.3.4` | `firmware.hpp` |
 | `RELAY_PINS` / `RELAY_ACTIVE_HIGH` | `{2}` / `true` | `firmware.hpp` |
 | `DEFAULT_ON_MINUTES` / `MAX_ON_MINUTES` | 30 / 10080 | `firmware.hpp` |
-| `CLOUD_URL` | `https://chpc-web.onrender.com/api/` (`esp32dev-local`: `http://192.168.55.9:4001/api/`) | `firmware.hpp`, `platformio.ini` |
+| `CLOUD_URL` | `https://dom.mojeturnie.pl/api/` (`esp32dev-local`: `http://192.168.55.9:4001/api/`) | `firmware.hpp`, `platformio.ini` |
 | `MAX_RELAYS` | 8 | `relays.hpp` |
 | `EXCHANGE_INTERVAL_MS` | 5 s | `switch.cpp` |
 | `REGISTER_RETRY_MS` / `PENDING_RETRY_MS` | 30 s / 5 s | `switch.cpp` |
@@ -169,7 +169,7 @@ Układ flash to domyślna tablica Arduino-ESP32 z dwiema partycjami aplikacji (`
 
 **Diagnostyka w zgłoszeniu stanu (`diag`, od 1.1.2; pamięć i pogoda od 1.3.2).** Każde zgłoszenie niesie `diag {reset, boot, wifiDrops, rssi, httpMs, heapFree, heapMin, heapBlock, weather}`: przyczynę i numer startu, zerwania Wi-Fi, siłę sygnału, czas poprzedniej wymiany, pamięć sterty w bajtach (wolna, najmniejsza od startu, największy ciągły blok — połączenie TLS potrzebuje ok. 16 KB ciągłych) i `weather {places, ok, fail, code, tls, heapBlock, agoS}`: liczbę miejsc z chmury, udane i nieudane pobrania od startu, wynik ostatniej próby (kod HTTP; ujemny = błąd połączenia HTTPClient; 1 = odpowiedź 200 nieczytelna), błąd mbedtls (znaczący tylko przy nieudanej próbie), największy blok sterty tuż przed próbą i sekundy od niej. Serwer trzyma ostatnią diagnostykę w pamięci (`GET /api/switch/diagnostics`), a nowy start zapisuje w dzienniku operacji. Powód (2026-10-18): pogoda nie dochodziła przez ponad 8 h przy działającym włączniku. Konsola pokazuje przy każdej próbie `pogoda N/M: … (HTTP, TLS, blok)`.
 
-**Wydanie nowej wersji:** podnieść `FW_VERSION` w `src/firmware.hpp`, `pio run -d devices/switch`, wgrać `.pio/build/esp32dev/firmware.bin` na stronie firmware w aplikacji (lista sterowników → trybik na kafelku włącznika, plus na belce „Aktualna wersja”, wersja taka jak `FW_VERSION` i opis) albo `curl -X PUT -H "Content-Type: application/octet-stream" --data-binary @firmware.bin "https://chpc-web.onrender.com/api/firmware/switch/<wersja>?description=<opis>"`. Potem w Ustawieniach włącznika „Aktualizuj”; sterownik pobierze obraz, gdy przekaźnik będzie wyłączony.
+**Wydanie nowej wersji:** podnieść `FW_VERSION` w `src/firmware.hpp`, `pio run -d devices/switch`, wgrać `.pio/build/esp32dev/firmware.bin` na stronie firmware w aplikacji (lista sterowników → trybik na kafelku włącznika, plus na belce „Aktualna wersja”, wersja taka jak `FW_VERSION` i opis) albo `curl -X PUT -H "Content-Type: application/octet-stream" --data-binary @firmware.bin "https://dom.mojeturnie.pl/api/firmware/switch/<wersja>?description=<opis>"`. Potem w Ustawieniach włącznika „Aktualizuj”; sterownik pobierze obraz, gdy przekaźnik będzie wyłączony.
 
 ## Budowanie, testy, środowiska
 

@@ -7,7 +7,7 @@
 
 constexpr const char *DEVICE_TYPE = "pellet-boiler-pelux200";
 // Wersja firmware: wysyłana w zgłoszeniu (strona Ustawienia w aplikacji). Podnieść przy wydaniu.
-constexpr const char *FW_VERSION = "1.11.0";
+constexpr const char *FW_VERSION = "1.11.1";
 // Nazwa nadawana nowemu urządzeniu przy pierwszym zgłoszeniu.
 constexpr const char *DEVICE_NAME = "Piec Pellux 200";
 
@@ -26,6 +26,6 @@ constexpr uint16_t DEFAULT_POLL_SECONDS = 300;
 
 // Stały adres chmury; flaga -D PELLET_CLOUD_URL=... (build_flags) podmienia go np. na serwer lokalny.
 #ifndef PELLET_CLOUD_URL
-#define PELLET_CLOUD_URL "https://chpc-web.onrender.com/api/"
+#define PELLET_CLOUD_URL "https://dom.mojeturnie.pl/api/"
 #endif
 constexpr const char *CLOUD_URL = PELLET_CLOUD_URL;

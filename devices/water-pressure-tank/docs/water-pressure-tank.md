@@ -100,7 +100,7 @@ Kompresor startuje raz i nie jest przerywany. Zapobiega temu, co działo się w 
 
 **Płytka:** ESP32 DevKit z modułem WROOM-32, środowisko PlatformIO `esp32dev`, konsola UART0. Przekaźnik na `GPIO26`. (Pierwotnie ESP32-C3 SuperMini na `GPIO10`, wycofana 2026-10-02 przez słabą antenę.) Pin i poziom to stałe w kodzie.
 
-**Stałe w `src/firmware.hpp`:** `RELAY_PIN = 10`, `RELAY_ACTIVE_HIGH` (obecnie `false`), `COMPRESSOR_START_DELAY_MS = 1000`, `DEFAULT_COMPRESSOR_SECONDS = 30`, `MAX_COMPRESSOR_SECONDS = 3600`, `CLOUD_URL = https://chpc-web.onrender.com/api/` (stały adres chmury, bez pola na stronie `/install`).
+**Stałe w `src/firmware.hpp`:** `RELAY_PIN = 10`, `RELAY_ACTIVE_HIGH` (obecnie `false`), `COMPRESSOR_START_DELAY_MS = 1000`, `DEFAULT_COMPRESSOR_SECONDS = 30`, `MAX_COMPRESSOR_SECONDS = 3600`, `CLOUD_URL = https://dom.mojeturnie.pl/api/` (stały adres chmury, bez pola na stronie `/install`).
 
 **Pliki:** `src/water-pressure-tank.cpp` (start, sieć, strony, wysyłka), `src/compressor.*` (czas pracy kompresora), `src/settings.*` (ustawienia i szacunek wody), `src/run_report.*` (JSON wysyłki i kolejka w NVS).
 

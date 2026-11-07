@@ -84,7 +84,7 @@ With the adapter connected, "Brownout detected" and a start in programming mode 
 | `FW_VERSION` | `1.3.4` | `firmware.hpp` |
 | `RELAY_PINS` / `RELAY_ACTIVE_HIGH` | `{2}` / `true` | `firmware.hpp` |
 | `DEFAULT_ON_MINUTES` / `MAX_ON_MINUTES` | 30 / 10080 | `firmware.hpp` |
-| `CLOUD_URL` | `https://chpc-web.onrender.com/api/` (`esp32dev-local`: `http://192.168.55.9:4001/api/`) | `firmware.hpp`, `platformio.ini` |
+| `CLOUD_URL` | `https://dom.mojeturnie.pl/api/` (`esp32dev-local`: `http://192.168.55.9:4001/api/`) | `firmware.hpp`, `platformio.ini` |
 | `MAX_RELAYS` | 8 | `relays.hpp` |
 | `EXCHANGE_INTERVAL_MS` | 5 s | `switch.cpp` |
 | `REGISTER_RETRY_MS` / `PENDING_RETRY_MS` | 30 s / 5 s | `switch.cpp` |
@@ -169,7 +169,7 @@ The flash layout is the default Arduino-ESP32 table with two application partiti
 
 **Diagnostics in the state report (`diag`, from 1.1.2; memory and weather from 1.3.2).** Each report carries `diag {reset, boot, wifiDrops, rssi, httpMs, heapFree, heapMin, heapBlock, weather}`: reset reason and boot number, Wi-Fi drops, signal strength, duration of the previous exchange, heap in bytes (free, lowest since boot, largest contiguous block — a TLS connection needs about 16 KB contiguous) and `weather {places, ok, fail, code, tls, heapBlock, agoS}`: places from the cloud, successful and failed fetches since boot, result of the last attempt (HTTP code; negative = HTTPClient connection error; 1 = unreadable 200 reply), mbedtls error (meaningful only for a failed attempt), largest heap block just before the attempt and seconds since it. The server keeps the last diagnostics in memory (`GET /api/switch/diagnostics`) and logs each new boot in the operation log.
 
-**Releasing a new version:** raise `FW_VERSION` in `src/firmware.hpp`, `pio run -d devices/switch`, upload `.pio/build/esp32dev/firmware.bin` on the firmware page in the application (controller list → cog on the switch tile, plus on the "Aktualna wersja" bar, version equal to `FW_VERSION` and a description) or `curl -X PUT -H "Content-Type: application/octet-stream" --data-binary @firmware.bin "https://chpc-web.onrender.com/api/firmware/switch/<version>?description=<text>"`. Then click "Aktualizuj" in the switch Settings; the controller downloads the image once the relay is off.
+**Releasing a new version:** raise `FW_VERSION` in `src/firmware.hpp`, `pio run -d devices/switch`, upload `.pio/build/esp32dev/firmware.bin` on the firmware page in the application (controller list → cog on the switch tile, plus on the "Aktualna wersja" bar, version equal to `FW_VERSION` and a description) or `curl -X PUT -H "Content-Type: application/octet-stream" --data-binary @firmware.bin "https://dom.mojeturnie.pl/api/firmware/switch/<version>?description=<text>"`. Then click "Aktualizuj" in the switch Settings; the controller downloads the image once the relay is off.
 
 ## Build, tests, environments
 

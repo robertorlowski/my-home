@@ -24,7 +24,7 @@ namespace mail_relay {
 
 class MailRelay {
 public:
-  // cloudUrl: adres API z ukośnikiem na końcu (np. „https://chpc-web.onrender.com/api/”). Tworzy albo wczytuje
+  // cloudUrl: adres API z ukośnikiem na końcu (np. „https://dom.mojeturnie.pl/api/”). Tworzy albo wczytuje
   // klucz i uruchamia zadanie. False = klucza nie da się utworzyć (płytka działa dalej, bez poczty).
   bool begin(Preferences &preferences, const String &cloudUrl);
 

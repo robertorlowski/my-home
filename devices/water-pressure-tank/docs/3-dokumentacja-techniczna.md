@@ -84,7 +84,7 @@ Stronę serwerową (API, kolekcje, woda z czasu pompy, wodomierz) opisuje [modu�
 | `COMPRESSOR_START_DELAY_MS` | 1000 | `firmware.hpp` |
 | `DEFAULT_COMPRESSOR_SECONDS` / `MAX_COMPRESSOR_SECONDS` | 30 / 3600 | `firmware.hpp` |
 | `MANUAL_COMPRESSOR_MAX_SECONDS` | 1800 (praca po „Turn on” najdłużej 30 min) | `firmware.hpp` |
-| `CLOUD_URL` | `https://chpc-web.onrender.com/api/` (adres `http://` działa bez TLS) | `firmware.hpp` |
+| `CLOUD_URL` | `https://dom.mojeturnie.pl/api/` (adres `http://` działa bez TLS) | `firmware.hpp` |
 | `REGISTER_RETRY_MS`, `COMPRESSOR_SEND_RETRY_MS` | 10 s | `water-pressure-tank.cpp` |
 | `AP_ADDRESS` | `10.10.10.1` | `water-pressure-tank.cpp` |
 | `RunQueue::CAPACITY` | 40 | `run_report.hpp` |
@@ -144,7 +144,7 @@ Układ flash to domyślna tablica Arduino-ESP32 z dwiema partycjami aplikacji (`
 5. Po zapisie obrazu wersja trafia do NVS (`ota_tried`). Gdy po restarcie `FW_VERSION` nadal nie zgadza się z ofertą (zapomniana zmiana wersji), kolejna próba jest pomijana. Nieudane pobranie ponawia się przy następnym uruchomieniu pompy.
 6. Awaryjnie plik `firmware.bin` można wgrać ręcznie na `/install` (sekcja „Firmware”).
 
-**Wydanie nowej wersji:** podnieść `FW_VERSION` w `firmware.hpp`, `pio run -d devices/water-pressure-tank`, wgrać `.pio/build/esp32dev/firmware.bin` na stronie firmware w aplikacji (lista sterowników → trybik na kafelku hydroforu, ikona plusa na belce „Aktualna wersja” otwiera popup „Dodaj wersję”: wersja taka jak `FW_VERSION` i opis zmian) albo z konsoli: `curl -X PUT -H "Content-Type: application/octet-stream" --data-binary @firmware.bin https://chpc-web.onrender.com/api/firmware/water-pressure-tank/1.0.1`. Serwer ustawia plik jako oferowany, a poprzednia wersja zostaje w bazie (przywrócenie: `PUT /api/firmware/water-pressure-tank` z `{"version": "1.0.0"}`). Tag w repozytorium (`water-pressure-tank-v<wersja>`) jest tylko znacznikiem źródeł. Potem w Ustawieniach hydroforu „Aktualizuj”; sterownik pobierze obraz przy najbliższej pracy pompy dłuższej niż czas kompresora.
+**Wydanie nowej wersji:** podnieść `FW_VERSION` w `firmware.hpp`, `pio run -d devices/water-pressure-tank`, wgrać `.pio/build/esp32dev/firmware.bin` na stronie firmware w aplikacji (lista sterowników → trybik na kafelku hydroforu, ikona plusa na belce „Aktualna wersja” otwiera popup „Dodaj wersję”: wersja taka jak `FW_VERSION` i opis zmian) albo z konsoli: `curl -X PUT -H "Content-Type: application/octet-stream" --data-binary @firmware.bin https://dom.mojeturnie.pl/api/firmware/water-pressure-tank/1.0.1`. Serwer ustawia plik jako oferowany, a poprzednia wersja zostaje w bazie (przywrócenie: `PUT /api/firmware/water-pressure-tank` z `{"version": "1.0.0"}`). Tag w repozytorium (`water-pressure-tank-v<wersja>`) jest tylko znacznikiem źródeł. Potem w Ustawieniach hydroforu „Aktualizuj”; sterownik pobierze obraz przy najbliższej pracy pompy dłuższej niż czas kompresora.
 
 **Uwagi:** pobieranie i serwer WWW nie mają testów na płytce (testy `native` obejmują `ota.cpp`, serwer ma testy w `server/test/firmware.test.ts`); certyfikat nie jest sprawdzany, a integralność obrazu zapewnia SHA-256 z odpowiedzi chmury (ten sam kanał, więc nie chroni przed podszyciem się pod serwer). Endpointy `/api/firmware/...` i `/api/devices/:rootId/firmware-update` nie mają jeszcze autoryzacji: każdy, kto zna adres serwera, może podmienić ofertę i zlecić aktualizację. Restart po aktualizacji kończy bieżący zapis uruchomienia kilkanaście sekund przed faktycznym końcem pracy pompy i zaczyna nowy `runId`.
 

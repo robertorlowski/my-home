@@ -20,7 +20,8 @@ constexpr const char *DEVICE_TYPE = "switch";
 // 1.3.4: pogoda zwykłym HTTP zamiast HTTPS; po dobie pracy TLS nie dostawał pamięci (mbedtls -0x7F00,
 //        2026-10-19: 808 nieudanych pobrań na 1072, największy blok sterty 45 KB).
 // 1.3.5: strony sterownika (/, /install) po angielsku.
-constexpr const char *FW_VERSION = "1.3.5";
+// 1.3.6: adres chmury dom.mojeturnie.pl (Oracle) zamiast chpc-web.onrender.com.
+constexpr const char *FW_VERSION = "1.3.6";
 // Nazwa nadawana nowemu urządzeniu przy pierwszym zgłoszeniu.
 constexpr const char *DEVICE_NAME = "Włącznik";
 
@@ -41,6 +42,6 @@ constexpr uint16_t MAX_ON_MINUTES = 10080;
 // (platformio.ini) podmienia go na lokalny serwer (npm run local) po HTTP; host, port
 // i TLS dla WebSocket są wyliczane z tego adresu (switch.cpp, parseCloudUrl).
 #ifndef SWITCH_CLOUD_URL
-#define SWITCH_CLOUD_URL "https://chpc-web.onrender.com/api/"
+#define SWITCH_CLOUD_URL "https://dom.mojeturnie.pl/api/"
 #endif
 constexpr const char *CLOUD_URL = SWITCH_CLOUD_URL;

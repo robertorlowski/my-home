@@ -8,7 +8,7 @@ Dokumentacja: **[1. Opis biznesowy](docs/1-opis-biznesowy.md)** (z listą kontro
 
 ```sh
 cp src/secrets.example.h src/secrets.h   # nazwa i hasło AP, login /install, domyślne Wi-Fi
-pio run                                  # build (esp32dev, produkcja: https://chpc-web.onrender.com/api/)
+pio run                                  # build (esp32dev, produkcja: https://dom.mojeturnie.pl/api/)
 pio run -e esp32dev-local                # build do testu z lokalnym serwerem (npm run local; adres w platformio.ini)
 pio test -e native                       # testy logiki na PC (11)
 pio device monitor                       # konsola (UART0, 115200, złącze P1 i przejściówka USB-TTL)
