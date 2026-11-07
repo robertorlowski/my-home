@@ -10,6 +10,7 @@ import mongoose from 'mongoose';
 import { restoreOutdoorTemperature } from './modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200.service';
 import { startScheduler } from './modules/heat-pump/services/scheduler.service';
 import { ensureHomeWeatherTile } from './core/services/weather-tile.service';
+import { startServerWeather } from './core/services/weather-fetch.service';
 import { startPelletBoilerScheduler } from './modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-schedule.service';
 import { removeExpiredPanelDetails } from './modules/heat-pump/services/pv.service';
 import { assignDefaultPumpConfigs } from './core/services/device.service';
@@ -90,6 +91,9 @@ const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'pol
   await restoreOutdoorTemperature().catch((error) => console.error('[meteo] error:', error));
   // kafelek pogody „Dom” (core/services/weather-tile.service.ts): powstaje przy pierwszym starcie po wdrożeniu
   await ensureHomeWeatherTile().catch((error) => console.error('[weather-tiles] error:', error));
+  // pogoda z Open-Meteo pobierana przez serwer (od 2026-11-07, core/services/weather-fetch.service.ts), niezależnie od
+  // BACKGROUND_JOBS: nic nie zapisuje w bazie, tylko w pamięci tej instancji; sterowniki pobierają już tylko zapasowo
+  startServerWeather();
 
   server.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
 })();

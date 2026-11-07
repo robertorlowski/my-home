@@ -13,7 +13,7 @@
 import { Types } from 'mongoose';
 import { DeviceModel } from '../models/device.model';
 import { WeatherTileDocument, WeatherTileModel } from '../models/weather-tile.model';
-import { getWeatherFor, setHomeWeatherKey, switchWeatherStale, WEATHER_LOCATION, Weather } from './meteo.service';
+import { getWeatherFor, serverWeatherActive, setHomeWeatherKey, weatherStale, WEATHER_LOCATION, Weather } from './meteo.service';
 import { appendToViewerOrder, placeForViewer, setViewerHidden, TileViewer, viewersHiding } from './tile-layout.service';
 
 export const MAX_WEATHER_TILES = 8;
@@ -184,7 +184,7 @@ type WeatherQuery = { id: string; lat: number; lon: number };
 let weatherQueriesCache: { at: number; queries: WeatherQuery[] } | null = null;
 const forgetWeatherQueries = () => { weatherQueriesCache = null; };
 
-// Miejsca, dla których włącznik pobiera pogodę: dom zawsze (GET /temperature), pozostałe tylko widoczne dla
+// Miejsca do pobrania pogody (serwer, zapasowo włącznik i co): dom zawsze (GET /temperature), pozostałe tylko widoczne dla
 // właściciela (kafelek bez właściciela: ukryty wspólnie albo przez użytkownika systemowego); najwyżej tyle, ile
 // przyjmuje włącznik, najstarsze kafelki pierwsze.
 export async function weatherQueries(now = Date.now()): Promise<WeatherQuery[]> {
@@ -205,8 +205,17 @@ export async function weatherQueries(now = Date.now()): Promise<WeatherQuery[]> 
   return queries;
 }
 
-// Miejsca dla zapasowego pobierania przez sterownik co (odpowiedź POST /hp/add, co od 1.3.1): te same co dla
-// włącznika, ale tylko bez świeżej pogody od włącznika (meteo.service, switchWeatherStale); pusta lista = włącznik działa.
-export async function backupWeatherQueries(now = new Date()): Promise<{ id: string; lat: number; lon: number }[]> {
-  return (await weatherQueries()).filter((query) => switchWeatherStale(query.id, now));
+// Miejsca dla włącznika (odpowiedź POST /switch/state): przy pobieraniu przez serwer (od 2026-11-07,
+// weather-fetch.service) tylko te bez świeżej pogody od serwera; zwykle pusta lista, która wyłącza pobieranie
+// we włączniku. Bez pobierania przez serwer (testy) wszystkie.
+export async function switchWeatherQueries(now = new Date()): Promise<WeatherQuery[]> {
+  const queries = await weatherQueries();
+  return serverWeatherActive() ? queries.filter((query) => weatherStale(query.id, 'server', now)) : queries;
+}
+
+// Miejsca dla zapasowego pobierania przez sterownik co (odpowiedź POST /hp/add, co od 1.3.1): bez świeżej pogody od
+// serwera (gdy pobiera) i od włącznika (meteo.service, weatherStale); pusta lista = serwer albo włącznik działa.
+export async function backupWeatherQueries(now = new Date()): Promise<WeatherQuery[]> {
+  return (await weatherQueries()).filter((query) => weatherStale(query.id, 'switch', now)
+    && (!serverWeatherActive() || weatherStale(query.id, 'server', now)));
 }

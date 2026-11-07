@@ -5,6 +5,10 @@
 // serwera z ostatniego odczytu w bazie (core nie importuje modułów). Pomiar starszy niż OUTDOOR_MAX_AGE_MS jest
 // pomijany; wtedy (i w domu bez kotła) temperatura z prognozy Open-Meteo, jeśli jest świeża (od 2026-10-15).
 //
+// Od 2026-11-07 pogodę pobiera serwer (core/services/weather-fetch.service.ts, źródło 'server'): na Oracle ma własny
+// adres IP. Włącznik, a po nim co, pobierają już tylko zapasowo: dostają miejsca, dla których serwer nie ma świeżej
+// pogody od WEATHER_BACKUP_AFTER_MS (weatherStale). Bez uruchomionego pobierania (testy) działa jak niżej.
+//
 // Pogoda (niebo, opady, wiatr, dzień/noc, temperatura z prognozy) od 2026-10-15: pobiera ją sterownik włącznika
 // z Open-Meteo z domowego łącza (Open-Meteo liczy limit zapytań na adres IP, a Render dzieli adres z innymi usługami —
 // w lipcu 2026 pobieranie z serwera nie działało; włącznik, bo nie każdy dom będzie miał sterownik co). Miejsca
@@ -15,7 +19,7 @@
 //
 // Zapasowo (od 2026-10-17, jak przekaźnik poczty) pogodę pobiera sterownik co (od 1.3.1): w odpowiedzi POST /hp/add
 // dostaje weather_queries tylko z miejscami, dla których włącznik nie dostarczył odczytu od WEATHER_BACKUP_AFTER_MS
-// (switchWeatherStale; po starcie serwera najpierw tyle samo czeka na włącznik), i odsyła pole weather w następnym
+// (weatherStale; po starcie serwera najpierw tyle samo czeka na włącznik), i odsyła pole weather w następnym
 // hp/add. Gdy włącznik wróci, lista co jest pusta. Odczyty obu sterowników trafiają do tej samej mapy (nowszy wygrywa).
 
 export const OUTDOOR_MAX_AGE_MS = 15 * 60 * 1000;
@@ -47,15 +51,18 @@ type WeatherEntry = Omit<Weather, 'at'> & { at: Date };
 // klucz pogody ze starszego włącznika (jedno miejsce = dom)
 const HOME_KEY = 'home';
 const weatherByKey = new Map<string, WeatherEntry>();
-// chwila ostatniego odczytu od włącznika dla klucza (do decyzji o zapasowym pobieraniu przez co)
-const switchWeatherAt = new Map<string, number>();
+export type WeatherSource = 'server' | 'switch' | 'co';
+// chwila ostatniego odczytu od źródła dla klucza (do decyzji o zapasowym pobieraniu przez sterowniki)
+const sourceAt: Record<WeatherSource, Map<string, number>> = { server: new Map(), switch: new Map(), co: new Map() };
+// pobieranie przez serwer uruchomione (weather-fetch.service, startServerWeather) i od kiedy
+let serverWeatherSince: number | null = null;
+export function setServerWeatherActive(active: boolean, now = Date.now()) { serverWeatherSince = active ? now : null; }
+export const serverWeatherActive = () => serverWeatherSince !== null;
 // id kafelka „Dom” (weather-tile.service); pogoda domu = pod tym id albo pod HOME_KEY
 let homeKey = HOME_KEY;
 export function setHomeWeatherKey(id: string) { homeKey = id; }
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
-
-export type WeatherSource = 'switch' | 'co';
 
 // Jeden odczyt {temp, code, cloud, precip, rain, snow, wind, day, age_s} pod kluczem; błędny albo starszy od
 // zapamiętanego jest pomijany.
@@ -65,7 +72,7 @@ function storeWeather(key: string, input: unknown, now: Date, source: WeatherSou
   if (!input || typeof input !== 'object' || !keys.every((key) => isNumber(value[key]))) return;
   const ageS = Math.max(0, value.age_s as number);
   const at = new Date(now.getTime() - ageS * 1000);
-  if (source === 'switch') switchWeatherAt.set(key, Math.max(switchWeatherAt.get(key) ?? 0, at.getTime()));
+  sourceAt[source].set(key, Math.max(sourceAt[source].get(key) ?? 0, at.getTime()));
   const previous = weatherByKey.get(key);
   if (previous && previous.at > at) return;
   weatherByKey.set(key, {
@@ -88,11 +95,13 @@ export function setWeatherFromController(input: unknown, now = new Date(), sourc
   storeWeather(HOME_KEY, input, now, source);
 }
 
-// true = włącznik nie dostarczył pogody dla klucza od WEATHER_BACKUP_AFTER_MS (dom: także pod HOME_KEY), a serwer
-// działa co najmniej tyle (po starcie najpierw czeka na włącznik); wtedy pogodę pobiera co.
-export function switchWeatherStale(key: string, now = new Date()): boolean {
-  if (now.getTime() - startedAt < WEATHER_BACKUP_AFTER_MS) return false;
-  const last = Math.max(switchWeatherAt.get(key) ?? 0, key === homeKey ? switchWeatherAt.get(HOME_KEY) ?? 0 : 0);
+// true = źródło nie dostarczyło pogody dla klucza od WEATHER_BACKUP_AFTER_MS (dom: także pod HOME_KEY), a działa
+// co najmniej tyle (po starcie serwera albo pobierania najpierw czeka na to źródło); wtedy pobiera następne źródło.
+export function weatherStale(key: string, source: WeatherSource, now = new Date()): boolean {
+  const since = source === 'server' ? serverWeatherSince ?? now.getTime() : startedAt;
+  if (now.getTime() - since < WEATHER_BACKUP_AFTER_MS) return false;
+  const times = sourceAt[source];
+  const last = Math.max(times.get(key) ?? 0, key === homeKey ? times.get(HOME_KEY) ?? 0 : 0);
   return now.getTime() - last > WEATHER_BACKUP_AFTER_MS;
 }
 

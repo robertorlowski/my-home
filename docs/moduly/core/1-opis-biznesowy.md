@@ -14,7 +14,7 @@ Moduł odpowiada za:
 - **konta użytkowników**: logowanie e-mailem i kodem, dane konta, udostępnianie sterownika innej osobie z wyborem zakładek;
 - **wspólny wygląd**: pasek sterownika z zakładkami, dolną nawigację na telefonie, motyw jasny i ciemny, język polski albo angielski, okna dialogowe, kartę „Sterownik” i dziennik operacji;
 - **menu i ekrany zależne od rodzaju sterownika** (pompa ma harmonogramy, hydrofor i fotowoltaika nie);
-- **wspólne usługi**: temperaturę zewnętrzną (IMGW), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez włącznik), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
+- **wspólne usługi**: temperaturę zewnętrzną (IMGW), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez serwer, zapasowo przez włącznik), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
 - **pocztę**: kody logowania i powiadomienia wysyła serwer; opcjonalnie mogą je wysyłać sterowniki w domu (włącznik, zapasowo `co`).
 - **ustawienia aplikacji**: konto systemowe ma w menu po lewej Moje dane, Powiadomienia i Ustawienia. Zakładka Ustawienia (poczta, adresy aplikacji, wersja demo, klucze powiadomień, zadania w tle) wymaga osobnego hasła.
 
@@ -107,7 +107,7 @@ Moduł odpowiada za:
 - **Poczta przez sterowniki jest opcją.** Domyślnie maile wysyła serwer. Po włączeniu „Wysyłki przez sterowniki” maile (kody logowania, zaproszenia, potwierdzenia) wysyła włącznik, a zapasowo `co`. Gdy oba są wtedy bez sieci, logowanie kodem nie działa (komunikat „Poczta jest chwilowo niedostępna”); zostaje konto systemowe z hasłem. Klucz płytki, która ma dostać dane poczty, zatwierdza użytkownik systemowy po porównaniu odcisku ze stroną `/install` płytki.
 - **Powiadomienia zależą od przeglądarki.** Na iPhonie działają tylko w aplikacji dodanej do ekranu początkowego (iOS 16.4+), w trybie incognito wcale, a Android potrafi opóźnić je przy oszczędzaniu baterii. Temperatura na kafelku „Dom” pochodzi z czujnika zewnętrznego kotła, gdy piec daje świeży pomiar (do 15 min); przy wyłączonym piecu z modelu pogodowego, który w dolinie myli się nocą o kilka stopni.
 - **Wersja demo jest publiczna.** Każdy, kto zna adres aplikacji, widzi dane instalacji właściciela (temperatury, historię, harmonogramy). Serwer ukrywa dane wrażliwe i blokuje zapisy, ale sam podgląd jest jawny; wyłącza się go, usuwając `DEMO_OWNER_EMAIL` z konfiguracji serwera.
-- **Pogoda zależy od włącznika.** Bieżące warunki pobiera włącznik z domowego łącza (Render dzieli adres IP z innymi usługami i Open-Meteo odrzucało zapytania serwera); bez włącznika pasek i kafelki pogody pokazują ostatni odczyt, a potem prognozę.
+- **Pogodę pobiera serwer.** Od 2026-11-07 bieżące warunki pobiera serwer na Oracle, który ma własny adres IP (na Renderze adres był wspólny z innymi usługami i Open-Meteo odrzucało zapytania). Gdy serwer nie dostanie pogody przez 25 min, pobiera ją włącznik z domowego łącza, a po nim sterownik `co`; bez żadnego z nich pasek i kafelki pogody pokazują ostatni odczyt, a potem prognozę.
 
 ## Słownik
 

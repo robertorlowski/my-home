@@ -14,7 +14,7 @@ The module is responsible for:
 - **user accounts**: login by e-mail and code, account data, sharing a controller with another person with a choice of tabs;
 - **the shared look**: the controller bar with tabs, the bottom navigation on a phone, the light and dark theme, Polish or English language, dialogs, the "Sterownik" card and the operations log;
 - **menus and screens that depend on the controller kind** (the heat pump has schedules, the water pressure tank and photovoltaics do not);
-- **shared services**: outdoor temperature (IMGW), the weather of the home and of the weather tiles (Open-Meteo, fetched by the switch), a weather page with a forecast, the Polish public holiday calendar, fast notifications to the controller and the browser (WebSocket);
+- **shared services**: outdoor temperature (IMGW), the weather of the home and of the weather tiles (Open-Meteo, fetched by the server, by the switch as a fallback), a weather page with a forecast, the Polish public holiday calendar, fast notifications to the controller and the browser (WebSocket);
 - **mail**: login codes and notifications are sent by the server; optionally the controllers at home can send them (the switch, with `co` as a fallback).
 - **application settings**: the system account has My details, Notifications and Settings in the left menu. The Settings tab (mail, application addresses, demo, notification keys, background jobs) requires a separate password.
 
@@ -109,7 +109,7 @@ The user interface is in Polish; the screenshots below show it as is.
 - **Mail through controllers is optional.** By default the server sends mail. With "Send through controllers" on, mails (login codes, invitations, confirmations) are sent by the switch, with `co` as a fallback. When both are then offline, login by code does not work ("Poczta jest chwilowo niedostępna"); the system account with a password remains. The key of a board that is to receive the mail credentials is approved by the system user after comparing the fingerprint with the board's `/install` page.
 - **Notifications depend on the browser.** On an iPhone they work only in the application added to the home screen (iOS 16.4+), not at all in incognito mode, and Android may delay them while saving battery. The temperature on the "Dom" tile comes from the boiler's outdoor sensor when the boiler delivers a fresh reading (up to 15 min); with the boiler off it comes from the weather model, which in the valley is off by a few degrees at night.
 - **The demo is public.** Anyone who knows the application address sees the owner's installation data (temperatures, history, schedules). The server hides sensitive data and blocks writes, but the view itself is open; it is switched off by removing `DEMO_OWNER_EMAIL` from the server configuration.
-- **Weather depends on the switch.** Current conditions are fetched by the switch over the home connection (Render shares its IP address with other services and Open-Meteo rejected the server's requests); without the switch the strip and weather tiles show the last reading, then the forecast.
+- **The server fetches the weather.** Since 2026-11-07 current conditions are fetched by the server on Oracle, which has its own IP address (on Render the address was shared with other services and Open-Meteo rejected the requests). When the server gets no weather for 25 min, the switch fetches it over the home connection, then the `co` controller; without any of them the strip and weather tiles show the last reading, then the forecast.
 
 ## Glossary
 

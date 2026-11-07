@@ -14,6 +14,8 @@ vi.mock('../src/core/services/meteo.service', () => ({
   setHomeWeatherKey: () => undefined,
   setWeatherFromController: () => undefined,
   backupWeatherQueries: () => [],
+  serverWeatherActive: () => false,
+  weatherStale: () => false,
   WEATHER_LOCATION: { lat: 49.37, lon: 20.01 },
 }));
 

@@ -8,7 +8,7 @@ import { warsawDayBoundsUTC } from '../../../core/time';
 import { firmwareOfferForRoot } from '../../../core/services/firmware.service';
 import { serverBaseUrl } from '../../../core/controllers/firmware.controller';
 import { setWeatherFromController } from '../../../core/services/meteo.service';
-import { weatherQueries } from '../../../core/services/weather-tile.service';
+import { switchWeatherQueries } from '../../../core/services/weather-tile.service';
 import {
   listActivations, listRelays, parseStateReport, relayCount, renameRelay, reportState, setRelayMode,
 } from '../services/switch.service';
@@ -63,11 +63,13 @@ export async function postSwitchState(req: Request, res: Response) {
     // pogoda z Open-Meteo pobrana przez włącznik z domowego łącza (od 1.1.3; core/services/meteo.service.ts)
     setWeatherFromController((req.body as { weather?: unknown } | undefined)?.weather);
     const firmware = await firmwareOfferForRoot(rootId, serverBaseUrl(req));
-    // weather_query: dom (włącznik 1.1.3 pobiera jedno miejsce); weather_queries: wszystkie kafelki pogody (od 1.2.0)
-    const queries = await weatherQueries();
-    const [home] = queries;
+    // weather_query: dom (włącznik 1.1.3 pobiera jedno miejsce); weather_queries: kafelki pogody (od 1.2.0). Od
+    // 2026-11-07 pogodę pobiera serwer, więc lista jest zwykle pusta (włącznik wtedy nic nie pobiera); weather_query
+    // tylko przy niepustej liście (pierwsze jest wtedy miejsce domu albo pierwszy kafelek bez świeżej pogody)
+    const queries = await switchWeatherQueries();
+    const [first] = queries;
     const weather = shouldSendWeather(rootId, JSON.stringify(queries), report.uptimeS, Date.now())
-      ? { weather_query: { lat: home.lat, lon: home.lon }, weather_queries: queries }
+      ? { ...(first ? { weather_query: { lat: first.lat, lon: first.lon } } : {}), weather_queries: queries }
       : {};
     return res.status(200).json({ relays, ...(firmware ? { firmware } : {}), ...weather });
   } catch (error) {

@@ -125,7 +125,8 @@ export async function getHpMonthlySummary(req: Request, res: Response) {
 // (ustawia operację dla NASTĘPNEJ odpowiedzi) -> zapis telemetrii -> odpowiedź.
 // Odpowiedź zawsze niesie operację, także gdy HP jest puste (CHPC nie odpowiada).
 // Zapasowa pogoda (co od 1.3.1, core meteo.service): pole weather z telemetrii trafia do pogody kafelków (i nie
-// do rekordu ani pamięci telemetrii), a odpowiedź niesie weather_queries z miejscami bez świeżej pogody od włącznika.
+// do rekordu ani pamięci telemetrii), a odpowiedź niesie weather_queries z miejscami bez świeżej pogody od serwera
+// i włącznika.
 export const addHp = async (req: Request<{}, {}, HpEntry>, res: Response) => {
   const data :HpEntry = req.body;
   console.log("Add HP data");
