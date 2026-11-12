@@ -203,7 +203,7 @@ On `vm-prod` the server and client run in one image (`deploy/oracle/Dockerfile`)
 | `main` | production | `my-home:prod-<commit>` |
 | `develop` | test | `my-home:test-<commit>` |
 
-Since 2026-11-08 the server builds the image itself: `oracle-cloud/vm-prod/deploy-my-home.sh prod|test [commit]` sends a `git archive` of the chosen commit (by default `origin/main` or `origin/develop`) over ssh to `docker build` on `vm-prod` and installs it. Only files from git go into the image. Each channel keeps the current version and 2 previous ones. Before that, GitHub Actions built the image and published it to `ghcr.io`.
+Since 2026-11-08 the server builds the image itself: `oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh prod|test [commit]` sends a `git archive` of the chosen commit (by default `origin/main` or `origin/develop`) over ssh to `docker build` on `vm-prod` and installs it. Only files from git go into the image. Each channel keeps the current version and 2 previous ones. Before that, GitHub Actions built the image and published it to `ghcr.io`.
 
 ## Local environment and demo data
 
@@ -231,7 +231,7 @@ node test/e2e/run-layout.mjs
 
 ## Deployment
 
-The server and the client are deployed together from the `main` branch: GitHub builds the image and `oracle-cloud/vm-prod/deploy-my-home.sh prod` installs it. A core change that alters the API needs the server to be deployed before the firmware.
+The server and the client are deployed together from the `main` branch: GitHub builds the image and `oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh prod` installs it. A core change that alters the API needs the server to be deployed before the firmware.
 
 ## Known issues
 

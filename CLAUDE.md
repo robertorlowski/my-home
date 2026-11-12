@@ -26,7 +26,7 @@ Repozytorium [robertorlowski/my-home](https://github.com/robertorlowski/my-home)
 | `devices/pellet-boiler-pelux200/` | firmware sterownika pieca „Piec Pellux 200” (ESP32-C3 SuperMini z modułem RS-485 HW-519, typ `pellet-boiler-pelux200`): na magistrali ecoMAX kotła udaje moduł ecoNET, czyta dane i ustawienia (bez zapisu), punkt 5c; instrukcja w `README.md`, podłączenie i protokół w `docs/` |
 | `devices/air-conditioner/` | projekt sterownika klimatyzatora Sinclair SIM-12BS3 (ESP32-C3 SuperMini w gnieździe modułu Wi-Fi, UART Gree 4800 8E1); na razie tylko schemat podłączenia w `docs/podlaczenie.md`, bez firmware i bez modułu w aplikacji |
 | `test/e2e/` | test całego łańcucha (punkt 11) |
-| `scripts/` | środowisko lokalne (`npm run local`), dane demonstracyjne (`seed-local.mjs`), symulatory hydroforu i włącznika |
+| `scripts/` | środowisko lokalne (`npm run local`), test na bazie testowej z vm-prod (`npm run local:oracle`), dane demonstracyjne (`seed-local.mjs`), symulatory hydroforu i włącznika |
 
 Oba firmware przeniesiono 2026-09-27 z historią z osobnych repozytoriów [heatpomp](https://github.com/robertorlowski/heatpomp) (`main`) i [chpc](https://github.com/robertorlowski/chpc) (`master`); tamte repozytoria nie są już rozwijane. Dawne kopie robocze `D:\DevLocal\arduino_src\heatpump` i `…\chpc` są nieaktualne. Firmware otwiera się w VS Code przez `chpc.code-workspace` (PlatformIO wymaga `platformio.ini` w katalogu głównym folderu), a z terminala: `pio run -d devices/co`, `pio test -d devices/chpc -e native`. Lokalny `devices/co/src/secrets.h` jest poza gitem (wzór: `secrets.example.h`).
 
@@ -34,7 +34,7 @@ Oba firmware przeniesiono 2026-09-27 z historią z osobnych repozytoriów [heatp
 
 Każdy firmware ma własny `README.md`, a CHPC także `devices/chpc/CLAUDE.md` ze szczegółami. **Strony WWW i ekran sterowników są tylko po angielsku**, bez wyboru języka (od 2026-10-21: `co` 1.3.3, włącznik 1.3.5, hydrofor 1.3.2, piec 1.10.1; także stan przekaźnika poczty i błędy SMTP z `devices/common/mail_relay`); komentarze w kodzie i log konsoli szeregowej zostają po polsku, a nazwy wysyłane w zgłoszeniu (`DEVICE_NAME`: „Hydrofor”, „Włącznik”, „Piec Pellux 200”), klucze JSON, NVS i nazwy sieci AP się nie zmieniły. Ten plik zawiera to, co jest potrzebne do pracy nad całym łańcuchem.
 
-**Kolejność wdrożenia.** Wspólny commit nie wdraża wszystkiego naraz. Najpierw wdraża się serwer (push `main` tylko buduje obraz, instalację uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh prod`), potem firmware `co` (wgranie do ESP32), a na końcu CHPC. Serwer musi znać nowe pole lub endpoint, zanim wyśle je sterownik.
+**Kolejność wdrożenia.** Wspólny commit nie wdraża wszystkiego naraz. Najpierw wdraża się serwer (push `main` tylko buduje obraz, instalację uruchamia `oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh prod`), potem firmware `co` (wgranie do ESP32), a na końcu CHPC. Serwer musi znać nowe pole lub endpoint, zanim wyśle je sterownik.
 
 ## 1. Podział systemu (My Home)
 
@@ -99,7 +99,7 @@ Wartości konfiguracyjne:
 - `CLIENT_DIR` — katalog z buildem klienta podawanym przez serwer (`core/client-static.ts`); ustawia go tylko obraz Dockera;
 - `VITE_SERVER_URL` — adres serwera wbudowywany w klienta przy buildzie; bez wartości `https://dom.mojeturnie.pl`, `same-origin` to adres, z którego otwarto stronę (obraz Dockera).
 
-**Obraz Docker (tylko Oracle).** Jeden obraz z serwerem i klientem (`deploy/oracle/Dockerfile`), budowany od 2026-11-08 na samym `vm-prod` przez `oracle-cloud/vm-prod/deploy-my-home.sh prod|test [commit]` (`git archive` commitu przez ssh do `docker build`; bez GitHub Actions i rejestru): `main` to kanał `prod`, `develop` to kanał `test`, obraz `my-home:<kanał>-<commit>`, na serwerze aktualna wersja i 2 poprzednie w każdym kanale. Wdrożenie wymaga wcześniejszego pusha gałęzi. Praca lokalna działa bez Dockera.
+**Obraz Docker (tylko Oracle).** Jeden obraz z serwerem i klientem (`deploy/oracle/Dockerfile`), budowany od 2026-11-08 na samym `vm-prod` przez `oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh prod|test [commit]` (`git archive` commitu przez ssh do `docker build`; bez GitHub Actions i rejestru): `main` to kanał `prod`, `develop` to kanał `test`, obraz `my-home:<kanał>-<commit>`, na serwerze aktualna wersja i 2 poprzednie w każdym kanale. Wdrożenie wymaga wcześniejszego pusha gałęzi. Praca lokalna działa bez Dockera.
 
 Na serwerze w zmiennych środowiskowych są tylko `MONGODB_URI` i `SYSTEM_PASSWORD`, reszta jest w kolekcji `app_settings`; lokalnie w `server/.env` (poza gitem, wzór w [`server/.env.example`](server/.env.example)). W kodzie nie ma wartości domyślnych. Do 2026-09-27 adres z hasłem użytkownika `hp` był wpisany w `server.ts` i jest w historii publicznego repozytorium; ten użytkownik został usunięty w Atlasie (2026-09-27). Produkcja na Oracle łączy się lokalnie jako `myhome`.
 
@@ -113,6 +113,15 @@ Na serwerze w zmiennych środowiskowych są tylko `MONGODB_URI` i `SYSTEM_PASSWO
 Pomiar: skrypty z gniazdami TLS i `monitorCommands` na bazie produkcyjnej (tylko odczyt); wynik na liczniku Render do sprawdzenia kilka dni po wdrożeniu.
 
 **Środowisko lokalne bez bazy produkcyjnej:** `npm run local` ([`scripts/local-dev.mjs`](scripts/local-dev.mjs)) uruchamia trwałą bazę MongoDB w `.local-db/` (port 27027, poza gitem), serwer na porcie 4001 i klienta Vite na 5173. `npm run local -- --db` uruchamia samą bazę. Pierwsze uruchomienie pobiera binarkę MongoDB (ok. 100 MB). Lokalną bazę kasuje się, usuwając `.local-db/`.
+
+**Test lokalny na bazie testowej z vm-prod:** `npm run local:oracle` ([`scripts/test-oracle.mjs`](scripts/test-oracle.mjs); do 2026-11-12 `test-lokalny.mjs` w repozytorium `oracle-cloud`) uruchamia na stacji serwer (4001) i klienta (5173) na bazie `hpdb_test` z `vm-prod`, przez tunel SSH `127.0.0.1:27117 -> vm-prod 127.0.0.1:27017`. Produkcji (`hpdb`, `my-home-prod`) nie dotyka. Potrzebne działające `ssh vm-prod`.
+
+- Przy pierwszym uruchomieniu pobiera `/etc/apps/my-home-test.env` z serwera do `~/.my-home/test-oracle.env` (poza repozytorium; są w nim hasła, nie wklejać i nie dodawać do gita); `npm run local:oracle -- --odswiez` pobiera go na nowo po zmianie ustawień na serwerze.
+- Odmawia startu, gdy adres bazy nie wskazuje `hpdb_test`; konto bazy `myhome_test` ma dostęp tylko do niej.
+- Wyłącza harmonogramy (`BACKGROUND_JOBS=off`), pocztę i powiadomienia, więc test niczego nie wysyła naprawdę.
+- `hpdb_test` jest wspólna z kontenerem `my-home-test` na serwerze: zapisy widać w obu, stan w pamięci (ręczne operacje pompy, WebSocket) każdy serwer ma własny. Baza to kopia produkcji z 2026-11-07, sterowniki pokazują brak odpowiedzi (łączą się tylko z produkcją).
+- Logowanie konta `system` hasłem środowiska testowego z serwera (do zmiany po przejściu `system` na kod z maila, plan w `oracle-cloud/vm-prod/admin/docs/plan-logowanie-system-kodem.md`).
+- Bez skryptu: tunel `ssh -N -L 27117:127.0.0.1:27017 vm-prod` i `server/.env` z bazą `hpdb_test` przez `127.0.0.1:27117` (`directConnection=true`). Odświeżenie bazy testowej: `oracle-cloud/vm-prod-notatki-konfiguracji.md`, „Test my-home”.
 
 ## 3. Kontekst urządzenia
 

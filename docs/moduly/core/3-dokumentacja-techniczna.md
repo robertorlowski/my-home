@@ -203,7 +203,7 @@ Na `vm-prod` serwer i klient działają w jednym obrazie (`deploy/oracle/Dockerf
 | `main` | produkcja | `my-home:prod-<commit>` |
 | `develop` | test | `my-home:test-<commit>` |
 
-Od 2026-11-08 obraz buduje sam serwer: `oracle-cloud/vm-prod/deploy-my-home.sh prod|test [commit]` wysyła `git archive` wybranego commitu (domyślnie `origin/main` albo `origin/develop`) przez ssh do `docker build` na `vm-prod` i instaluje go. Do repozytorium trafiają więc tylko pliki z gita. W każdym kanale zostaje aktualna wersja i 2 poprzednie. Wcześniej obraz budował GitHub Actions i publikował w `ghcr.io`. Sekrety są tylko w plikach środowiskowych na serwerze, nie w obrazie.
+Od 2026-11-08 obraz buduje sam serwer: `oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh prod|test [commit]` wysyła `git archive` wybranego commitu (domyślnie `origin/main` albo `origin/develop`) przez ssh do `docker build` na `vm-prod` i instaluje go. Do repozytorium trafiają więc tylko pliki z gita. W każdym kanale zostaje aktualna wersja i 2 poprzednie. Wcześniej obraz budował GitHub Actions i publikował w `ghcr.io`. Sekrety są tylko w plikach środowiskowych na serwerze, nie w obrazie.
 
 ## Środowisko lokalne i dane demonstracyjne
 
@@ -231,7 +231,7 @@ node test/e2e/run-layout.mjs
 
 ## Wdrożenie
 
-Serwer i klient wdraża się razem z gałęzi `main`: GitHub buduje obraz, a instalację uruchamia `oracle-cloud/vm-prod/deploy-my-home.sh prod`. Zmiana w core, która zmienia API, wymaga, by serwer był wdrożony przed firmware.
+Serwer i klient wdraża się razem z gałęzi `main`: GitHub buduje obraz, a instalację uruchamia `oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh prod`. Zmiana w core, która zmienia API, wymaga, by serwer był wdrożony przed firmware.
 
 ## Znane problemy
 

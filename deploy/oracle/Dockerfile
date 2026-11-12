@@ -1,5 +1,5 @@
 # my-home na vm-prod (Oracle, arm64): jeden obraz z serwerem i klientem. Render i praca lokalna nie używają tego pliku.
-# Buduje go serwer vm-prod: oracle-cloud/vm-prod/deploy-my-home.sh wysyła git archive commitu do docker build
+# Buduje go serwer vm-prod: oracle-cloud/vm-prod/.deploy-my-home/deploy-my-home.sh wysyła git archive commitu do docker build
 # (od 2026-11-08; wcześniej GitHub Actions i ghcr.io). main to kanał prod, develop to kanał test.
 # Sekrety są tylko w zmiennych środowiskowych na serwerze, nie trafiają do obrazu.
 FROM node:22-bookworm-slim AS build
