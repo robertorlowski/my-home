@@ -76,7 +76,16 @@ Konto: `email` (unikalny wśród kont z e-mailem), `firstName`, `lastName`, adre
 
 ### `sessions` i `auth_codes`
 
-W bazie są tylko skróty SHA-256 tokenu, kodu i linku, nie same wartości. `sessions`: `tokenHash` (unikalny), `userId`, `remember` (90 dni), `demo` (sesja wersji demo, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`; od 2026-11-13 konto `system`: `system-login` kod ważny 5 min, `system-sent` ślad wysłanego kodu do limitu 5 na godzinę, `system-lock` blokada po 5 błędnych kodach), `email` (przy koncie `system` napis `system`), `codeHash`, `tokenHash`, `attempts`, `ip` i `delivery` (`mail` / `log` / `emergency`; tylko konto `system`), `expiresAt`. Obie kolekcje mają indeks TTL na `expiresAt`, więc wygasłe dokumenty MongoDB usuwa sama; polecenie awaryjne (`--kod-awaryjny`) usuwa dokumenty `system-*` i zakłada nowy kod.
+W bazie są tylko skróty SHA-256 tokenu, kodu i linku, nie same wartości. `sessions`: `tokenHash` (unikalny), `userId`, `remember` (90 dni), `demo` (sesja wersji demo, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`; od 2026-11-13 konto `system`: `system-login` kod ważny 5 min, `system-sent` ślad wysłanego kodu do limitu 5 na godzinę, `system-fail` licznik błędnych kodów konta `system` (także z telefonu), `system-lock` blokada po 5 błędnych kodach; kod z telefonu: `totp-fail` licznik błędnych kodów z telefonu adresu, przy 5 blokada kodu z telefonu do `expiresAt`, `totp-disable` kod z maila do wyłączenia telefonu), `email` (przy koncie `system` napis `system`), `codeHash`, `tokenHash`, `attempts`, `ip` i `delivery` (`mail` / `log` / `emergency`; tylko konto `system`), `expiresAt`. Obie kolekcje mają indeks TTL na `expiresAt`, więc wygasłe dokumenty MongoDB usuwa sama; polecenie awaryjne (`--kod-awaryjny`) usuwa dokumenty `system-*` i zakłada nowy kod.
+
+### Wspólna baza kluczy `logowanie` (kod z telefonu, od 2026-11-13)
+
+Osobna baza (nazwa z `LOGIN_KEYS_DB`, domyślnie `logowanie`, test `logowanie_test`), wspólna z Archiwum i panelem admin; Mój dom łączy się z nią swoim kontem bazy (`myhome` ma rolę `readWrite`). Format ustalony w `oracle-cloud/vm-prod/admin/docs/plan-logowanie-system-kodem.md`, ten sam co do bajtu w każdej aplikacji:
+
+- `totp_klucze`: `{_id: adres e-mail małymi literami, sekret: "<iv>.<tag>.<szyfrogram>", utworzono, aplikacja: "my-home" | "archiwum" | "admin"}` — jeden dokument na adres; `sekret` to surowe 20 bajtów sekretu zaszyfrowane AES-256-GCM kluczem `LOGOWANIE_KLUCZ` (iv 12 B, znacznik 16 B, bez AAD, części w base64url). Usunięcie dokumentu wyłącza kod z telefonu we wszystkich aplikacjach. Konto `system` ma klucz pod adresem kodów konta system (`SYSTEM_EMAIL`).
+- `totp_uzyte`: `{_id: "<adres>:<licznik okna 30 s przyjętego kodu>", czas}`, indeks TTL na `czas` (180 s); wstawiany przed przyjęciem kodu, duplikat = kod już użyty (także w innej aplikacji).
+
+Usunięcie konta w Moim domu nie usuwa klucza adresu (należy do adresu, a nie do konta, i może go używać inna aplikacja); zmiana e-maila zostawia klucz starego adresu.
 
 ### `device_shares`
 

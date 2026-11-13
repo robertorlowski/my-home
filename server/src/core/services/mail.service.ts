@@ -1,5 +1,6 @@
 // Maile kont użytkowników (2026-10-11): kod i link logowania, kod logowania konta system (od 2026-11-13, z adresem IP,
-// z którego go zamówiono), zmiana e-maila, usunięcie konta, udostępnienie sterownika, powiadomienie administratora o rejestracji. SMTP tylko ze zmiennych środowiskowych (SMTP_HOST,
+// z którego go zamówiono), kod wyłączenia logowania kodem z telefonu (od 2026-11-13), zmiana e-maila, usunięcie konta,
+// udostępnienie sterownika, powiadomienie administratora o rejestracji. SMTP tylko ze zmiennych środowiskowych (SMTP_HOST,
 // SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM, MAIL_ADMIN; Render: Environment, lokalnie server/.env).
 // Bez SMTP_HOST (testy, środowisko bez poczty) mail trafia do outbox w pamięci i do logu.
 // MAIL_RELAY=1: serwer nie łączy się z pocztą, mail idzie do kolejki i wysyła go sterownik (mail-relay.service.ts).
@@ -116,6 +117,9 @@ const M = {
     systemIp: 'Kod zamówiono z adresu IP {ip} ({when}).',
     systemFooter: 'Kod jest ważny {minutes} minut (do {until}) i działa tylko raz. Jeśli to nie Ty, nikomu go nie podawaj: po {attempts} błędnych kodach logowanie system blokuje się na {lock} minut.',
     changeSubject: 'Potwierdź nowy adres: {code}',
+    phoneOffSubject: 'Wyłączenie kodu z telefonu: {code}',
+    phoneOffCode: 'kod potwierdzenia wyłączenia logowania kodem z aplikacji na telefonie:',
+    phoneOffFooter: 'Kod jest ważny 10 minut (do {until}). Wyłączenie działa we wszystkich aplikacjach mojeturnie.pl. Jeśli to nie Ty, zignoruj tę wiadomość.',
     changeFooter: 'Kod jest ważny 10 minut (do {until}). Jeśli to nie Ty, zignoruj tę wiadomość.',
     changeCode: 'kod potwierdzenia nowego adresu e-mail:',
     changedSubject: 'Zmiana adresu e-mail konta',
@@ -147,6 +151,9 @@ const M = {
     systemIp: 'The code was requested from the IP address {ip} ({when}).',
     systemFooter: 'The code is valid for {minutes} minutes (until {until}) and works only once. If this was not you, do not share it with anyone: after {attempts} wrong codes system sign-in is locked for {lock} minutes.',
     changeSubject: 'Confirm the new address: {code}',
+    phoneOffSubject: 'Turning off the phone code: {code}',
+    phoneOffCode: 'the confirmation code for turning off sign-in with a code from the phone app:',
+    phoneOffFooter: 'The code is valid for 10 minutes (until {until}). Turning it off applies to all mojeturnie.pl applications. If this was not you, ignore this message.',
     changeFooter: 'The code is valid for 10 minutes (until {until}). If this was not you, ignore this message.',
     changeCode: 'confirmation code for the new e-mail address:',
     changedSubject: 'Account e-mail address changed',
@@ -208,6 +215,17 @@ export function emailChangeMail(to: string, code: string, expiresAt: Date, lang:
     subject: m(lang, 'changeSubject', { code: formatCode(code) }),
     text: `${m(lang, 'hello')}\n\n${m(lang, 'changeCode')} ${formatCode(code)}\n\n${footer}`,
     html: layout({ paragraphs: [m(lang, 'hello'), m(lang, 'changeCode')], code: formatCode(code), footer }),
+  };
+}
+
+// Kod do wyłączenia logowania kodem z telefonu (zwykłe konto; konto system dostaje zwykły kod konta system).
+export function phoneDisableMail(to: string, code: string, expiresAt: Date, lang: Lang = DEFAULT_LANG): OutgoingMail {
+  const footer = m(lang, 'phoneOffFooter', { until: until(expiresAt, lang) });
+  return {
+    to,
+    subject: m(lang, 'phoneOffSubject', { code: formatCode(code) }),
+    text: `${m(lang, 'hello')}\n\n${m(lang, 'phoneOffCode')} ${formatCode(code)}\n\n${footer}`,
+    html: layout({ paragraphs: [m(lang, 'hello'), m(lang, 'phoneOffCode')], code: formatCode(code), footer }),
   };
 }
 

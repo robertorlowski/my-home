@@ -425,3 +425,9 @@ button.icon-button.theme-toggle[type]:hover {
 .settings-form { display: flex; flex-direction: column; gap: var(--gap); }
 .settings-form .field > small { display: block; margin-top: 4px; }
 .settings-clear { align-self: flex-start; padding: 0; }
+
+/* ---- logowanie kodem z telefonu (components/PhoneLoginCard.tsx, od 2026-11-13) ---- */
+/* kod QR to obrazek PNG z białym marginesem, więc da się go zeskanować także w motywie ciemnym */
+.phone-qr { display: block; width: 200px; height: 200px; margin: 0 auto; border: 1px solid var(--line); border-radius: 6px; image-rendering: pixelated; }
+.phone-key { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.phone-key code { font-size: 15px; letter-spacing: 1px; word-break: break-all; text-align: center; }

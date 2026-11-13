@@ -23,6 +23,7 @@ Moduł odpowiada za:
 - **Właściciel instalacji** — loguje się, wybiera sterownik, nadaje mu nazwę, układa kafelki, udostępnia sterownik domownikom. Korzysta z aplikacji na komputerze i na telefonie.
 - **Instalator** (zwykle ta sama osoba) — podłącza nowy sterownik; wystarczy, że sterownik ma Wi-Fi, reszta dzieje się sama.
 - **Użytkownik systemowy** — konto administracyjne bez hasła (od 2026-11-13): w pole e-mail wpisuje się „system”, a kod przychodzi zawsze na stały adres z ustawień instalacji (na serwerze bez poczty jest w dzienniku serwera; gdy poczta nie działa, kod daje polecenie awaryjne na serwerze). Widzi wszystkie sterowniki, zarządza firmware rodzajów sterowników i widzi zajętość bazy.
+- **Logowanie kodem z telefonu** (od 2026-11-13) — każde konto, także „system”, może zamiast kodu z maila używać kodu z aplikacji Microsoft Authenticator albo Google Authenticator. Telefon włącza się na stronie konta (kod QR), działa we wszystkich aplikacjach mojeturnie.pl jednym wpisem w telefonie, a kod z maila zostaje zawsze dostępny przyciskiem „Wyślij kod na maila”.
 
 ## Co użytkownik może zrobić
 

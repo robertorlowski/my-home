@@ -1,6 +1,7 @@
 // Konta użytkowników (2026-10-11): logowanie i rejestracja kodem albo linkiem z maila (jeden przebieg),
 // sesje (token w nagłówku Authorization, bo klient i API są na różnych domenach), użytkownik systemowy
-// (od 2026-11-13 kod z maila na stały adres z ustawień zamiast hasła SYSTEM_PASSWORD), dane konta, zmiana e-maila
+// (od 2026-11-13 kod z maila na stały adres z ustawień zamiast hasła SYSTEM_PASSWORD), kod z aplikacji na telefonie
+// (TOTP, od 2026-11-13: logowanie, rejestracja i wyłączenie; mechanizm w totp.service.ts), dane konta, zmiana e-maila
 // i usunięcie konta z danymi sterowników.
 import { setting } from './settings.service';
 import crypto from 'crypto';
@@ -14,8 +15,12 @@ import { forgetDeviceInfo } from './device-info.service';
 import { assertMailAvailable } from './mail-relay.service';
 import {
   adminEmail, clientBaseUrl, deleteAccountMail, emailChangeMail, emailChangedMail, formatCode, loginMail, mailConfigured,
-  registrationAdminMail, sendMail, systemLoginMail, until,
+  phoneDisableMail, registrationAdminMail, sendMail, systemLoginMail, until,
 } from './mail.service';
+import {
+  base32Encode, decryptSecret, deleteTotpKey, findTotpKey, insertTotpKey, markTotpUsed, matchTotp, newTotpSecret,
+  otpauthUrl, qrDataUrl, totpConfigured,
+} from './totp.service';
 
 export const CODE_TTL_MS = 10 * 60 * 1000;
 export const RESEND_MS = 60 * 1000;
@@ -233,14 +238,20 @@ export async function verifyLogin(body: { email?: unknown; code?: unknown; token
   const email = normalizeEmail(body.email);
   if (!body.token && !email) throw new AuthError(texts('err.emailRequired'));
   const doc = await consumeCode('login', { token: body.token, code: body.code, email: email ?? undefined });
-  let user = await UserModel.findOne({ email: doc.email }).lean<UserEntry>();
+  return signInVerifiedEmail(doc.email);
+}
+
+// Adres potwierdzony kodem z maila, linkiem albo kodem z telefonu (telefon mógł zostać zarejestrowany w innej aplikacji
+// mojeturnie.pl, więc i tu konto może jeszcze nie istnieć): sesja, a dla nowego adresu nowe konto.
+async function signInVerifiedEmail(email: string) {
+  let user = await UserModel.findOne({ email }).lean<UserEntry>();
   const created = !user;
   if (!user) {
-    user = (await UserModel.create({ email: doc.email })).toObject();
-    if (adminEmail()) void sendMail(registrationAdminMail(adminEmail(), doc.email)).catch((error) => console.error('[mail] administrator:', error));
+    user = (await UserModel.create({ email })).toObject();
+    if (adminEmail()) void sendMail(registrationAdminMail(adminEmail(), email)).catch((error) => console.error('[mail] administrator:', error));
   }
   // zaproszenia wysłane na ten adres przed założeniem konta
-  await DeviceShareModel.updateMany({ email: doc.email, userId: null }, { $set: { userId: String(user._id) } });
+  await DeviceShareModel.updateMany({ email, userId: null }, { $set: { userId: String(user._id) } });
   const token = await createSession(String(user._id));
   return { token, created, user: publicUser(user) };
 }
@@ -251,15 +262,17 @@ export async function verifyLogin(body: { email?: unknown; code?: unknown; token
 // (systemEmail: SYSTEM_EMAIL, bez niego MAIL_ADMIN), nigdy z formularza; w mailu adres IP, z którego zamówiono kod.
 // Bez poczty (środowisko testowe, npm run local, nowa instalacja) albo bez adresu kod trafia do dziennika serwera.
 // Limity: nowy kod najwyżej raz na RESEND_MS i SYSTEM_CODES_PER_HOUR razy na godzinę; MAX_ATTEMPTS błędnych kodów
-// unieważnia kod i blokuje logowanie system (wysłanie i wpisanie kodu) na SYSTEM_LOCK_MS. Polecenie awaryjne
-// (core/cli.ts, --kod-awaryjny) wypisuje kod w terminalu serwera bez poczty i zdejmuje blokadę oraz limit na godzinę.
-// Stan jest w auth_codes (purpose system-login / system-sent / system-lock, email 'system'), a nie w pamięci,
-// bo polecenie awaryjne to osobny proces. Zamówienie, błędny kod, blokada i logowanie trafiają do dziennika serwera.
+// (z maila, awaryjnych i z telefonu razem, w odstępach krótszych niż SYSTEM_LOCK_MS) unieważnia kod i blokuje
+// logowanie system (wysłanie i wpisanie kodu) na SYSTEM_LOCK_MS. Polecenie awaryjne (core/cli.ts, --kod-awaryjny)
+// wypisuje kod w terminalu serwera bez poczty i zdejmuje blokadę oraz limity. Stan jest w auth_codes (purpose
+// system-login / system-sent / system-fail / system-lock, email 'system'), a nie w pamięci, bo polecenie awaryjne to
+// osobny proces. Zamówienie, błędny kod, blokada i logowanie trafiają do dziennika serwera. Konto system z telefonem
+// (klucz adresu systemEmail()) loguje się też kodem z aplikacji: POST /auth/system/verify przyjmuje każdy z tych kodów.
 export const SYSTEM_CODE_TTL_MS = 5 * 60 * 1000;
 export const SYSTEM_CODES_PER_HOUR = 5;
 export const SYSTEM_LOCK_MS = 15 * 60 * 1000;
 const SYSTEM_SENT_WINDOW_MS = 60 * 60 * 1000;
-const SYSTEM_PURPOSES: AuthCodePurpose[] = ['system-login', 'system-sent', 'system-lock'];
+const SYSTEM_PURPOSES: AuthCodePurpose[] = ['system-login', 'system-sent', 'system-fail', 'system-lock'];
 
 /** adres kodów konta system: ustawienie instalacji, nigdy wpisany w kod (kod jest publiczny, a cudza instalacja
  *  wysyłałaby kody właścicielowi); pusty = adres administratora, bez obu kod idzie do dziennika serwera */
@@ -331,6 +344,30 @@ export async function startSystemLogin(ip: string, lang: Lang = DEFAULT_LANG) {
 
 // POST /auth/system/verify {code}: sesja konta system (klient pyta potem o zapamiętanie, jak u innych kont).
 export async function verifySystemLogin(codeValue: unknown, ip: string) {
+  const source = await consumeSystemCode(codeValue, ip);
+  const user = await ensureSystemUser();
+  console.log(`[konta] system: zalogowano ${SOURCE_TEXT[source]} z IP ${ip}`);
+  return { token: await createSession(String(user._id)), created: false, user: publicUser(user) };
+}
+
+type SystemCodeSource = SystemCodeDelivery | 'phone';
+const SOURCE_TEXT: Record<SystemCodeSource, string> = {
+  mail: 'kodem z maila', log: 'kodem z dziennika serwera', emergency: 'kodem awaryjnym', phone: 'kodem z telefonu',
+};
+
+/** błędny kod: licznik w oknie windowMs od ostatniego błędu (system-fail konta system, totp-fail kodu z telefonu) */
+async function countFailure(purpose: 'system-fail' | 'totp-fail', key: string, now: number, windowMs: number, ip?: string) {
+  const doc = await AuthCodeModel.findOneAndUpdate(
+    { purpose, email: key, expiresAt: { $gt: new Date(now) } },
+    { $inc: { attempts: 1 }, $set: { expiresAt: new Date(now + windowMs), ...(ip ? { ip } : {}) } },
+    { upsert: true, new: true, setDefaultsOnInsert: false },
+  ).lean<AuthCodeEntry>();
+  return doc?.attempts ?? 1;
+}
+
+// Kod konta system przy logowaniu i przy wyłączaniu telefonu: z maila, z dziennika serwera, awaryjny albo z aplikacji
+// na telefonie (klucz adresu systemEmail()). Każdy błędny kod idzie do wspólnego licznika (system-fail).
+async function consumeSystemCode(codeValue: unknown, ip: string): Promise<SystemCodeSource> {
   const now = Date.now();
   const locked = await systemLockSeconds(now);
   if (locked) throw lockedError(locked);
@@ -338,21 +375,27 @@ export async function verifySystemLogin(codeValue: unknown, ip: string) {
   if (!/^\d{6}$/.test(code)) throw new AuthError(texts('err.codeDigits'));
   const doc = await AuthCodeModel.findOne({ purpose: 'system-login', email: SYSTEM_LOGIN, expiresAt: { $gt: new Date(now) } })
     .sort({ createdAt: -1 }).lean<AuthCodeEntry>();
-  if (!doc) throw new AuthError(texts('err.codeExpired'));
-  if (doc.codeHash === codeHash(SYSTEM_LOGIN, code)) {
+  if (doc && doc.codeHash === codeHash(SYSTEM_LOGIN, code)) {
     // usunięcie przed utworzeniem sesji: przy dwóch żądaniach naraz kod działa tylko w jednym
     const used = await AuthCodeModel.findOneAndDelete({ _id: doc._id }).lean<AuthCodeEntry>();
     if (!used) throw new AuthError(texts('err.codeExpired'));
-    const user = await ensureSystemUser();
-    const how = used.delivery === 'emergency' ? 'kodem awaryjnym' : used.delivery === 'log' ? 'kodem z dziennika serwera' : 'kodem z maila';
-    console.log(`[konta] system: zalogowano ${how} z IP ${ip}`);
-    return { token: await createSession(String(user._id)), created: false, user: publicUser(user) };
+    await AuthCodeModel.deleteMany({ purpose: 'system-fail', email: SYSTEM_LOGIN });
+    return used.delivery ?? 'mail';
   }
-  const failed = await AuthCodeModel.findOneAndUpdate({ _id: doc._id }, { $inc: { attempts: 1 } }, { new: true }).lean<AuthCodeEntry>();
-  if (!failed) throw new AuthError(texts('err.codeExpired'));
-  console.warn(`[konta] system: błędny kod z IP ${ip} (${failed.attempts}/${MAX_ATTEMPTS})`);
-  if (failed.attempts < MAX_ATTEMPTS) throw new AuthError(texts('err.wrongCodeLeft', { left: MAX_ATTEMPTS - failed.attempts }));
-  await AuthCodeModel.deleteMany({ purpose: 'system-login', email: SYSTEM_LOGIN });
+  const phone = await checkPhoneCode(systemEmail().toLowerCase(), code, now);
+  if (phone === 'ok') {
+    await AuthCodeModel.deleteMany({ purpose: 'system-fail', email: SYSTEM_LOGIN });
+    return 'phone';
+  }
+  // ten sam kod z telefonu drugi raz (np. podwójne kliknięcie) nie jest zgadywaniem
+  if (phone === 'used') throw new AuthError(texts('err.totpUsed'));
+  if (!doc && phone === 'unavailable') throw new AuthError(texts('err.totpUnavailable'), 503);
+  // bez kodu z maila i bez telefonu nie ma czego zgadywać
+  if (!doc && phone === 'none') throw new AuthError(texts('err.codeExpired'));
+  const attempts = await countFailure('system-fail', SYSTEM_LOGIN, now, SYSTEM_LOCK_MS, ip);
+  console.warn(`[konta] system: błędny kod z IP ${ip} (${attempts}/${MAX_ATTEMPTS})`);
+  if (attempts < MAX_ATTEMPTS) throw new AuthError(texts('err.wrongCodeLeft', { left: MAX_ATTEMPTS - attempts }));
+  await AuthCodeModel.deleteMany({ purpose: { $in: ['system-login', 'system-fail'] }, email: SYSTEM_LOGIN });
   await AuthCodeModel.create({ purpose: 'system-lock', email: SYSTEM_LOGIN, ip, expiresAt: new Date(now + SYSTEM_LOCK_MS) });
   console.warn(`[konta] system: ${MAX_ATTEMPTS} błędnych kodów (ostatni z IP ${ip}), kod unieważniony, logowanie system`
     + ` zablokowane na ${minutes(SYSTEM_LOCK_MS)} min; blokadę zdejmuje node dist/server.js --kod-awaryjny`);
@@ -370,6 +413,238 @@ export async function issueEmergencySystemCode() {
     purpose: 'system-login', email: SYSTEM_LOGIN, codeHash: codeHash(SYSTEM_LOGIN, code), expiresAt, delivery: 'emergency',
   });
   return { code, expiresAt };
+}
+
+// ------------------------------------------------------------------ kod z aplikacji na telefonie (TOTP, od 2026-11-13)
+// Mechanizm i wspólna baza kluczy (jeden wpis „mojeturnie.pl” w telefonie dla Mojego domu, Archiwum i panelu admin):
+// totp.service.ts. Tu zasady: krok 1 logowania mówi, czy adres ma telefon (POST /auth/methods); kod z telefonu ma
+// te same limity błędnych prób co kod z maila (MAX_ATTEMPTS; u zwykłego konta blokuje wtedy sam kod z telefonu na
+// PHONE_LOCK_MS, a kod z maila działa dalej; u konta system liczy się do blokady system); rejestracja w ustawieniach
+// konta trzyma nowy sekret najwyżej PHONE_SETUP_MS w pamięci przy sesji i zapisuje go dopiero po pierwszym poprawnym
+// kodzie; wyłączenie wymaga kodu z telefonu albo z maila. Konto system używa klucza adresu systemEmail(), zwykłe konto
+// adresu konta (po zmianie adresu telefon trzeba zarejestrować od nowa, klucz starego adresu zostaje dla innych
+// aplikacji). Bez LOGOWANIE_KLUCZ albo bez dostępu do bazy kluczy wszystko działa jak bez telefonu.
+export const PHONE_SETUP_MS = 10 * 60 * 1000;
+export const PHONE_LOCK_MS = 15 * 60 * 1000;
+
+type PhoneCheck = 'ok' | 'wrong' | 'used' | 'none' | 'unavailable';
+
+// baza kluczy niedostępna albo inny klucz szyfrujący: najwyżej jedno ostrzeżenie na minutę, logowanie idzie mailem
+let lastStoreWarning = 0;
+const warnStore = (error: unknown) => {
+  if (Date.now() - lastStoreWarning < 60_000) return;
+  lastStoreWarning = Date.now();
+  console.warn('[totp] kod z telefonu niedostępny:', (error as Error)?.message ?? error);
+};
+
+/** adres, którego klucz z telefonu dotyczy konta: system → systemEmail(), inne → e-mail konta */
+const phoneAddress = (user: UserEntry) => (user.isSystem ? systemEmail().toLowerCase() : user.email ?? '');
+
+/** sekret telefonu adresu, jeśli ten serwer umie go sprawdzić (LOGOWANIE_KLUCZ odszyfrowuje klucz) */
+async function phoneSecret(address: string): Promise<Buffer | null> {
+  if (!address || !totpConfigured()) return null;
+  const doc = await findTotpKey(address);
+  return doc ? decryptSecret(doc.sekret) : null;
+}
+
+/** krok 1 logowania: czy pokazać pole „Kod z aplikacji”; błąd bazy = nie (zostaje kod z maila) */
+async function hasPhone(address: string): Promise<boolean> {
+  try {
+    return !!(await phoneSecret(address));
+  } catch (error) {
+    warnStore(error);
+    return false;
+  }
+}
+
+// Kod z telefonu bez limitów prób (limity liczą wywołujący): okno ±30 s, potem znak w totp_uzyte, więc ten sam kod
+// nie zadziała drugi raz w żadnej aplikacji.
+async function checkPhoneCode(address: string, code: string, now = Date.now()): Promise<PhoneCheck> {
+  let secret: Buffer | null;
+  try {
+    secret = await phoneSecret(address);
+  } catch (error) {
+    warnStore(error);
+    return 'unavailable';
+  }
+  if (!secret) return 'none';
+  const window = matchTotp(secret, code, now);
+  if (window === null) return 'wrong';
+  try {
+    return (await markTotpUsed(address, window)) ? 'ok' : 'used';
+  } catch (error) {
+    warnStore(error);
+    return 'unavailable';
+  }
+}
+
+const phoneLockedError = (seconds: number) =>
+  new AuthError(texts('err.totpLocked', { minutes: Math.max(1, Math.ceil(seconds / 60)) }), 429, seconds, { locked: true });
+
+async function phoneLockSeconds(email: string, now: number): Promise<number> {
+  const doc = await AuthCodeModel.findOne({
+    purpose: 'totp-fail', email, attempts: { $gte: MAX_ATTEMPTS }, expiresAt: { $gt: new Date(now) },
+  }).lean<AuthCodeEntry>();
+  return doc ? Math.ceil((new Date(doc.expiresAt).getTime() - now) / 1000) : 0;
+}
+
+/** błędny kod z telefonu zwykłego konta: komunikat z liczbą prób albo blokada kodu z telefonu */
+async function phoneFailure(email: string, now: number, ip: string): Promise<AuthError> {
+  const attempts = await countFailure('totp-fail', email, now, PHONE_LOCK_MS);
+  if (attempts < MAX_ATTEMPTS) return new AuthError(texts('err.wrongCodeLeft', { left: MAX_ATTEMPTS - attempts }));
+  console.warn(`[konta] kod z telefonu zablokowany na ${minutes(PHONE_LOCK_MS)} min po ${MAX_ATTEMPTS} błędnych kodach (ostatni z IP ${ip})`);
+  return phoneLockedError(Math.round(PHONE_LOCK_MS / 1000));
+}
+
+const cleanCode = (value: unknown) => (typeof value === 'string' ? value.replace(/\s/g, '') : '');
+
+// POST /auth/methods {email}: krok 1 logowania; „system” oznacza konto system (klucz adresu systemEmail()).
+export async function loginMethods(emailValue: unknown) {
+  if (typeof emailValue === 'string' && emailValue.trim().toLowerCase() === SYSTEM_LOGIN) {
+    return { email: SYSTEM_LOGIN, totp: await hasPhone(systemEmail().toLowerCase()) };
+  }
+  const email = normalizeEmail(emailValue);
+  if (!email) throw new AuthError(texts('err.emailInvalid'));
+  return { email, totp: await hasPhone(email) };
+}
+
+// POST /auth/totp/verify {email, code}: logowanie zwykłego konta kodem z telefonu (konto system: /auth/system/verify).
+export async function verifyPhoneLogin(body: { email?: unknown; code?: unknown }, ip: string) {
+  const email = normalizeEmail(body.email);
+  if (!email) throw new AuthError(texts('err.emailRequired'));
+  const now = Date.now();
+  const locked = await phoneLockSeconds(email, now);
+  if (locked) throw phoneLockedError(locked);
+  const code = cleanCode(body.code);
+  if (!/^\d{6}$/.test(code)) throw new AuthError(texts('err.codeDigits'));
+  const result = await checkPhoneCode(email, code, now);
+  if (result === 'unavailable') throw new AuthError(texts('err.totpUnavailable'), 503);
+  if (result === 'none') throw new AuthError(texts('err.totpOff'));
+  if (result === 'used') throw new AuthError(texts('err.totpUsed'));
+  if (result === 'wrong') throw await phoneFailure(email, now, ip);
+  await AuthCodeModel.deleteMany({ purpose: 'totp-fail', email });
+  return signInVerifiedEmail(email);
+}
+
+export type PhoneStatus = {
+  /** można włączyć albo wyłączyć (klucz szyfrujący, baza kluczy i adres są) */
+  available: boolean;
+  enabled: boolean;
+  address: string;
+  /** gdzie zarejestrowano telefon (my-home, archiwum, admin) i kiedy */
+  app?: string;
+  since?: Date;
+  /** dlaczego niedostępne: off = serwer bez LOGOWANIE_KLUCZ, store = baza kluczy niedostępna, address = system bez adresu */
+  reason?: 'off' | 'store' | 'address' | 'demo';
+};
+
+// GET /auth/totp: stan dla karty „Logowanie kodem z telefonu”.
+export async function phoneStatus(user: UserEntry): Promise<PhoneStatus> {
+  if (user.isDemo) return { available: false, enabled: false, address: '', reason: 'demo' };
+  const address = phoneAddress(user);
+  if (!totpConfigured()) return { available: false, enabled: false, address, reason: 'off' };
+  if (!address) return { available: false, enabled: false, address, reason: 'address' };
+  try {
+    const doc = await findTotpKey(address);
+    return doc
+      ? { available: true, enabled: true, address, app: doc.aplikacja, since: doc.utworzono }
+      : { available: true, enabled: false, address };
+  } catch (error) {
+    warnStore(error);
+    return { available: false, enabled: false, address, reason: 'store' };
+  }
+}
+
+// rejestracje w toku: skrót tokenu sesji → sekret (tylko w pamięci, najwyżej PHONE_SETUP_MS)
+const pendingSetups = new Map<string, { address: string; secret: Buffer; expiresAt: number }>();
+
+// POST /auth/totp/setup: nowy sekret, kod QR i klucz tekstem; nic nie trafia jeszcze do bazy kluczy.
+export async function startPhoneSetup(user: UserEntry, sessionToken: string) {
+  const status = await phoneStatus(user);
+  if (!status.available) throw new AuthError(texts(status.reason === 'address' ? 'err.totpNoAddress' : 'err.totpUnavailable'), 503);
+  if (status.enabled) throw new AuthError(texts('err.totpAlreadyOn'), 409);
+  const now = Date.now();
+  for (const [key, entry] of pendingSetups) if (entry.expiresAt <= now) pendingSetups.delete(key);
+  const secret = newTotpSecret();
+  pendingSetups.set(sha256(sessionToken), { address: status.address, secret, expiresAt: now + PHONE_SETUP_MS });
+  const key = base32Encode(secret);
+  const url = otpauthUrl(status.address, key);
+  return { address: status.address, secret: key, otpauthUrl: url, qr: await qrDataUrl(url), expiresInSeconds: Math.round(PHONE_SETUP_MS / 1000) };
+}
+
+// POST /auth/totp/confirm {code}: pierwszy kod z aplikacji zapisuje telefon w totp_klucze (od tej chwili wszystkie
+// aplikacje mojeturnie.pl proszą o kod z telefonu dla tego adresu).
+export async function confirmPhoneSetup(user: UserEntry, sessionToken: string, codeValue: unknown) {
+  const entry = pendingSetups.get(sha256(sessionToken));
+  if (!entry || entry.expiresAt <= Date.now() || entry.address !== phoneAddress(user)) throw new AuthError(texts('err.totpSetupExpired'));
+  const code = cleanCode(codeValue);
+  if (!/^\d{6}$/.test(code)) throw new AuthError(texts('err.codeDigits'));
+  const window = matchTotp(entry.secret, code);
+  if (window === null) throw new AuthError(texts('err.totpWrongSetup'));
+  try {
+    if (!(await markTotpUsed(entry.address, window))) throw new AuthError(texts('err.totpUsed'));
+    if (!(await insertTotpKey(entry.address, entry.secret))) throw new AuthError(texts('err.totpAlreadyOn'), 409);
+  } catch (error) {
+    if (error instanceof AuthError) throw error;
+    warnStore(error);
+    throw new AuthError(texts('err.totpUnavailable'), 503);
+  }
+  pendingSetups.delete(sha256(sessionToken));
+  if (user.isSystem) console.log('[konta] system: zarejestrowano telefon (kod z aplikacji)');
+  return phoneStatus(user);
+}
+
+/** rezygnacja z rejestracji w toku (przycisk „Anuluj”) */
+export const cancelPhoneSetup = (sessionToken: string) => { pendingSetups.delete(sha256(sessionToken)); };
+
+// POST /auth/totp/disable/code: kod z maila do wyłączenia telefonu (konto system: zwykły kod konta system).
+export async function sendPhoneDisableCode(user: UserEntry, ip: string, lang: Lang = DEFAULT_LANG) {
+  if (user.isSystem) return startSystemLogin(ip, lang);
+  if (!user.email) throw new AuthError(texts('err.totpOff'));
+  await assertMailAvailable();
+  const { code, expiresAt } = await createCode('totp-disable', user.email, { userId: String(user._id) });
+  await sendMail(phoneDisableMail(user.email, code, expiresAt, mailLang(user, lang)));
+  return { delivery: 'mail' as const, expiresInSeconds: Math.round(CODE_TTL_MS / 1000), resendAfterSeconds: Math.round(RESEND_MS / 1000) };
+}
+
+// POST /auth/totp/disable {code}: kod z telefonu albo z maila; usuwa klucz adresu we wspólnej bazie, więc kod z telefonu
+// przestaje działać we wszystkich aplikacjach. Potem można zarejestrować nowy telefon.
+export async function disablePhone(user: UserEntry, codeValue: unknown, ip: string) {
+  const status = await phoneStatus(user);
+  if (!status.enabled) throw new AuthError(texts('err.totpOff'));
+  if (user.isSystem) {
+    await consumeSystemCode(codeValue, ip);
+  } else {
+    const code = cleanCode(codeValue);
+    if (!/^\d{6}$/.test(code)) throw new AuthError(texts('err.codeDigits'));
+    const now = Date.now();
+    const locked = await phoneLockSeconds(status.address, now);
+    const phone = locked ? 'wrong' : await checkPhoneCode(status.address, code, now);
+    if (phone === 'used') throw new AuthError(texts('err.totpUsed'));
+    if (phone !== 'ok') {
+      const userId = String(user._id);
+      // kod z maila (zamówiony przyciskiem „Wyślij kod na maila”) ma własne limity (consumeCode)
+      if (await AuthCodeModel.exists({ purpose: 'totp-disable', userId, expiresAt: { $gt: new Date(now) } })) {
+        await consumeCode('totp-disable', { code, userId });
+      } else if (locked) {
+        throw phoneLockedError(locked);
+      } else if (phone === 'unavailable') {
+        throw new AuthError(texts('err.totpUnavailable'), 503);
+      } else {
+        throw await phoneFailure(status.address, now, ip);
+      }
+    } else {
+      await AuthCodeModel.deleteMany({ purpose: 'totp-fail', email: status.address });
+    }
+  }
+  try {
+    await deleteTotpKey(status.address);
+  } catch (error) {
+    warnStore(error);
+    throw new AuthError(texts('err.totpUnavailable'), 503);
+  }
+  if (user.isSystem) console.log(`[konta] system: wyłączono kod z telefonu (IP ${ip})`);
+  return phoneStatus(user);
 }
 
 // ------------------------------------------------------------------ wersja demo (2026-10-21)

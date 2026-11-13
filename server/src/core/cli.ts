@@ -9,6 +9,8 @@
 //   działa”); zdejmuje blokadę po błędnych kodach i limit kodów na godzinę (auth.service.ts issueEmergencySystemCode).
 //   Łączy się tylko z bazą (MONGODB_URI), więc działa też przy zatrzymanym serwerze. Na ekranie logowania: „system”
 //   w polu e-mail i „Mam już kod”.
+// --kod-totp KLUCZ: bieżący kod z aplikacji na telefonie dla klucza (base32, jak pod kodem QR przy rejestracji), bez
+//   bazy i bez telefonu; do sprawdzania logowania kodem z telefonu na środowisku testowym.
 // --api METODA ŚCIEŻKA [JSON] [--bin]: żądanie do serwera działającego obok (INTERNAL_API_URL albo 127.0.0.1:PORT)
 //   z jego wewnętrznym tokenem (core/internal.ts), czyli bez konta i hasła; zastępuje skrypty, które logowały się hasłem
 //   systemowym (wgrywanie firmware). JSON = treść application/json, --bin = treść ze standardowego wejścia jako
@@ -19,6 +21,7 @@ import { INTERNAL_TOKEN_HEADER, internalApiUrl, internalTokenFile, readInternalT
 import { issueEmergencySystemCode, SYSTEM_CODE_TTL_MS } from './services/auth.service';
 import { formatCode, until } from './services/mail.service';
 import { operationHeaders, systemMeta } from './services/operation-log.service';
+import { base32Decode, TOTP_STEP_S, totpCode } from './services/totp.service';
 
 export type CliOptions = {
   /** treść dla --bin (testy); domyślnie standardowe wejście */
@@ -27,12 +30,13 @@ export type CliOptions = {
   printError?: (text: string) => void;
 };
 
-const COMMANDS = ['--kod-awaryjny', '--api'];
+const COMMANDS = ['--kod-awaryjny', '--kod-totp', '--api'];
 export const isCliCommand = (args: string[]) => args.some((arg) => COMMANDS.includes(arg));
 
 const USAGE = [
   'Polecenia (na serwerze, obok działającego serwera, np. docker exec my-home-prod node dist/server.js …):',
   '  --kod-awaryjny                                   kod konta system w terminalu (5 min), zdejmuje blokadę',
+  '  --kod-totp KLUCZ                                 bieżący kod z aplikacji na telefonie dla klucza base32 (testy)',
   "  --api GET|POST|PUT|DELETE /ścieżka ['{json}']    żądanie do API serwera bez logowania",
   '  --api PUT /firmware/<rodzaj>/<wersja> --bin < plik.bin',
 ].join('\n');
@@ -43,6 +47,8 @@ export async function runCli(args: string[], options: CliOptions = {}): Promise<
   const print = options.print ?? ((text: string) => { process.stdout.write(`${text}\n`); });
   const printError = options.printError ?? ((text: string) => { process.stderr.write(`${text}\n`); });
   if (args.includes('--kod-awaryjny')) return emergencyCode(print, printError);
+  const totp = args.indexOf('--kod-totp');
+  if (totp >= 0) return phoneCode(args[totp + 1] ?? '', print, printError);
   const at = args.indexOf('--api');
   if (at >= 0) return apiCall(args.slice(at + 1), options, print, printError);
   printError(USAGE);
@@ -69,6 +75,23 @@ async function emergencyCode(print: (text: string) => void, printError: (text: s
   } finally {
     if (!connected) await mongoose.disconnect();
   }
+}
+
+function phoneCode(key: string, print: (text: string) => void, printError: (text: string) => void): number {
+  let secret: Buffer;
+  try {
+    secret = base32Decode(key);
+  } catch {
+    secret = Buffer.alloc(0);
+  }
+  if (secret.length < 10) {
+    printError('--kod-totp KLUCZ: klucz base32 spod kodu QR (rejestracja telefonu), np. --kod-totp JBSW Y3DP EHPK 3PXP');
+    return 2;
+  }
+  const now = Date.now();
+  const left = TOTP_STEP_S - Math.floor(now / 1000) % TOTP_STEP_S;
+  print(`Kod z aplikacji: ${formatCode(totpCode(secret, now))} (jeszcze ${left} s), następny: ${formatCode(totpCode(secret, now + TOTP_STEP_S * 1000))}`);
+  return 0;
 }
 
 async function readAll(stdin: AsyncIterable<Buffer | string>): Promise<Buffer> {

@@ -1,5 +1,6 @@
 // „Moje dane” (/account, menu konta w nagłówku; konta użytkowników, 2026-10-11) w wyglądzie „Instrument” z makiet/
-// (od 2026-10-21 także karta „Powiadomienia” — PushSettingsCard, Web Push)
+// (od 2026-10-21 także karta „Powiadomienia” — PushSettingsCard, Web Push; od 2026-11-13 „Logowanie kodem z telefonu”
+// — PhoneLoginCard, TOTP)
 // (#s-konto, 2026-10-17): karty „Moje dane” (e-mail ze zmianą przez kod na nowy adres, dane i lokalizacja konta —
 // ProfileForm), „Sesja” (wylogowanie) i czerwona „Usunięcie konta” (.card-danger; link potwierdzający w mailu,
 // okno .modal). DeleteAccountConfirm (/account/delete?token=…) to strona z linku — działa także bez zalogowania.
@@ -7,6 +8,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthRequests } from '../../api';
 import { SystemAccount } from './system';
+import { PhoneLoginCard } from '../../components/PhoneLoginCard';
 import { ProfileForm } from '../../components/ProfileForm';
 import { PushSettingsCard } from '../../components/PushSettingsCard';
 import { useAuth, userDisplayName } from '../../context/AuthContext';
@@ -182,6 +184,8 @@ export function Account() {
         {saved && <div className="toast toast-ok">{t('common.saved')}</div>}
         {user.isSystem && <p className="help">{t('account.systemHint')}</p>}
       </section>
+
+      <PhoneLoginCard />
 
       <PushSettingsCard />
 

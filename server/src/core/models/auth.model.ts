@@ -6,9 +6,15 @@ import mongoose, { Schema } from 'mongoose';
 
 /** login: logowanie i rejestracja; email-change: nowy adres; delete-account: potwierdzenie usunięcia konta;
  *  konto system (email: 'system'): system-login = kod (ważny 5 min), system-sent = ślad wysłanego kodu do limitu
- *  na godzinę (expiresAt = wysłanie + 1 h), system-lock = blokada po błędnych kodach (do expiresAt) */
-export type AuthCodePurpose = 'login' | 'email-change' | 'delete-account' | 'system-login' | 'system-sent' | 'system-lock';
-export const AUTH_CODE_PURPOSES: AuthCodePurpose[] = ['login', 'email-change', 'delete-account', 'system-login', 'system-sent', 'system-lock'];
+ *  na godzinę (expiresAt = wysłanie + 1 h), system-fail = licznik błędnych kodów (attempts, okno 15 min od ostatniego),
+ *  system-lock = blokada po błędnych kodach (do expiresAt);
+ *  kod z telefonu (TOTP, od 2026-11-13): totp-fail = licznik błędnych kodów z telefonu adresu (attempts ≥ 5 = blokada
+ *  kodu z telefonu do expiresAt), totp-disable = kod z maila do wyłączenia telefonu (jak email-change) */
+export type AuthCodePurpose = 'login' | 'email-change' | 'delete-account' | 'system-login' | 'system-sent' | 'system-fail'
+  | 'system-lock' | 'totp-fail' | 'totp-disable';
+export const AUTH_CODE_PURPOSES: AuthCodePurpose[] = [
+  'login', 'email-change', 'delete-account', 'system-login', 'system-sent', 'system-fail', 'system-lock', 'totp-fail', 'totp-disable',
+];
 /** jak dotarł kod konta system: mail, dziennik serwera (bez poczty albo adresu), polecenie awaryjne */
 export type SystemCodeDelivery = 'mail' | 'log' | 'emergency';
 
@@ -22,7 +28,7 @@ export interface AuthCodeEntry {
   codeHash?: string;
   tokenHash?: string;
   attempts: number;
-  /** konto system: adres IP, z którego zamówiono kod (system-login, system-sent) albo wpisano ostatni błędny (system-lock) */
+  /** konto system: adres IP, z którego zamówiono kod (system-login, system-sent) albo wpisano ostatni błędny (system-fail, system-lock) */
   ip?: string;
   /** konto system: jak dotarł kod */
   delivery?: SystemCodeDelivery;

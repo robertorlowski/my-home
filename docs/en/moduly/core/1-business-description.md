@@ -23,6 +23,7 @@ The module is responsible for:
 - **The installation owner** — logs in, chooses a controller, names it, arranges the tiles, shares a controller with household members. Uses the application on a computer and on a phone.
 - **The installer** (usually the same person) — connects a new controller; it is enough to give the controller Wi-Fi, the rest happens automatically.
 - **The system user** — the administrative account without a password (since 2026-11-13): "system" goes into the e-mail field and the code always arrives at the fixed address from the installation settings (on a server without mail it is in the server log; when mail does not work, the emergency command on the server gives a code). Sees all controllers, manages the firmware of controller kinds and sees the database usage.
+- **Sign-in with a phone code** (since 2026-11-13) — every account, "system" included, can use a code from Microsoft Authenticator or Google Authenticator instead of the e-mail code. The phone is turned on on the account page (QR code), works in all mojeturnie.pl applications with one entry in the phone, and the e-mail code always stays available with "Send a code by e-mail".
 
 ## What the user can do
 

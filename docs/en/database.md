@@ -76,7 +76,16 @@ Account: `email` (unique among accounts with an e-mail), `firstName`, `lastName`
 
 ### `sessions` and `auth_codes`
 
-The database holds only SHA-256 hashes of the token, code and link, not the values. `sessions`: `tokenHash` (unique), `userId`, `remember` (90 days), `demo` (demo session, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`; since 2026-11-13 the `system` account: `system-login` the code, valid 5 min, `system-sent` a trace of a sent code for the limit of 5 per hour, `system-lock` the lock after 5 wrong codes), `email` (for the `system` account the text `system`), `codeHash`, `tokenHash`, `attempts`, `ip` and `delivery` (`mail` / `log` / `emergency`; `system` account only), `expiresAt`. Both collections have a TTL index on `expiresAt`, so MongoDB removes expired documents itself; the emergency command (`--kod-awaryjny`) removes the `system-*` documents and creates a new code.
+The database holds only SHA-256 hashes of the token, code and link, not the values. `sessions`: `tokenHash` (unique), `userId`, `remember` (90 days), `demo` (demo session, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`; since 2026-11-13 the `system` account: `system-login` the code, valid 5 min, `system-sent` a trace of a sent code for the limit of 5 per hour, `system-fail` the counter of wrong `system` account codes (phone codes included), `system-lock` the lock after 5 wrong codes; phone code: `totp-fail` the counter of wrong phone codes of an address, at 5 the phone code is locked until `expiresAt`, `totp-disable` the e-mail code for turning the phone off), `email` (for the `system` account the text `system`), `codeHash`, `tokenHash`, `attempts`, `ip` and `delivery` (`mail` / `log` / `emergency`; `system` account only), `expiresAt`. Both collections have a TTL index on `expiresAt`, so MongoDB removes expired documents itself; the emergency command (`--kod-awaryjny`) removes the `system-*` documents and creates a new code.
+
+### The shared key database `logowanie` (phone code, since 2026-11-13)
+
+A separate database (name from `LOGIN_KEYS_DB`, default `logowanie`, test `logowanie_test`), shared with Archiwum and the admin panel; My Home connects to it with its own database account (`myhome` has the `readWrite` role). The format is fixed in `oracle-cloud/vm-prod/admin/docs/plan-logowanie-system-kodem.md` and is byte-for-byte the same in every application:
+
+- `totp_klucze`: `{_id: e-mail address in lower case, sekret: "<iv>.<tag>.<ciphertext>", utworzono, aplikacja: "my-home" | "archiwum" | "admin"}` — one document per address; `sekret` is the raw 20 secret bytes encrypted with AES-256-GCM using `LOGOWANIE_KLUCZ` (iv 12 B, tag 16 B, no AAD, parts in base64url). Removing the document turns the phone code off in all applications. The `system` account has its key under the system account code address (`SYSTEM_EMAIL`).
+- `totp_uzyte`: `{_id: "<address>:<30 s window counter of the accepted code>", czas}`, TTL index on `czas` (180 s); inserted before a code is accepted, a duplicate = the code has already been used (also in another application).
+
+Deleting an account in My Home does not remove the address key (it belongs to the address, not the account, and another application may use it); an e-mail change leaves the key of the old address.
 
 ### `device_shares`
 

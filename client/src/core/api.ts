@@ -113,6 +113,16 @@ export class FirmwareRequests {
 type Session = { token: string; created: boolean; user: User };
 /** kod konta system (od 2026-11-13): mail na stały adres z ustawień serwera albo, bez poczty, dziennik serwera */
 export type SystemCodeSent = { delivery: 'mail' | 'log'; expiresInSeconds: number; resendAfterSeconds: number };
+/** logowanie kodem z aplikacji na telefonie (TOTP, od 2026-11-13): stan konta i rejestracja nowego telefonu */
+export type PhoneStatus = {
+  available: boolean;
+  enabled: boolean;
+  address: string;
+  app?: string;
+  since?: string;
+  reason?: 'off' | 'store' | 'address' | 'demo';
+};
+export type PhoneSetup = { address: string; secret: string; otpauthUrl: string; qr: string; expiresInSeconds: number };
 // ustawienia aplikacji, tylko konto systemowe (od 2026-11-13 bez osobnego hasła)
 export const SettingsRequests = {
   read: () => Requests.json<AppSetting[]>('GET', '/settings'),
@@ -126,6 +136,9 @@ export const AuthRequests = {
   // konto system: kod na adres z ustawień serwera (bez hasła), potem kod → sesja jak verifyCode
   systemStart: () => Requests.json<SystemCodeSent>('POST', '/auth/system'),
   systemVerify: (code: string) => Requests.json<Session>('POST', '/auth/system/verify', { code }),
+  // krok 1 bez wysyłania maila: czy adres (albo „system”) ma telefon; kod z telefonu zwykłego konta
+  methods: (email: string) => Requests.json<{ email: string; totp: boolean }>('POST', '/auth/methods', { email }),
+  phoneVerify: (email: string, code: string) => Requests.json<Session>('POST', '/auth/totp/verify', { email, code }),
   // wersja demo: dostępność (przycisk pod logowaniem) i wejście bez hasła (sesja 2 h, tylko odczyt)
   demoAvailable: () => Requests.json<{ available: boolean }>('GET', '/auth/demo'),
   demo: () => Requests.json<Session>('POST', '/auth/demo'),
@@ -138,6 +151,17 @@ export const AuthRequests = {
   verifyEmail: (code: string) => Requests.json<User>('POST', '/auth/email-change/verify', { code }),
   deleteAccount: () => Requests.json<{ email: string; devices: number }>('POST', '/auth/delete'),
   confirmDelete: (token: string) => Requests.json<{ devices: number }>('POST', '/auth/delete/confirm', { token }),
+};
+
+// Logowanie kodem z telefonu na stronie konta (/api/auth/totp*, od 2026-11-13): stan, rejestracja (kod QR, pierwszy kod),
+// kod z maila do wyłączenia i wyłączenie (kodem z telefonu albo z maila).
+export const PhoneRequests = {
+  status: () => Requests.json<PhoneStatus>('GET', '/auth/totp'),
+  setup: () => Requests.json<PhoneSetup>('POST', '/auth/totp/setup'),
+  cancel: () => Requests.json<null>('DELETE', '/auth/totp/setup'),
+  confirm: (code: string) => Requests.json<PhoneStatus>('POST', '/auth/totp/confirm', { code }),
+  disableCode: () => Requests.json<{ delivery: 'mail' | 'log'; resendAfterSeconds: number }>('POST', '/auth/totp/disable/code'),
+  disable: (code: string) => Requests.json<PhoneStatus>('POST', '/auth/totp/disable', { code }),
 };
 
 // Powiadomienia Web Push konta (/api/push/*, 2026-10-21): ustawienia, subskrypcja tej przeglądarki, reguły, próbne.

@@ -7,7 +7,8 @@
     "dev": "nodemon",
     "test": "vitest",
     "build": "tsc",
-    "kod-awaryjny": "ts-node --transpile-only src/server.ts --kod-awaryjny"
+    "kod-awaryjny": "ts-node --transpile-only src/server.ts --kod-awaryjny",
+    "kod-totp": "ts-node --transpile-only src/server.ts --kod-totp"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
     "mongoose": "^8.17.1",
     "nodemailer": "^6.9.16",
     "openmeteo": "^1.2.0",
+    "qrcode": "1.5.4",
     "socket.io": "^4.8.1",
     "web-push": "^3.6.7",
     "ws": "^8.18.3"
@@ -36,6 +38,7 @@
     "@types/express": "^4.17.23",
     "@types/node": "^24.0.15",
     "@types/nodemailer": "^6.4.17",
+    "@types/qrcode": "1.5.6",
     "@types/supertest": "^6.0.2",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^7.2.0",

@@ -22,6 +22,7 @@ import { ensureSystemUser, systemEmail } from './core/services/auth.service';
 import { loadSettings, setting } from './core/services/settings.service';
 import { pushConfigured } from './core/services/push.service';
 import { startPushWatchdog } from './core/services/push-watchdog.service';
+import { loginKeysDbName, totpProblem } from './core/services/totp.service';
 
 const PANEL_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
@@ -69,6 +70,11 @@ async function startServer() {
   }
   if (!setting('SMTP_HOST')) console.warn('[konta] brak SMTP_HOST: maile tylko w logu');
   console.log(`[konta] kody konta system: ${systemEmail() ? `na adres ${systemEmail()} (${setting('SYSTEM_EMAIL') ? 'SYSTEM_EMAIL' : 'MAIL_ADMIN'})` : 'tylko w dzienniku serwera (brak SYSTEM_EMAIL i MAIL_ADMIN)'}`);
+  // kod z aplikacji na telefonie (TOTP, od 2026-11-13): klucz LOGOWANIE_KLUCZ i dostęp do wspólnej bazy kluczy;
+  // bez nich logowanie działa kodem z maila (core/services/totp.service.ts)
+  void totpProblem().then((problem) => console.log(problem
+    ? `[totp] kod z telefonu wyłączony: ${problem}`
+    : `[totp] kod z telefonu włączony (baza ${loginKeysDbName()})`));
   if (!pushConfigured()) console.warn('[push] brak VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY: powiadomienia Web Push wyłączone');
 
   // Zadania w tle tylko przy BACKGROUND_JOBS=on w ustawieniach: domyślnie wyłączone, bo drugi serwer zlecałby

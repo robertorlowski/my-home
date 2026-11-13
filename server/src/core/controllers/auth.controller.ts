@@ -1,11 +1,13 @@
 // /api/auth/* (konta użytkowników, 2026-10-11): logowanie kodem lub linkiem z maila, logowanie systemowe (od 2026-11-13
-// kodem z maila na stały adres z ustawień, bez hasła), „Zapamiętaj 90 dni”, wylogowanie, dane konta, zmiana e-maila
-// i usunięcie konta. Ścieżki są publiczne dla middleware (session.ts), więc te, które dotyczą zalogowanego, sprawdzają
+// kodem z maila na stały adres z ustawień, bez hasła), kod z aplikacji na telefonie (TOTP, od 2026-11-13: krok 1
+// logowania, logowanie, rejestracja i wyłączenie telefonu), „Zapamiętaj 90 dni”, wylogowanie, dane konta, zmiana
+// e-maila i usunięcie konta. Ścieżki są publiczne dla middleware (session.ts), więc te, które dotyczą zalogowanego, sprawdzają
 // req.user same (signedIn).
 import { Request, Response } from 'express';
 import {
-  AuthError, confirmDeleteAccount, demoAvailable, demoLogin, logout, publicUser, setRemember, startDeleteAccount, startEmailChange,
-  setLanguage, startLogin, startSystemLogin, updateProfile, verifyEmailChange, verifyLogin, verifySystemLogin,
+  AuthError, cancelPhoneSetup, confirmDeleteAccount, confirmPhoneSetup, demoAvailable, demoLogin, disablePhone, loginMethods, logout,
+  phoneStatus, publicUser, sendPhoneDisableCode, setRemember, startDeleteAccount, startEmailChange, setLanguage, startLogin,
+  startPhoneSetup, startSystemLogin, updateProfile, verifyEmailChange, verifyLogin, verifyPhoneLogin, verifySystemLogin,
 } from '../services/auth.service';
 import { MailUnavailableError } from '../services/mail-relay.service';
 import { requestLang, t, texts } from '../i18n';
@@ -58,9 +60,55 @@ export const authSystem = run(async (req, res) => {
   res.status(200).json(await startSystemLogin(clientIp(req), requestLang(req)));
 });
 
-// POST /auth/system/verify {code}: sesja użytkownika systemowego, jak POST /auth/verify
+// POST /auth/system/verify {code}: sesja użytkownika systemowego, jak POST /auth/verify; kod z maila, z dziennika
+// serwera, awaryjny albo z aplikacji na telefonie
 export const authSystemVerify = run(async (req, res) => {
   res.status(200).json(await verifySystemLogin(req.body?.code, clientIp(req)));
+});
+
+// POST /auth/methods {email}: krok 1 logowania bez wysyłania maila → {email, totp}; totp = adres (albo „system”) ma
+// zarejestrowany telefon, więc klient pokazuje pole „Kod z aplikacji” i przycisk „Wyślij kod na maila”
+export const authMethods = run(async (req, res) => {
+  res.status(200).json(await loginMethods(req.body?.email));
+});
+
+// POST /auth/totp/verify {email, code}: logowanie kodem z telefonu (zwykłe konto; nowy adres zakłada konto)
+export const authTotpVerify = run(async (req, res) => {
+  res.status(200).json(await verifyPhoneLogin(req.body ?? {}, clientIp(req)));
+});
+
+// GET /auth/totp: stan logowania kodem z telefonu konta; POST /auth/totp/setup: kod QR i klucz; POST /auth/totp/confirm
+// {code}: pierwszy kod zapisuje telefon; DELETE /auth/totp/setup: rezygnacja; POST /auth/totp/disable/code: kod z maila do
+// wyłączenia; POST /auth/totp/disable {code}: wyłączenie kodem z telefonu albo z maila
+export const authTotpStatus = run(async (req, res) => {
+  if (!signedIn(req, res)) return;
+  res.status(200).json(await phoneStatus(req.user!));
+});
+
+export const authTotpSetup = run(async (req, res) => {
+  if (!signedIn(req, res)) return;
+  res.status(200).json(await startPhoneSetup(req.user!, req.sessionToken as string));
+});
+
+export const authTotpSetupCancel = run(async (req, res) => {
+  if (!signedIn(req, res)) return;
+  cancelPhoneSetup(req.sessionToken as string);
+  res.status(204).end();
+});
+
+export const authTotpConfirm = run(async (req, res) => {
+  if (!signedIn(req, res)) return;
+  res.status(200).json(await confirmPhoneSetup(req.user!, req.sessionToken as string, req.body?.code));
+});
+
+export const authTotpDisableCode = run(async (req, res) => {
+  if (!signedIn(req, res)) return;
+  res.status(200).json(await sendPhoneDisableCode(req.user!, clientIp(req), requestLang(req)));
+});
+
+export const authTotpDisable = run(async (req, res) => {
+  if (!signedIn(req, res)) return;
+  res.status(200).json(await disablePhone(req.user!, req.body?.code, clientIp(req)));
 });
 
 // POST /auth/remember {remember}: odpowiedź na „Zapamiętać Twoje dane … na najbliższe 90 dni?”

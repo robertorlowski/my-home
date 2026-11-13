@@ -2,7 +2,10 @@
 // karta .auth-card z marką, kroki e-mail → kod z maila (6 cyfr, 10 min, 5 prób, nowy kod po 60 s) albo link z maila
 // (/login?token=…). Wpisanie „system” zamiast e-maila (od 2026-11-13 bez hasła): „Wyślij kod” wysyła kod na stały adres
 // konta system z ustawień serwera (bez poczty kod jest w dzienniku serwera), potem ten sam krok z kodem (5 min) i pytanie
-// o zapamiętanie jak u innych; „Mam już kod” przechodzi do kroku z kodem bez wysyłania (kod awaryjny z polecenia na serwerze).
+// o zapamiętanie jak u innych; „Mam już kod” przechodzi do kroku z kodem bez wysyłania (kod z maila, awaryjny z polecenia
+// na serwerze albo z telefonu). Kod z aplikacji na telefonie (TOTP, od 2026-11-13): krok 1 najpierw pyta serwer
+// (POST /auth/methods), czy adres ma zarejestrowany telefon; jeśli tak, zamiast maila jest krok „Kod z aplikacji”
+// z przyciskiem „Wyślij kod na maila” (dotychczasowa droga, zawsze dostępna). Konta bez telefonu działają jak dotąd.
 // Logika w AuthContext (signIn), żądania w AuthRequests; style w components/account.css.
 import { FormEvent, useEffect, useState } from 'react';
 import { AuthRequests } from '../../api';
@@ -18,6 +21,8 @@ const ErrorAlert = ({ text }: { text: string }) => (
   <div className="alert alert-err" role="alert"><div><strong>{text}</strong></div></div>
 );
 
+/** krok: adres → kod z telefonu (gdy adres ma telefon) albo kod z maila */
+type Step = 'email' | 'phone' | 'code';
 /** skąd wziąć kod konta system: mail, dziennik serwera (bez poczty) albo „Mam już kod” (null) */
 type SystemDelivery = 'mail' | 'log' | null;
 
@@ -26,14 +31,16 @@ export function Login() {
   const { t } = useLang();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [sentTo, setSentTo] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>('email');
+  // adres (albo „system”), którego dotyczą kroki z kodem
+  const [target, setTarget] = useState('');
   const [systemDelivery, setSystemDelivery] = useState<SystemDelivery>(null);
   const [resendAt, setResendAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const isSystem = email.trim().toLowerCase() === SYSTEM_LOGIN;
-  const systemStep = sentTo === SYSTEM_LOGIN;
+  const systemTarget = target === SYSTEM_LOGIN;
 
   // link z maila: /login?token=… — token jest jednorazowy, więc od razu znika z adresu (odświeżenie strony
   // nie próbuje go użyć drugi raz i nie pokazuje błędu „link wykorzystany”)
@@ -48,40 +55,40 @@ export function Login() {
       .finally(() => setBusy(false));
   }, []);
 
-  // odliczanie do „Wyślij ponownie” (resendAt z serwera), tylko na kroku z kodem
+  // odliczanie do „Wyślij ponownie” (resendAt z serwera), tylko na kroku z kodem z maila
   useEffect(() => {
-    if (!sentTo) return;
+    if (step !== 'code') return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, [sentTo]);
+  }, [step]);
 
-  const send = async (event?: FormEvent) => {
-    event?.preventDefault();
+  const showCodeStep = (to: string, resendAfterSeconds: number) => {
+    setTarget(to);
+    setStep('code');
+    setCode('');
+    setResendAt(Date.now() + resendAfterSeconds * 1000);
+    setNow(Date.now());
+  };
+
+  // kod z maila: zwykłe konto POST /auth/start, konto system POST /auth/system
+  const sendMailCode = async (to: string) => {
     setBusy(true);
     setError('');
     try {
-      if (isSystem) {
+      if (to === SYSTEM_LOGIN) {
         const result = await AuthRequests.systemStart();
-        setSentTo(SYSTEM_LOGIN);
         setSystemDelivery(result.delivery);
-        setCode('');
-        setResendAt(Date.now() + result.resendAfterSeconds * 1000);
-        setNow(Date.now());
-        return;
+        showCodeStep(SYSTEM_LOGIN, result.resendAfterSeconds);
+      } else {
+        const result = await AuthRequests.start(to);
+        showCodeStep(result.email, result.resendAfterSeconds);
       }
-      const result = await AuthRequests.start(email);
-      setSentTo(result.email);
-      setCode('');
-      setResendAt(Date.now() + result.resendAfterSeconds * 1000);
-      setNow(Date.now());
     } catch (caught) {
       // 429 = kod już wysłany i jeszcze nie minęło 60 s (u konta system także limit kodów na godzinę): przejście na krok
-      // z kodem z odliczaniem, bo poprzedni kod nadal działa (serwer go nie unieważnia); blokada konta system
-      // po błędnych kodach (locked) zostawia na tym kroku sam komunikat
+      // z kodem z odliczaniem, bo poprzedni kod nadal działa (serwer go nie unieważnia); blokada (locked) zostawia
+      // bieżący krok z samym komunikatem
       if (caught instanceof ApiError && caught.status === 429 && caught.retryAfterSeconds && !caught.locked) {
-        setSentTo(isSystem ? SYSTEM_LOGIN : email.trim().toLowerCase());
-        setResendAt(Date.now() + caught.retryAfterSeconds * 1000);
-        setNow(Date.now());
+        showCodeStep(to === SYSTEM_LOGIN ? SYSTEM_LOGIN : to.trim().toLowerCase(), caught.retryAfterSeconds);
       }
       setError(message(caught));
     } finally {
@@ -89,21 +96,57 @@ export function Login() {
     }
   };
 
-  // konto system: kod już jest (kod awaryjny z polecenia na serwerze albo mail sprzed chwili), bez wysyłania nowego
+  // krok 1: adres z telefonem → kod z aplikacji; inaczej od razu kod z maila jak dotąd. Gdy serwer nie umie odpowiedzieć
+  // (np. starsza wersja bez /auth/methods), też kod z maila, żeby logowanie zawsze działało.
+  const next = async (event?: FormEvent) => {
+    event?.preventDefault();
+    setBusy(true);
+    setError('');
+    const login = isSystem ? SYSTEM_LOGIN : email;
+    try {
+      const methods = await AuthRequests.methods(login);
+      if (methods.totp) {
+        setTarget(methods.email);
+        setStep('phone');
+        setCode('');
+        setBusy(false);
+        return;
+      }
+    } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 400) {
+        setError(message(caught));
+        setBusy(false);
+        return;
+      }
+    }
+    await sendMailCode(login);
+  };
+
+  // konto system: kod już jest (kod awaryjny z polecenia na serwerze, mail sprzed chwili albo telefon), bez wysyłania
   const haveSystemCode = () => {
-    setSentTo(SYSTEM_LOGIN);
+    setTarget(SYSTEM_LOGIN);
+    setStep('code');
     setSystemDelivery(null);
     setCode('');
     setError('');
   };
 
+  const back = () => {
+    setStep('email');
+    setTarget('');
+    setSystemDelivery(null);
+    setError('');
+  };
+
   const verify = async (event: FormEvent) => {
     event.preventDefault();
-    if (!sentTo) return;
     setBusy(true);
     setError('');
     try {
-      const session = systemStep ? await AuthRequests.systemVerify(code) : await AuthRequests.verifyCode(sentTo, code);
+      // konto system przyjmuje na jednym adresie kod z maila, awaryjny i z telefonu
+      const session = systemTarget ? await AuthRequests.systemVerify(code)
+        : step === 'phone' ? await AuthRequests.phoneVerify(target, code)
+          : await AuthRequests.verifyCode(target, code);
       signIn(session.token, session.user);
     } catch (caught) {
       setError(message(caught));
@@ -132,14 +175,19 @@ export function Login() {
   const waitText = `${Math.floor(wait / 60)}:${String(wait % 60).padStart(2, '0')}`;
   const systemSentText = systemDelivery === 'mail' ? t('login.systemSentMail')
     : systemDelivery === 'log' ? t('login.systemSentLog') : t('login.systemHaveCode');
+  // maxLength 7 = „123 456” ze spacją
+  const codeInput = (
+    <input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} required autoFocus placeholder={t('login.codePlaceholder')}
+      value={code} onChange={(event) => setCode(event.target.value.replace(/[^\d ]/g, ''))} />
+  );
 
   return (
     <div className="auth">
       <div className="auth-card">
         <div className="brand brand-big"><span className="brand-mark" /><span className="brand-name">{t('app.name')}</span></div>
         <h1>{t('login.title')}</h1>
-        {sentTo === null ? (
-          <form className="auth-step" onSubmit={send}>
+        {step === 'email' && (
+          <form className="auth-step" onSubmit={next}>
             <p className="help">{t('login.intro')}</p>
             <label className="field">
               <span>{t('login.email')}</span>
@@ -155,27 +203,45 @@ export function Login() {
               </div>
             )}
           </form>
-        ) : (
+        )}
+        {step === 'phone' && (
           <form className="auth-step" onSubmit={verify}>
-            {systemStep
-              ? <p className="help">{systemSentText} {t('login.systemCodeValid')}</p>
-              : <p className="help">{t('login.codeSentBefore')} <strong>{sentTo}</strong>. {t('login.codeSentAfter')}</p>}
+            <p className="help">
+              {t('login.phoneIntro')}{!systemTarget && <> {t('login.phoneAccount')} <strong>{target}</strong>.</>}
+            </p>
             <label className="field">
-              <span>{systemStep ? t('login.systemCode') : t('login.code')}</span>
-              <input className="code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} required autoFocus placeholder={t('login.codePlaceholder')}
-                value={code} onChange={(event) => setCode(event.target.value.replace(/[^\d ]/g, ''))} />{/* maxLength 7 = „123 456” ze spacją */}
+              <span>{t('login.phoneCode')}</span>
+              {codeInput}
+            </label>
+            {error && <ErrorAlert text={error} />}
+            <button type="submit" className="btn btn-primary btn-block" disabled={busy}>{t('login.signIn')}</button>
+            <button type="button" className="btn btn-ghost btn-block" disabled={busy} onClick={() => void sendMailCode(target)}>{t('login.phoneSendMail')}</button>
+            <div className="auth-links">
+              <span />
+              <button type="button" className="link-btn" onClick={back}>{t('login.otherEmail')}</button>
+            </div>
+          </form>
+        )}
+        {step === 'code' && (
+          <form className="auth-step" onSubmit={verify}>
+            {systemTarget
+              ? <p className="help">{systemSentText} {t('login.systemCodeValid')}</p>
+              : <p className="help">{t('login.codeSentBefore')} <strong>{target}</strong>. {t('login.codeSentAfter')}</p>}
+            <label className="field">
+              <span>{systemTarget ? t('login.systemCode') : t('login.code')}</span>
+              {codeInput}
             </label>
             {error && <ErrorAlert text={error} />}
             <button type="submit" className="btn btn-primary btn-block" disabled={busy}>{t('login.signIn')}</button>
             <div className="auth-links">
-              <button type="button" className="link-btn" disabled={busy || wait > 0} onClick={() => send()}>
-                {wait > 0 ? t('login.resendIn', { time: waitText }) : systemStep && systemDelivery === null ? t('login.sendCode') : t('login.resend')}
+              <button type="button" className="link-btn" disabled={busy || wait > 0} onClick={() => void sendMailCode(target)}>
+                {wait > 0 ? t('login.resendIn', { time: waitText }) : systemTarget && systemDelivery === null ? t('login.sendCode') : t('login.resend')}
               </button>
-              <button type="button" className="link-btn" onClick={() => { setSentTo(null); setSystemDelivery(null); setError(''); }}>{t('login.otherEmail')}</button>
+              <button type="button" className="link-btn" onClick={back}>{t('login.otherEmail')}</button>
             </div>
           </form>
         )}
-        {demo && sentTo === null && (
+        {demo && step === 'email' && (
           <div className="auth-demo">
             <button type="button" className="link-btn" disabled={busy} onClick={() => void enterDemo()}>{t('login.demo')}</button>
           </div>

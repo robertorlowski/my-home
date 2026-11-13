@@ -1,6 +1,7 @@
 // Konto systemowe (/account, od 2026-11-07): panele w bocznym menu po lewej (komputer) albo w dolnej nawigacji
 // (telefon), tak samo jak widoki sterownika i pogody. Panel jest w ?tab= (Moje dane = bez parametru).
-// Panele: Moje dane, Powiadomienia i Ustawienia (karty Poczta, Aplikacja, Klucze powiadomień, Serwer, każda z własnym zapisem).
+// Panele: Moje dane (z kartą „Logowanie kodem z telefonu” dla adresu kodów konta system, PhoneLoginCard), Powiadomienia
+// i Ustawienia (karty Poczta, Aplikacja, Klucze powiadomień, Serwer, każda z własnym zapisem).
 // Ustawienia aplikacji: GET /api/settings i PUT /api/settings (serwer core/services/settings.service.ts); od 2026-11-13
 // bez hasła ustawień, bo konto system loguje się kodem z maila. Sekrety nie wracają z serwera, pole pokazuje tylko,
 // że są ustawione; zapis wysyła wyłącznie zmienione pola.
@@ -9,6 +10,7 @@ import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { SettingsRequests } from '../../api';
 import { BottomNavItems, NavItem, SideTabs } from '../../components/Header';
 import { BackIcon } from '../../components/icons';
+import { PhoneLoginCard } from '../../components/PhoneLoginCard';
 import { PushSettingsCard } from '../../components/PushSettingsCard';
 import { UserMenu } from '../../components/UserMenu';
 import { useAuth } from '../../context/AuthContext';
@@ -221,6 +223,7 @@ export function SystemAccount() {
             <header className="card-head"><h2>{t('account.systemTitle')}</h2></header>
             <p className="help">{t('account.systemHint')}</p>
           </section>
+          <PhoneLoginCard system />
           <section className="card">
             <header className="card-head"><h2>{t('account.session')}</h2></header>
             <div className="actions"><button type="button" className="btn" onClick={() => void logout()}>{t('menu.logout')}</button></div>

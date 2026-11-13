@@ -9,7 +9,8 @@ import {
 } from './controllers/device.controller'
 import {
   authDelete, authDeleteConfirm, authDemo, authDemoAvailable, authEmailChange, authEmailChangeVerify, authLogout, authMe, authRemember,
-  authStart, authSystem, authSystemVerify, authSetLanguage, authUpdateMe, authVerify,
+  authMethods, authStart, authSystem, authSystemVerify, authSetLanguage, authTotpConfirm, authTotpDisable, authTotpDisableCode,
+  authTotpSetup, authTotpSetupCancel, authTotpStatus, authTotpVerify, authUpdateMe, authVerify,
 } from './controllers/auth.controller'
 import { deleteFirmware, downloadFirmware, getFirmware, updateFirmwareOffer, uploadFirmware } from './controllers/firmware.controller'
 import { getTemperature } from './controllers/meteo.controller'
@@ -35,6 +36,15 @@ router.post('/auth/verify', authVerify)
 // konto system (od 2026-11-13 bez hasła): kod na stały adres z ustawień albo do dziennika serwera, potem kod → sesja
 router.post('/auth/system', authSystem)
 router.post('/auth/system/verify', authSystemVerify)
+// kod z aplikacji na telefonie (TOTP, od 2026-11-13; klucze we wspólnej bazie logowanie, core/services/totp.service.ts)
+router.post('/auth/methods', authMethods)
+router.post('/auth/totp/verify', authTotpVerify)
+router.get('/auth/totp', authTotpStatus)
+router.post('/auth/totp/setup', authTotpSetup)
+router.delete('/auth/totp/setup', authTotpSetupCancel)
+router.post('/auth/totp/confirm', authTotpConfirm)
+router.post('/auth/totp/disable/code', authTotpDisableCode)
+router.post('/auth/totp/disable', authTotpDisable)
 // wersja demo (publiczny podgląd konta z DEMO_OWNER_EMAIL, tylko odczyt)
 router.get('/auth/demo', authDemoAvailable)
 router.post('/auth/demo', authDemo)
