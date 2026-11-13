@@ -270,7 +270,7 @@ Serwer i klient wdraża się razem z gałęzi `main`: GitHub buduje obraz, a ins
 
 ## Znane problemy
 
-- **Endpointy sterownika bez autoryzacji.** Klucza API nie ma (nieaktywny `verifyApiKey` i nagłówek `x-api-key` usunięte 2026-10-27); aplikację chronią sesje kont, a endpointy z `controllerPaths` przyjmują sam SN.
+- **Endpointy sterownika bez autoryzacji.** Klucza API nie ma (nieaktywny `verifyApiKey` i nagłówek `x-api-key` usunięte 2026-10-27); aplikację chronią sesje kont, a endpointy z `controllerPaths` przyjmują sam SN. Propozycja kluczy sterowników: [propozycja-uwierzytelnienie-sterownikow-2026-11-13.md](propozycja-uwierzytelnienie-sterownikow-2026-11-13.md).
 - **Dane w pamięci serwera** (`device-info.service.ts`, ostatnia telemetria, operacje ręczne) giną przy restarcie; po zmianie `deviceId` w bazie trzeba zrestartować serwer.
 - **Położenie domu** do pogody jest wpisane w kod (`WEATHER_LOCATION` w `meteo.service.ts`).
 - **Pogodę i pocztę obsługuje tylko serwer** (od 2026-11-13, bez zapasu w sterownikach). Gdy serwer nie dostanie pogody z Open-Meteo, kafelki pokazują ostatni odczyt (do 45 min), potem prognozę; bez `SMTP_HOST` maile trafiają tylko do skrzynki w pamięci i do dziennika serwera.
