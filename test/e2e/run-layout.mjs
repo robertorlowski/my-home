@@ -4,10 +4,12 @@
 // wystaje poza okno, bez błędów konsoli, zrzut ekranu. Od 2026-10-16 (nowy wygląd): także pasek górny, boczne menu na
 // komputerze i dolna nawigacja na telefonie.
 //
-// Wymaga uruchomionego "npm run local" (albo serwera z SYSTEM_PASSWORD) i urządzeń w bazie lokalnej (np.
-// scripts/seed-local.mjs, scripts/seed-pv-local.mjs --keep, symulatory). Logowanie: konto systemowe z hasłem
-// E2E_SYSTEM_PASSWORD (domyślnie demo123). Przeglądarka: Chromium Playwright, albo BROWSER_CHANNEL=msedge.
+// Wymaga uruchomionego "npm run local" i urządzeń w bazie lokalnej (np. scripts/seed-local.mjs, scripts/seed-pv-local.mjs
+// --keep, symulatory). Logowanie: konto systemowe bez hasła (od 2026-11-13) kodem awaryjnym z polecenia serwera
+// (npm run kod-awaryjny -w server) na bazie lokalnej npm run local albo E2E_MONGODB_URI, w przeglądarce „system” →
+// „Mam już kod” → kod. Przeglądarka: Chromium Playwright, albo BROWSER_CHANNEL=msedge (chrome: systemowy Chrome).
 // Wyniki: test/raport-testow/uklad-wyniki.json i zrzuty test/raport-testow/zrzuty/uklad-<rodzaj>-<widok>-<szerokość>-<motyw>.png (poza gitem).
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +22,17 @@ mkdirSync(SHOTS, { recursive: true });
 
 const API = 'http://localhost:4001/api';
 const WEB = 'http://localhost:5173';
-const PASSWORD = process.env.E2E_SYSTEM_PASSWORD ?? 'demo123';
+// baza serwera z npm run local (scripts/local-dev.mjs, LOCAL_DB_URI)
+const DB = process.env.E2E_MONGODB_URI ?? 'mongodb://127.0.0.1:27027/chpc-local';
+// kod konta system z polecenia awaryjnego (core/cli.ts): jednorazowy, ważny 5 min, bez poczty
+const systemCode = () => {
+  const out = execFileSync('npm', ['run', '--silent', 'kod-awaryjny', '-w', 'server'], {
+    cwd: join(HERE, '..', '..'), env: { ...process.env, MONGODB_URI: DB }, encoding: 'utf8', shell: true,
+  });
+  const code = /(\d{3}) (\d{3})/.exec(out)?.slice(1).join('');
+  if (!code) throw new Error(`Brak kodu awaryjnego w wyniku polecenia: ${out}`);
+  return code;
+};
 const WIDTHS = [360, 768, 1280];
 const THEMES = ['dark', 'light'];
 // widoki z menu rodzaju (client/src/devices/<rodzaj>/device-type.tsx)
@@ -78,13 +90,14 @@ for (const theme of THEMES) {
   page.on('pageerror', (error) => consoleErrors.push(String(error)));
   await page.addInitScript(() => sessionStorage.setItem('chpc.defaultApplied', '1'));
 
-  // logowanie kontem systemowym („system” w polu e-mail pokazuje pole hasła)
+  // logowanie kontem systemowym bez hasła: „system” w polu e-mail, „Mam już kod”, kod awaryjny
   await page.goto(`${WEB}/`);
   await page.waitForTimeout(1500);
   if (await page.locator('input').count()) {
     await page.fill('input', 'system');
     await page.waitForTimeout(300);
-    await page.fill('input[type=password]', PASSWORD);
+    await page.getByRole('button', { name: /^(Mam już kod|I already have a code)$/ }).click();
+    await page.fill('input.code', systemCode());
     await page.keyboard.press('Enter');
     await page.waitForTimeout(2000);
     const no = page.getByRole('button', { name: /^Nie/ });

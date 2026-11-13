@@ -1,7 +1,8 @@
 // Logowanie i dostęp dla każdego żądania /api (konta użytkowników, 2026-10-11; montowane w core/app.ts):
 // - authenticate (przed kontekstem urządzenia): token z nagłówka Authorization: Bearer → req.user, req.sessionToken;
 // - authorize (po kontekście urządzenia): bez logowania przechodzą tylko /auth/*, endpointy sterowników (bez zmian
-//   w firmware), pobranie pliku firmware i wywołania wewnętrzne; reszta wymaga sesji (401), a żądanie z rootId
+//   w firmware), pobranie pliku firmware i wywołania wewnętrzne (moduły serwera i polecenie --api na serwerze,
+//   core/internal.ts); reszta wymaga sesji (401), a żądanie z rootId
 //   dostępu do sterownika (403; osoba z udostępnieniem: zapisy według zakładek, access.service.ts).
 // AUTH_DISABLED=1 wyłącza sprawdzanie (testy starszych modułów; nie ustawiać na produkcji).
 import { NextFunction, Request, Response } from 'express';

@@ -22,7 +22,7 @@ import { UserModel } from '../src/core/models/user.model'
 import { SessionModel } from '../src/core/models/auth.model'
 import { HpEntryModel } from '../src/modules/heat-pump/models/hp.model'
 import { outbox } from '../src/core/services/mail.service'
-import { ensureSystemUser, SESSION_REMEMBER_MS } from '../src/core/services/auth.service'
+import { ensureSystemUser, issueEmergencySystemCode, SESSION_REMEMBER_MS } from '../src/core/services/auth.service'
 import { INTERNAL_TOKEN } from '../src/core/internal'
 import { DeviceType } from '../src/core/types'
 
@@ -30,6 +30,13 @@ const lastMail = (to: string) => [...outbox].reverse().find((mail) => mail.to ==
 const codeOf = (to: string) => /(\d{3}) (\d{3})/.exec(lastMail(to)?.text ?? '')?.slice(1).join('') ?? '';
 const tokenOf = (to: string) => /token=([A-Za-z0-9_-]+)/.exec(lastMail(to)?.text ?? '')?.[1] ?? '';
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+// Konto system: kod awaryjny (jak polecenie --kod-awaryjny) i POST /auth/system/verify; przebieg z mailem i limity
+// sprawdza system-login.test.ts
+async function systemLogin() {
+  const { code } = await issueEmergencySystemCode();
+  return (await request(app).post('/api/auth/system/verify').send({ code }).expect(200)).body.token as string;
+}
 
 // Logowanie kodem; omija limit 60 s między kodami (testy logują to samo konto kilka razy)
 async function login(email: string) {
@@ -46,7 +53,6 @@ describe('Konta użytkowników', () => {
 
   beforeAll(async () => {
     process.env.AUTH_DISABLED = '0';
-    process.env.SYSTEM_PASSWORD = 'tajne-haslo';
     process.env.CLIENT_URL = 'https://app.example';
     delete process.env.SMTP_HOST;
     mongoServer = await MongoMemoryServer.create();
@@ -166,8 +172,9 @@ describe('Konta użytkowników', () => {
     expect(after.map((d: { rootId: string }) => d.rootId)).toEqual([pumpRootId, boilerRootId]);
     expect((await request(app).put('/api/firmware/switch').set(bearer(robert)).send({ enabled: true })).status).toBe(403);
 
-    await request(app).post('/api/auth/system').send({ password: 'zle' }).expect(401);
-    const system = (await request(app).post('/api/auth/system').send({ password: 'tajne-haslo' }).expect(200)).body.token;
+    // hasła systemowego nie ma: dawne żądanie z hasłem dostaje 400 i nie zakłada sesji
+    await request(app).post('/api/auth/system').send({ password: 'tajne-haslo' }).expect(400);
+    const system = await systemLogin();
     const all = (await request(app).get('/api/devices').set(bearer(system)).expect(200)).body;
     expect(all).toHaveLength(3);
     expect(all.find((d: { deviceId: string }) => d.deviceId === 'AA0000000009').owner).toBeNull();
@@ -177,7 +184,7 @@ describe('Konta użytkowników', () => {
 
   it('układ listy osobno dla konta: pola szachownicy, ukrycie, własne kafelki pogody; wzór kafelka tylko systemowy', async () => {
     const robert = await login('robert@infotower.pl');
-    const system = (await request(app).post('/api/auth/system').send({ password: 'tajne-haslo' }).expect(200)).body.token;
+    const system = await systemLogin();
     type Tile = { id: string; name: string; sortOrder?: number; hidden: boolean; home: boolean };
     type Listed = { rootId: string; sortOrder?: number; hidden: boolean };
 

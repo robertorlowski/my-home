@@ -16,13 +16,13 @@ Moduł odpowiada za:
 - **menu i ekrany zależne od rodzaju sterownika** (pompa ma harmonogramy, hydrofor i fotowoltaika nie);
 - **wspólne usługi**: temperaturę zewnętrzną (czujnik kotła, bez niego prognoza), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez serwer, zapasowo przez włącznik), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
 - **pocztę**: kody logowania i powiadomienia wysyła serwer; opcjonalnie mogą je wysyłać sterowniki w domu (włącznik, zapasowo `co`).
-- **ustawienia aplikacji**: konto systemowe ma w menu po lewej Moje dane, Powiadomienia i Ustawienia. Zakładka Ustawienia (poczta, adresy aplikacji, wersja demo, klucze powiadomień, zadania w tle) wymaga osobnego hasła.
+- **ustawienia aplikacji**: konto systemowe ma w menu po lewej Moje dane, Powiadomienia i Ustawienia. Zakładka Ustawienia (poczta, adres kodów konta system, adresy aplikacji, wersja demo, klucze powiadomień, zadania w tle) otwiera się bez dodatkowego hasła (od 2026-11-13).
 
 ## Dla kogo
 
 - **Właściciel instalacji** — loguje się, wybiera sterownik, nadaje mu nazwę, układa kafelki, udostępnia sterownik domownikom. Korzysta z aplikacji na komputerze i na telefonie.
 - **Instalator** (zwykle ta sama osoba) — podłącza nowy sterownik; wystarczy, że sterownik ma Wi-Fi, reszta dzieje się sama.
-- **Użytkownik systemowy** — konto administracyjne (logowanie „system” i hasło): widzi wszystkie sterowniki, zarządza firmware rodzajów sterowników i widzi zajętość bazy.
+- **Użytkownik systemowy** — konto administracyjne bez hasła (od 2026-11-13): w pole e-mail wpisuje się „system”, a kod przychodzi zawsze na stały adres z ustawień instalacji (na serwerze bez poczty jest w dzienniku serwera; gdy poczta nie działa, kod daje polecenie awaryjne na serwerze). Widzi wszystkie sterowniki, zarządza firmware rodzajów sterowników i widzi zajętość bazy.
 
 ## Co użytkownik może zrobić
 

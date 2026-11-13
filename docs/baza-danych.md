@@ -72,11 +72,11 @@ Dane `hp`, `pv` i `pellet_boiler_pelux200` są na dysku skompresowane (razem ok.
 
 ### `users`
 
-Konto: `email` (unikalny wśród kont z e-mailem), `firstName`, `lastName`, adres (`street`, `postalCode`, `city`, `country`), `location {lat, lng}`, `language` (`pl` / `en`), `defaultRootId`, `deviceOrder` (układ listy sterowników i kafelków), `simpleTiles`, `notifications {rules: [{rootId, events}], quietFrom, quietTo}`. Konto systemowe (login `system`, hasło w `SYSTEM_PASSWORD`) ma `isSystem: true` i nie ma e-maila. Indeks: unikalny `{email}` tylko dla dokumentów z e-mailem.
+Konto: `email` (unikalny wśród kont z e-mailem), `firstName`, `lastName`, adres (`street`, `postalCode`, `city`, `country`), `location {lat, lng}`, `language` (`pl` / `en`), `defaultRootId`, `deviceOrder` (układ listy sterowników i kafelków), `simpleTiles`, `notifications {rules: [{rootId, events}], quietFrom, quietTo}`. Konto systemowe (login `system`, od 2026-11-13 bez hasła: kod z maila na adres z ustawienia `SYSTEM_EMAIL`) ma `isSystem: true` i nie ma e-maila. Indeks: unikalny `{email}` tylko dla dokumentów z e-mailem.
 
 ### `sessions` i `auth_codes`
 
-W bazie są tylko skróty SHA-256 tokenu, kodu i linku, nie same wartości. `sessions`: `tokenHash` (unikalny), `userId`, `remember` (90 dni), `demo` (sesja wersji demo, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`), `email`, `tokenHash`, `expiresAt`. Obie kolekcje mają indeks TTL na `expiresAt`, więc wygasłe dokumenty MongoDB usuwa sama.
+W bazie są tylko skróty SHA-256 tokenu, kodu i linku, nie same wartości. `sessions`: `tokenHash` (unikalny), `userId`, `remember` (90 dni), `demo` (sesja wersji demo, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`; od 2026-11-13 konto `system`: `system-login` kod ważny 5 min, `system-sent` ślad wysłanego kodu do limitu 5 na godzinę, `system-lock` blokada po 5 błędnych kodach), `email` (przy koncie `system` napis `system`), `codeHash`, `tokenHash`, `attempts`, `ip` i `delivery` (`mail` / `log` / `emergency`; tylko konto `system`), `expiresAt`. Obie kolekcje mają indeks TTL na `expiresAt`, więc wygasłe dokumenty MongoDB usuwa sama; polecenie awaryjne (`--kod-awaryjny`) usuwa dokumenty `system-*` i zakłada nowy kod.
 
 ### `device_shares`
 
@@ -84,7 +84,7 @@ Udostępnienie sterownika: `rootId`, `ownerId`, `email` osoby zaproszonej, `user
 
 ### `app_settings`
 
-Jeden dokument z ustawieniami zmienianymi na ekranie konta systemowego: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `MAIL_RELAY`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`) i `updatedAt`. `_id` to nazwa bazy, więc kopia produkcji odtworzona jako `hpdb_test` ma dokument `hpdb` i środowisko testowe go nie użyje. Wartości sekretów są w bazie jawnie, ekran ich nie pokazuje. Poza bazą zostają tylko `MONGODB_URI` i `SYSTEM_PASSWORD`.
+Jeden dokument z ustawieniami zmienianymi na ekranie konta systemowego: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (od 2026-11-13: adres kodów logowania konta `system`), `MAIL_RELAY`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`) i `updatedAt`. `_id` to nazwa bazy, więc kopia produkcji odtworzona jako `hpdb_test` ma dokument `hpdb` i środowisko testowe go nie użyje. Wartości sekretów są w bazie jawnie, ekran ich nie pokazuje. Poza bazą zostaje tylko `MONGODB_URI` (`SYSTEM_PASSWORD` od 2026-11-13 nie jest używane: konto `system` loguje się kodem z maila).
 
 ## Sterowniki
 

@@ -72,11 +72,11 @@ The `hp`, `pv` and `pellet_boiler_pelux200` data are compressed on disk (about 5
 
 ### `users`
 
-Account: `email` (unique among accounts with an e-mail), `firstName`, `lastName`, address (`street`, `postalCode`, `city`, `country`), `location {lat, lng}`, `language` (`pl` / `en`), `defaultRootId`, `deviceOrder` (layout of the controller and tile list), `simpleTiles`, `notifications {rules: [{rootId, events}], quietFrom, quietTo}`. The system account (login `system`, password in `SYSTEM_PASSWORD`) has `isSystem: true` and no e-mail. Index: unique `{email}` only for documents with an e-mail.
+Account: `email` (unique among accounts with an e-mail), `firstName`, `lastName`, address (`street`, `postalCode`, `city`, `country`), `location {lat, lng}`, `language` (`pl` / `en`), `defaultRootId`, `deviceOrder` (layout of the controller and tile list), `simpleTiles`, `notifications {rules: [{rootId, events}], quietFrom, quietTo}`. The system account (login `system`, since 2026-11-13 without a password: a code by e-mail to the address in the `SYSTEM_EMAIL` setting) has `isSystem: true` and no e-mail. Index: unique `{email}` only for documents with an e-mail.
 
 ### `sessions` and `auth_codes`
 
-The database holds only SHA-256 hashes of the token, code and link, not the values. `sessions`: `tokenHash` (unique), `userId`, `remember` (90 days), `demo` (demo session, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`), `email`, `tokenHash`, `expiresAt`. Both collections have a TTL index on `expiresAt`, so MongoDB removes expired documents itself.
+The database holds only SHA-256 hashes of the token, code and link, not the values. `sessions`: `tokenHash` (unique), `userId`, `remember` (90 days), `demo` (demo session, 2 h), `expiresAt`, `lastSeenAt`. `auth_codes`: `purpose` (`login`, `email-change`, `delete-account`; since 2026-11-13 the `system` account: `system-login` the code, valid 5 min, `system-sent` a trace of a sent code for the limit of 5 per hour, `system-lock` the lock after 5 wrong codes), `email` (for the `system` account the text `system`), `codeHash`, `tokenHash`, `attempts`, `ip` and `delivery` (`mail` / `log` / `emergency`; `system` account only), `expiresAt`. Both collections have a TTL index on `expiresAt`, so MongoDB removes expired documents itself; the emergency command (`--kod-awaryjny`) removes the `system-*` documents and creates a new code.
 
 ### `device_shares`
 
@@ -84,7 +84,7 @@ A controller share: `rootId`, `ownerId`, the invited person's `email`, `userId` 
 
 ### `app_settings`
 
-One document with the settings changed on the system account screen: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `MAIL_RELAY`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`) and `updatedAt`. `_id` is the database name, so a copy of production restored as `hpdb_test` has the `hpdb` document and the test environment does not use it. Secret values are stored in plain form; the screen does not show them. Only `MONGODB_URI` and `SYSTEM_PASSWORD` stay outside the database.
+One document with the settings changed on the system account screen: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (since 2026-11-13: the address of the `system` account sign-in codes), `MAIL_RELAY`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`) and `updatedAt`. `_id` is the database name, so a copy of production restored as `hpdb_test` has the `hpdb` document and the test environment does not use it. Secret values are stored in plain form; the screen does not show them. Only `MONGODB_URI` stays outside the database (`SYSTEM_PASSWORD` is not used since 2026-11-13: the `system` account signs in with a code from the e-mail).
 
 ## Controllers
 

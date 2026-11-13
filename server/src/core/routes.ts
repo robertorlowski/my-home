@@ -9,7 +9,7 @@ import {
 } from './controllers/device.controller'
 import {
   authDelete, authDeleteConfirm, authDemo, authDemoAvailable, authEmailChange, authEmailChangeVerify, authLogout, authMe, authRemember,
-  authStart, authSystem, authSetLanguage, authUpdateMe, authVerify,
+  authStart, authSystem, authSystemVerify, authSetLanguage, authUpdateMe, authVerify,
 } from './controllers/auth.controller'
 import { deleteFirmware, downloadFirmware, getFirmware, updateFirmwareOffer, uploadFirmware } from './controllers/firmware.controller'
 import { getTemperature } from './controllers/meteo.controller'
@@ -32,7 +32,9 @@ const router = express.Router()
 // Konta użytkowników (logowanie kodem z maila, sesja w nagłówku Authorization; core/middleware/session.ts)
 router.post('/auth/start', authStart)
 router.post('/auth/verify', authVerify)
+// konto system (od 2026-11-13 bez hasła): kod na stały adres z ustawień albo do dziennika serwera, potem kod → sesja
 router.post('/auth/system', authSystem)
+router.post('/auth/system/verify', authSystemVerify)
 // wersja demo (publiczny podgląd konta z DEMO_OWNER_EMAIL, tylko odczyt)
 router.get('/auth/demo', authDemoAvailable)
 router.post('/auth/demo', authDemo)
@@ -87,7 +89,9 @@ router.put('/firmware/:deviceType/:version', express.raw({ type: 'application/oc
 router.get('/firmware/:deviceType/:version', downloadFirmware)
 router.delete('/firmware/:deviceType/:version', deleteFirmware)
 
-// ustawienia aplikacji: konto systemowe (middleware/session.ts) i hasło ustawień; odczyt przez POST, bo hasło jest w treści
+// ustawienia aplikacji: tylko konto systemowe (middleware/session.ts), bez dodatkowego hasła (od 2026-11-13);
+// POST /settings/read to dawny odczyt z hasłem w treści, dla klienta sprzed zmiany (hasło jest pomijane)
+router.get('/settings', readSettings)
 router.post('/settings/read', readSettings)
 router.put('/settings', putSettings)
 

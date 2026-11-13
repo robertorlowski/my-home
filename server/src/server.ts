@@ -1,10 +1,14 @@
-// Punkt startowy serwera (npm start, Render): HTTP + WebSocket na jednym porcie,
+// Punkt startowy serwera (npm start, obraz Dockera na vm-prod): HTTP + WebSocket na jednym porcie,
 // połączenie z MongoDB (MONGODB_URI), scheduler pompy ciepła, czyszczenie
 // szczegółów paneli PV i temperatura zewnętrzna z czujnika kotła. Aplikacja Express
 // jest w core/app.ts (osobno, żeby testy mogły jej użyć bez nasłuchu i bazy).
+// Ten sam plik uruchamia polecenia na serwerze (od 2026-11-13, core/cli.ts): --kod-awaryjny (kod konta system bez
+// poczty) i --api (wywołanie API bez hasła, np. wgrywanie firmware); wtedy serwer nie startuje.
 import 'dotenv/config';
 import http from 'http';
 import app from './core/app'
+import { isCliCommand, runCli } from './core/cli';
+import { saveInternalToken } from './core/internal';
 import { createWsServer } from './core/websocket';
 import mongoose from 'mongoose';
 import { restoreOutdoorTemperature } from './modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200.service';
@@ -14,7 +18,7 @@ import { startServerWeather } from './core/services/weather-fetch.service';
 import { startPelletBoilerScheduler } from './modules/pellet-boiler-pelux200/services/pellet-boiler-pelux200-schedule.service';
 import { removeExpiredPanelDetails } from './modules/heat-pump/services/pv.service';
 import { assignDefaultPumpConfigs } from './core/services/device.service';
-import { ensureSystemUser } from './core/services/auth.service';
+import { ensureSystemUser, systemEmail } from './core/services/auth.service';
 import { loadSettings, setting } from './core/services/settings.service';
 import { pushConfigured } from './core/services/push.service';
 import { startPushWatchdog } from './core/services/push-watchdog.service';
@@ -31,16 +35,6 @@ const cleanPanelDetails = async () => {
 };
 
 
-const server = http.createServer(app);
-createWsServer(server);
-
-// adres z hasłem tylko w zmiennej środowiskowej (Render: Environment, lokalnie server/.env, Oracle: /etc/apps/my-home.env)
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  console.error("Brak MONGODB_URI: ustaw zmienną środowiskową albo server/.env (wzór w server/.env.example)");
-  process.exit(1);
-}
-
 const PORT = Number(process.env.PORT ?? 3001);
 
 // Sprawdzanie serwerów bazy raz na minutę, jednym zapytaniem (poll). Domyślnie sterownik MongoDB co 10 s
@@ -50,7 +44,16 @@ const PORT = Number(process.env.PORT ?? 3001);
 // serwera głównego jest wykrywana przy pierwszym nieudanym zapytaniu, nie po minucie.
 const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'poll' } as const;
 
-(async () => {
+async function startServer() {
+  // adres z hasłem tylko w zmiennej środowiskowej (lokalnie server/.env, Oracle: /etc/apps/my-home.env)
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) {
+    console.error("Brak MONGODB_URI: ustaw zmienną środowiskową albo server/.env (wzór w server/.env.example)");
+    process.exit(1);
+  }
+  const server = http.createServer(app);
+  createWsServer(server);
+
   await mongoose.connect(MONGODB_URI, MONGO_OPTIONS);
   console.log("Mongo connected");
 
@@ -60,8 +63,12 @@ const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'pol
   // konta użytkowników: użytkownik systemowy
   await ensureSystemUser().catch((error) => console.error('[konta] konto system:', error));
   if (process.env.AUTH_DISABLED === '1') console.warn('[konta] AUTH_DISABLED=1: API bez logowania (tylko do testów)');
-  if (!process.env.SYSTEM_PASSWORD) console.warn('[konta] brak SYSTEM_PASSWORD: logowanie systemowe wyłączone');
+  // hasło systemowe zniknęło 2026-11-13 (konto system loguje się kodem z maila): stara zmienna nie przeszkadza
+  if (process.env.SYSTEM_PASSWORD !== undefined) {
+    console.warn('[konta] SYSTEM_PASSWORD jest pomijane: konto system loguje się kodem z maila; usuń tę zmienną ze środowiska serwera');
+  }
   if (!setting('SMTP_HOST')) console.warn('[konta] brak SMTP_HOST: maile tylko w logu');
+  console.log(`[konta] kody konta system: ${systemEmail() ? `na adres ${systemEmail()} (${setting('SYSTEM_EMAIL') ? 'SYSTEM_EMAIL' : 'MAIL_ADMIN'})` : 'tylko w dzienniku serwera (brak SYSTEM_EMAIL i MAIL_ADMIN)'}`);
   if (!pushConfigured()) console.warn('[push] brak VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY: powiadomienia Web Push wyłączone');
 
   // Zadania w tle tylko przy BACKGROUND_JOBS=on w ustawieniach: domyślnie wyłączone, bo drugi serwer zlecałby
@@ -95,7 +102,21 @@ const MONGO_OPTIONS = { heartbeatFrequencyMS: 60_000, serverMonitoringMode: 'pol
   // BACKGROUND_JOBS: nic nie zapisuje w bazie, tylko w pamięci tej instancji; sterowniki pobierają już tylko zapasowo
   startServerWeather();
 
-  server.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
-})();
+  server.listen(PORT, () => {
+    console.log(`Listening on http://localhost:${PORT}`);
+    // token wywołań wewnętrznych dla polecenia --api uruchamianego obok (core/internal.ts)
+    saveInternalToken(PORT);
+  });
+}
+
+const args = process.argv.slice(2);
+if (isCliCommand(args)) {
+  runCli(args).then((code) => process.exit(code), (error) => {
+    console.error(error);
+    process.exit(1);
+  });
+} else {
+  void startServer();
+}
 
 

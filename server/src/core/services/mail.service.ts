@@ -1,5 +1,5 @@
-// Maile kont użytkowników (2026-10-11): kod i link logowania, zmiana e-maila, usunięcie konta, udostępnienie
-// sterownika, powiadomienie administratora o rejestracji. SMTP tylko ze zmiennych środowiskowych (SMTP_HOST,
+// Maile kont użytkowników (2026-10-11): kod i link logowania, kod logowania konta system (od 2026-11-13, z adresem IP,
+// z którego go zamówiono), zmiana e-maila, usunięcie konta, udostępnienie sterownika, powiadomienie administratora o rejestracji. SMTP tylko ze zmiennych środowiskowych (SMTP_HOST,
 // SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM, MAIL_ADMIN; Render: Environment, lokalnie server/.env).
 // Bez SMTP_HOST (testy, środowisko bez poczty) mail trafia do outbox w pamięci i do logu.
 // MAIL_RELAY=1: serwer nie łączy się z pocztą, mail idzie do kolejki i wysyła go sterownik (mail-relay.service.ts).
@@ -42,6 +42,9 @@ const smtpTransport = () => {
 export const resetMailTransport = () => { transport = null; };
 
 export const adminEmail = () => setting('MAIL_ADMIN') ?? '';
+
+/** poczta działa: SMTP z ustawień albo przekaźnik przez sterowniki; bez niej maile trafiają tylko do outbox i dziennika */
+export const mailConfigured = () => relayEnabled() || !!setting('SMTP_HOST');
 
 export async function sendMail(mail: OutgoingMail): Promise<void> {
   // MAIL_RELAY=1 (Render na darmowym planie blokuje SMTP): mail wysyła sterownik z domowego łącza
@@ -94,8 +97,9 @@ function layout(options: { paragraphs: string[]; code?: string; button?: { label
     + `<p style="margin:0;font-size:13px;color:#555">${escapeHtml(options.footer)}</p></div></div>`;
 }
 
-const formatCode = (code: string) => `${code.slice(0, 3)} ${code.slice(3)}`;
-const until = (expiresAt: Date, lang: Lang) => expiresAt.toLocaleTimeString(locale(lang), { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw' });
+export const formatCode = (code: string) => `${code.slice(0, 3)} ${code.slice(3)}`;
+export const until = (expiresAt: Date, lang: Lang) => expiresAt.toLocaleTimeString(locale(lang), { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw' });
+const moment = (at: Date, lang: Lang) => at.toLocaleString(locale(lang), { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/Warsaw' });
 
 // Teksty maili w obu językach (wersja językowa 2026-10-21): język odbiorcy = język jego konta, a bez konta język
 // żądania (ekranu logowania); mail do administratora zostaje po polsku.
@@ -107,6 +111,10 @@ const M = {
     loginCode: 'Twój kod logowania:',
     loginLink: 'Możesz też zalogować się linkiem:',
     loginButton: 'Zaloguj się',
+    systemSubject: 'Kod logowania system: {code}',
+    systemCode: 'kod logowania konta system:',
+    systemIp: 'Kod zamówiono z adresu IP {ip} ({when}).',
+    systemFooter: 'Kod jest ważny {minutes} minut (do {until}) i działa tylko raz. Jeśli to nie Ty, nikomu go nie podawaj: po {attempts} błędnych kodach logowanie system blokuje się na {lock} minut.',
     changeSubject: 'Potwierdź nowy adres: {code}',
     changeFooter: 'Kod jest ważny 10 minut (do {until}). Jeśli to nie Ty, zignoruj tę wiadomość.',
     changeCode: 'kod potwierdzenia nowego adresu e-mail:',
@@ -134,6 +142,10 @@ const M = {
     loginCode: 'Your sign-in code:',
     loginLink: 'You can also sign in with the link:',
     loginButton: 'Sign in',
+    systemSubject: 'System sign-in code: {code}',
+    systemCode: 'the system account sign-in code:',
+    systemIp: 'The code was requested from the IP address {ip} ({when}).',
+    systemFooter: 'The code is valid for {minutes} minutes (until {until}) and works only once. If this was not you, do not share it with anyone: after {attempts} wrong codes system sign-in is locked for {lock} minutes.',
     changeSubject: 'Confirm the new address: {code}',
     changeFooter: 'The code is valid for 10 minutes (until {until}). If this was not you, ignore this message.',
     changeCode: 'confirmation code for the new e-mail address:',
@@ -169,6 +181,23 @@ export function loginMail(to: string, code: string, url: string, expiresAt: Date
       paragraphs: [m(lang, 'hello'), m(lang, 'loginCode')], code: formatCode(code),
       button: { label: m(lang, 'loginButton'), url }, footer,
     }),
+  };
+}
+
+// Kod konta system (bez linku): zawsze na stały adres z ustawień (auth.service.ts systemEmail), z adresem IP, z którego
+// zamówiono kod; limity podaje auth.service (ważność, liczba prób, czas blokady).
+export function systemLoginMail(
+  to: string, code: string, expiresAt: Date, ip: string, limits: { minutes: number; attempts: number; lock: number },
+  lang: Lang = DEFAULT_LANG, requestedAt = new Date(),
+): OutgoingMail {
+  const footer = m(lang, 'systemFooter', { ...limits, until: until(expiresAt, lang) });
+  const origin = m(lang, 'systemIp', { ip, when: moment(requestedAt, lang) });
+  return {
+    to,
+    subject: m(lang, 'systemSubject', { code: formatCode(code) }),
+    text: `${m(lang, 'hello')}\n\n${m(lang, 'systemCode')} ${formatCode(code)}\n\n${origin}\n\n${footer}`,
+    // w HTML akapity stoją przed kodem, więc adres IP idzie do stopki pod kodem
+    html: layout({ paragraphs: [m(lang, 'hello'), m(lang, 'systemCode')], code: formatCode(code), footer: `${origin} ${footer}` }),
   };
 }
 

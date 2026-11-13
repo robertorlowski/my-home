@@ -27,4 +27,7 @@ COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/client/dist client/dist
 WORKDIR /app/server
 # Użytkownik z konta na serwerze (UID 1998), ustawiany w docker-compose.yml.
+# Polecenia na serwerze (od 2026-11-13, server/src/core/cli.ts), w działającym kontenerze, bez hasła:
+#   docker exec my-home-prod node dist/server.js --kod-awaryjny        kod konta system (5 min) bez poczty
+#   docker exec -i my-home-prod node dist/server.js --api PUT '/firmware/<rodzaj>/<wersja>?description=…' --bin < plik.bin
 CMD ["node", "dist/server.js"]

@@ -20,6 +20,7 @@ vi.mock('../src/core/services/meteo.service', () => ({
 import app from '../src/core/app'
 import { DeviceModel } from '../src/core/models/device.model'
 import { MailOutboxModel } from '../src/core/models/mail-outbox.model'
+import { issueEmergencySystemCode } from '../src/core/services/auth.service'
 import {
   FAILOVER_MS, LEASE_MS, Sealed, decryptWith, enqueueMail, mailResult, nextMailFor, resetRelaySeen,
 } from '../src/core/services/mail-relay.service'
@@ -48,7 +49,6 @@ describe('Przekaźnik poczty przez sterowniki', () => {
 
   beforeAll(async () => {
     process.env.AUTH_DISABLED = '0';
-    process.env.SYSTEM_PASSWORD = 'tajne-haslo';
     process.env.SMTP_HOST = 'smtp.example';
     process.env.SMTP_PORT = '587';
     process.env.SMTP_USER = 'raporty@example.pl';
@@ -57,7 +57,8 @@ describe('Przekaźnik poczty przez sterowniki', () => {
     process.env.MAIL_RELAY = '1';
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
-    systemToken = (await request(app).post('/api/auth/system').send({ password: 'tajne-haslo' }).expect(200)).body.token;
+    // konto system kodem awaryjnym (jak polecenie --kod-awaryjny): bez przekaźnika poczty, którego tu jeszcze nie ma
+    systemToken = (await request(app).post('/api/auth/system/verify').send({ code: (await issueEmergencySystemCode()).code }).expect(200)).body.token;
     switchRootId = (await register(DeviceType.SWITCH, SWITCH_SN, switchKey.publicKey)).body.rootId;
     pumpRootId = (await register(DeviceType.HP, PUMP_SN, pumpKey.publicKey)).body.rootId;
   });

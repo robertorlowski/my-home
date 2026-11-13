@@ -1,9 +1,10 @@
 // Konto systemowe (/account, od 2026-11-07): panele w bocznym menu po lewej (komputer) albo w dolnej nawigacji
 // (telefon), tak samo jak widoki sterownika i pogody. Panel jest w ?tab= (Moje dane = bez parametru).
 // Panele: Moje dane, Powiadomienia i Ustawienia (karty Poczta, Aplikacja, Klucze powiadomień, Serwer, każda z własnym zapisem).
-// Ustawienia aplikacji: POST /api/settings/read i PUT /api/settings, z hasłem ustawień (serwer core/services/settings.service.ts). Sekrety nie wracają
-// z serwera, pole pokazuje tylko, że są ustawione; zapis wysyła wyłącznie zmienione pola.
-import { FormEvent, ReactNode, useState } from 'react';
+// Ustawienia aplikacji: GET /api/settings i PUT /api/settings (serwer core/services/settings.service.ts); od 2026-11-13
+// bez hasła ustawień, bo konto system loguje się kodem z maila. Sekrety nie wracają z serwera, pole pokazuje tylko,
+// że są ustawione; zapis wysyła wyłącznie zmienione pola.
+import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { SettingsRequests } from '../../api';
 import { BottomNavItems, NavItem, SideTabs } from '../../components/Header';
@@ -109,11 +110,10 @@ function SettingField({ item, value, cleared, onChange, onClear }: {
   );
 }
 
-function SettingsPanel({ group, initial, save, onLocked }: {
+function SettingsPanel({ group, initial, save }: {
   group: SettingGroup;
   initial: AppSetting[];
   save: (values: Record<string, string | null>) => Promise<AppSetting[]>;
-  onLocked: () => void;
 }) {
   const { t } = useLang();
   const [settings, setSettings] = useState(initial);
@@ -151,9 +151,7 @@ function SettingsPanel({ group, initial, save, onLocked }: {
       load(await save(values));
       setDone(true);
     } catch (caught) {
-      // np. po północy hasło ustawień jest już inne
-      if (caught instanceof ApiError && (caught.status === 403 || caught.status === 429)) onLocked();
-      else setError(caught instanceof ApiError ? caught.message : t('common.somethingWrong'));
+      setError(caught instanceof ApiError ? caught.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);
     }
@@ -179,53 +177,33 @@ function SettingsPanel({ group, initial, save, onLocked }: {
   );
 }
 
-// Zakładka Ustawienia: najpierw hasło ustawień. Hasło jest tylko w pamięci tego ekranu, więc odświeżenie strony
-// albo wyjście z konta wymaga podania go ponownie. Sprawdza je serwer przy każdym odczycie i zapisie.
+// Zakładka Ustawienia: zalogowany użytkownik systemowy widzi ustawienia od razu (od 2026-11-13 bez hasła ustawień);
+// serwer i tak sprawdza konto przy każdym odczycie i zapisie (middleware/session.ts, systemOnly).
 function SettingsArea() {
   const { t } = useLang();
-  const [password, setPassword] = useState('');
-  const [unlocked, setUnlocked] = useState<{ password: string; settings: AppSetting[] } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [settings, setSettings] = useState<AppSetting[] | null>(null);
   const [error, setError] = useState('');
 
-  const unlock = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setError('');
-    try {
-      setUnlocked({ password, settings: await SettingsRequests.read(password) });
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : t('settings.loadFailed'));
-    } finally {
-      setPassword('');
-      setBusy(false);
-    }
-  };
+  useEffect(() => {
+    SettingsRequests.read()
+      .then(setSettings)
+      .catch((caught) => setError(caught instanceof ApiError ? caught.message : t('settings.loadFailed')));
+  }, []);
 
-  if (!unlocked) {
+  if (!settings) {
     return (
       <section className="card">
         <header className="card-head"><h2>{t('settings.tab.settings')}</h2></header>
-        <p className="help">{t('settings.lockHint')}</p>
-        <form className="settings-form" onSubmit={unlock}>
-          <label className="field">
-            <span>{t('settings.lockPassword')}</span>
-            <input type="password" required autoFocus autoComplete="off" value={password} onChange={(event) => setPassword(event.target.value)} />
-          </label>
-          {error && <div className="alert alert-err" role="alert"><div><strong>{error}</strong></div></div>}
-          <div className="actions actions-gap">
-            <button type="submit" className="btn btn-primary" disabled={busy}>{t('settings.unlock')}</button>
-          </div>
-        </form>
+        {error
+          ? <div className="alert alert-err" role="alert"><div><strong>{error}</strong></div></div>
+          : <p className="help">{t('common.loading')}</p>}
       </section>
     );
   }
   return (
     <>
       {SETTING_GROUPS.map((group) => (
-        <SettingsPanel key={group} group={group} initial={unlocked.settings}
-          save={(values) => SettingsRequests.save(unlocked.password, values)}
-          onLocked={() => { setUnlocked(null); setError(t('settings.lockedAgain')); }} />
+        <SettingsPanel key={group} group={group} initial={settings} save={SettingsRequests.save} />
       ))}
     </>
   );

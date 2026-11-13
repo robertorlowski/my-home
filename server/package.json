@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon",
     "test": "vitest",
-    "build": "tsc"
+    "build": "tsc",
+    "kod-awaryjny": "ts-node --transpile-only src/server.ts --kod-awaryjny"
   },
   "keywords": [],
   "author": "",

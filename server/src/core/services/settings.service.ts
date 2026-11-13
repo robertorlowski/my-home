@@ -1,14 +1,13 @@
-// Ustawienia aplikacji w bazie (od 2026-11-07, decyzja użytkownika): poczta, adres klienta, wersja demo, klucze
-// powiadomień i zadania w tle. W środowisku zostają tylko MONGODB_URI i SYSTEM_PASSWORD, a PORT służy pracy lokalnej.
+// Ustawienia aplikacji w bazie (od 2026-11-07, decyzja użytkownika): poczta, adres kodów konta system, adres klienta,
+// wersja demo, klucze powiadomień i zadania w tle. W środowisku zostaje tylko MONGODB_URI, a PORT służy pracy lokalnej
+// (SYSTEM_PASSWORD od 2026-11-13 nie jest używane: konto system loguje się kodem z maila, auth.service.ts).
 // Serwer czyta dokument raz po połączeniu z bazą i trzyma go w pamięci, więc setting() jest synchroniczne.
 // Brak wartości w bazie: wartość ze środowiska, używana tylko lokalnie i w testach (npm run local, vitest).
 // Dokument dotyczy bazy o nazwie równej jego _id, więc kopia produkcji pod inną nazwą nie włączy poczty ani zadań w tle.
 // Sekrety są w bazie jawnym tekstem i w jej kopiach; API ich nie zwraca, podaje tylko, czy są ustawione.
-// Odczyt i zapis wymagają konta systemowego i osobnego hasła ustawień (niżej).
-import crypto from 'crypto';
-import { formatInTimeZone } from 'date-fns-tz';
+// Odczyt i zapis: tylko zalogowane konto system (middleware/session.ts, systemOnly), bez dodatkowego hasła
+// (do 2026-11-13 hasło ustawień z nazwą dnia tygodnia).
 import mongoose from 'mongoose';
-import { TIME_ZONE } from '../time';
 import { SettingsModel } from '../models/settings.model';
 
 export const SETTING_GROUPS = ['mail', 'app', 'push', 'server'] as const;
@@ -22,6 +21,8 @@ const DEFINITIONS = {
   SMTP_PASS: { group: 'mail', kind: 'secret' },
   MAIL_FROM: { group: 'mail', kind: 'email' },
   MAIL_ADMIN: { group: 'mail', kind: 'email' },
+  // adres, na który idzie kod logowania konta system (od 2026-11-13); pusty = MAIL_ADMIN (auth.service.ts systemEmail)
+  SYSTEM_EMAIL: { group: 'mail', kind: 'email' },
   CLIENT_URL: { group: 'app', kind: 'urls' },
   DEMO_OWNER_EMAIL: { group: 'app', kind: 'email' },
   VAPID_PUBLIC_KEY: { group: 'push', kind: 'text' },
@@ -106,46 +107,6 @@ export async function saveSettings(changes: Record<string, unknown>): Promise<Se
   await loadSettings();
   return settingsView();
 }
-
-// ------------------------------------------------------------------ hasło ustawień
-
-// Decyzja użytkownika 2026-11-07: hasło konta system i polska nazwa dnia tygodnia (czas warszawski), np. …Sobota.
-// Serwer sprawdza je przy każdym odczycie i zapisie; klient trzyma je tylko w pamięci karty.
-const WEEKDAYS = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
-const MAX_FAILURES = 5;
-const LOCK_MS = 15 * 60_000;
-const failures = { count: 0, lockedUntil: 0 };
-
-export class SettingsLockError extends Error {
-  constructor(public status: 403 | 429) {
-    super('Ustawienia zablokowane.');
-  }
-}
-
-export const settingsPassword = (now = new Date()): string | null => {
-  const base = process.env.SYSTEM_PASSWORD;
-  return base ? `${base}${WEEKDAYS[Number(formatInTimeZone(now, TIME_ZONE, 'i')) - 1]}` : null;
-};
-
-const sha256 = (text: string) => crypto.createHash('sha256').update(text).digest();
-
-export function checkSettingsPassword(password: unknown, now = new Date()): void {
-  if (failures.lockedUntil > now.getTime()) throw new SettingsLockError(429);
-  const expected = settingsPassword(now);
-  if (expected && typeof password === 'string' && crypto.timingSafeEqual(sha256(password), sha256(expected))) {
-    failures.count = 0;
-    return;
-  }
-  failures.count += 1;
-  if (failures.count >= MAX_FAILURES) {
-    failures.count = 0;
-    failures.lockedUntil = now.getTime() + LOCK_MS;
-  }
-  throw new SettingsLockError(403);
-}
-
-/** testy */
-export const resetSettingsLock = () => { failures.count = 0; failures.lockedUntil = 0; };
 
 /** testy: bez wartości z bazy */
 export const resetSettingsCache = () => { values = {}; };

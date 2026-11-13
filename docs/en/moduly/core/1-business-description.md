@@ -16,13 +16,13 @@ The module is responsible for:
 - **menus and screens that depend on the controller kind** (the heat pump has schedules, the water pressure tank and photovoltaics do not);
 - **shared services**: outdoor temperature (the boiler sensor, otherwise the forecast), the weather of the home and of the weather tiles (Open-Meteo, fetched by the server, by the switch as a fallback), a weather page with a forecast, the Polish public holiday calendar, fast notifications to the controller and the browser (WebSocket);
 - **mail**: login codes and notifications are sent by the server; optionally the controllers at home can send them (the switch, with `co` as a fallback).
-- **application settings**: the system account has My details, Notifications and Settings in the left menu. The Settings tab (mail, application addresses, demo, notification keys, background jobs) requires a separate password.
+- **application settings**: the system account has My details, Notifications and Settings in the left menu. The Settings tab (mail, the system account code address, application addresses, demo, notification keys, background jobs) opens without an extra password (since 2026-11-13).
 
 ## Who uses it
 
 - **The installation owner** — logs in, chooses a controller, names it, arranges the tiles, shares a controller with household members. Uses the application on a computer and on a phone.
 - **The installer** (usually the same person) — connects a new controller; it is enough to give the controller Wi-Fi, the rest happens automatically.
-- **The system user** — the administrative account (login "system" with a password): sees all controllers, manages the firmware of controller kinds and sees the database usage.
+- **The system user** — the administrative account without a password (since 2026-11-13): "system" goes into the e-mail field and the code always arrives at the fixed address from the installation settings (on a server without mail it is in the server log; when mail does not work, the emergency command on the server gives a code). Sees all controllers, manages the firmware of controller kinds and sees the database usage.
 
 ## What the user can do
 

@@ -83,7 +83,7 @@ const serverEnv = {
   CLIENT_URL: 'http://localhost:5173',
   // Bez tego stacja dublowałaby zadania w tle; na tej bazie są wyłączone także na serwerze testowym.
   BACKGROUND_JOBS: 'off',
-  SMTP_HOST: '', SMTP_PORT: '', SMTP_USER: '', SMTP_PASS: '', MAIL_FROM: '', MAIL_ADMIN: '', MAIL_RELAY: '',
+  SMTP_HOST: '', SMTP_PORT: '', SMTP_USER: '', SMTP_PASS: '', MAIL_FROM: '', MAIL_ADMIN: '', MAIL_RELAY: '', SYSTEM_EMAIL: '',
   VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '', VAPID_SUBJECT: '',
 };
 

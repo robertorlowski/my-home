@@ -76,7 +76,8 @@ const apiFetch = async (input: string, init: RequestInit) => {
 
 // Błąd z kodem i komunikatem serwera (pole message) dla formularzy kont i udostępniania.
 export class ApiError extends Error {
-  constructor(message: string, public status: number, public retryAfterSeconds?: number) {
+  /** locked: blokada logowania konta system po błędnych kodach (429 z serwera, auth.service.ts) */
+  constructor(message: string, public status: number, public retryAfterSeconds?: number, public locked = false) {
     super(message);
   }
 }
@@ -95,7 +96,7 @@ export class Requests {
       throw new ApiError('Brak połączenia z serwerem.', 0);
     }
     const body = response.status === 204 ? null : await response.json().catch(() => null);
-    if (!response.ok) throw new ApiError(body?.message ?? `Błąd serwera (${response.status}).`, response.status, body?.retryAfterSeconds);
+    if (!response.ok) throw new ApiError(body?.message ?? `Błąd serwera (${response.status}).`, response.status, body?.retryAfterSeconds, body?.locked === true);
     return body as T;
   }
 

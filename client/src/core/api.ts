@@ -111,17 +111,21 @@ export class FirmwareRequests {
 // Konta użytkowników (/api/auth/*, 2026-10-11): logowanie kodem lub linkiem z maila, system, „Zapamiętaj 90 dni”,
 // dane konta, zmiana e-maila, usunięcie konta. Błędy jako ApiError z komunikatem serwera.
 type Session = { token: string; created: boolean; user: User };
-// ustawienia aplikacji, tylko konto systemowe
+/** kod konta system (od 2026-11-13): mail na stały adres z ustawień serwera albo, bez poczty, dziennik serwera */
+export type SystemCodeSent = { delivery: 'mail' | 'log'; expiresInSeconds: number; resendAfterSeconds: number };
+// ustawienia aplikacji, tylko konto systemowe (od 2026-11-13 bez osobnego hasła)
 export const SettingsRequests = {
-  read: (password: string) => Requests.json<AppSetting[]>('POST', '/settings/read', { password }),
-  save: (password: string, values: Record<string, string | null>) => Requests.json<AppSetting[]>('PUT', '/settings', { password, values }),
+  read: () => Requests.json<AppSetting[]>('GET', '/settings'),
+  save: (values: Record<string, string | null>) => Requests.json<AppSetting[]>('PUT', '/settings', { values }),
 };
 
 export const AuthRequests = {
   start: (email: string) => Requests.json<{ email: string; resendAfterSeconds: number }>('POST', '/auth/start', { email }),
   verifyCode: (email: string, code: string) => Requests.json<Session>('POST', '/auth/verify', { email, code }),
   verifyLink: (token: string) => Requests.json<Session>('POST', '/auth/verify', { token }),
-  system: (password: string) => Requests.json<Session>('POST', '/auth/system', { password }),
+  // konto system: kod na adres z ustawień serwera (bez hasła), potem kod → sesja jak verifyCode
+  systemStart: () => Requests.json<SystemCodeSent>('POST', '/auth/system'),
+  systemVerify: (code: string) => Requests.json<Session>('POST', '/auth/system/verify', { code }),
   // wersja demo: dostępność (przycisk pod logowaniem) i wejście bez hasła (sesja 2 h, tylko odczyt)
   demoAvailable: () => Requests.json<{ available: boolean }>('GET', '/auth/demo'),
   demo: () => Requests.json<Session>('POST', '/auth/demo'),

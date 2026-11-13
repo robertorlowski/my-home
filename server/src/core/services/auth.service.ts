@@ -1,18 +1,20 @@
 // Konta użytkowników (2026-10-11): logowanie i rejestracja kodem albo linkiem z maila (jeden przebieg),
 // sesje (token w nagłówku Authorization, bo klient i API są na różnych domenach), użytkownik systemowy
-// (hasło SYSTEM_PASSWORD), dane konta, zmiana e-maila i usunięcie konta z danymi sterowników.
+// (od 2026-11-13 kod z maila na stały adres z ustawień zamiast hasła SYSTEM_PASSWORD), dane konta, zmiana e-maila
+// i usunięcie konta z danymi sterowników.
 import { setting } from './settings.service';
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { both, DEFAULT_LANG, isLang, Lang, t, Texts, texts } from '../i18n';
-import { AuthCodeEntry, AuthCodeModel, AuthCodePurpose, SessionEntry, SessionModel } from '../models/auth.model';
+import { AuthCodeEntry, AuthCodeModel, AuthCodePurpose, SessionEntry, SessionModel, SystemCodeDelivery } from '../models/auth.model';
 import { DeviceShareModel } from '../models/device-share.model';
 import { DeviceModel } from '../models/device.model';
 import { UserEntry, UserLocation, UserModel } from '../models/user.model';
 import { forgetDeviceInfo } from './device-info.service';
 import { assertMailAvailable } from './mail-relay.service';
 import {
-  adminEmail, clientBaseUrl, deleteAccountMail, emailChangeMail, emailChangedMail, loginMail, registrationAdminMail, sendMail,
+  adminEmail, clientBaseUrl, deleteAccountMail, emailChangeMail, emailChangedMail, formatCode, loginMail, mailConfigured,
+  registrationAdminMail, sendMail, systemLoginMail, until,
 } from './mail.service';
 
 export const CODE_TTL_MS = 10 * 60 * 1000;
@@ -25,15 +27,13 @@ export const SESSION_IDLE_MS = 24 * 60 * 60 * 1000;
 export const SESSION_DEMO_MS = 2 * 60 * 60 * 1000;
 const DEMO_RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 10 };
 const SESSION_TOUCH_MS = 5 * 60 * 1000;
-const SYSTEM_MAX_FAILURES = 5;
-const SYSTEM_LOCK_MS = 60 * 1000;
 export const SYSTEM_LOGIN = 'system';
 
 // Błąd dla aplikacji: komunikat w obu językach (core/i18n.ts texts / both); kontroler wybiera język żądania
-// (messageFor). Sam napis = ten sam tekst w obu językach.
+// (messageFor). Sam napis = ten sam tekst w obu językach. extra: dodatkowe pola odpowiedzi (np. locked przy blokadzie).
 export class AuthError extends Error {
   readonly texts: Texts;
-  constructor(message: string | Texts, public status = 400, public retryAfterSeconds?: number) {
+  constructor(message: string | Texts, public status = 400, public retryAfterSeconds?: number, public extra?: Record<string, unknown>) {
     super(typeof message === 'string' ? message : message.pl);
     this.texts = typeof message === 'string' ? { pl: message, en: message } : message;
   }
@@ -43,6 +43,7 @@ export class AuthError extends Error {
 const sha256 = (value: string) => crypto.createHash('sha256').update(value).digest('hex');
 const newToken = () => crypto.randomBytes(32).toString('base64url');
 const codeHash = (email: string, code: string) => sha256(`${email}:${code}`);
+const newCode = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function normalizeEmail(value: unknown): string | null {
@@ -106,7 +107,7 @@ async function createCode(purpose: AuthCodePurpose, email: string, options: { us
     throw new AuthError(texts('err.codeRecently', { wait }), 429, wait);
   }
   await AuthCodeModel.deleteMany(filter);
-  const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+  const code = newCode();
   const token = options.link ? newToken() : undefined;
   const expiresAt = new Date(now + CODE_TTL_MS);
   await AuthCodeModel.create({
@@ -244,27 +245,131 @@ export async function verifyLogin(body: { email?: unknown; code?: unknown; token
   return { token, created, user: publicUser(user) };
 }
 
-const systemFailures = { count: 0, lockedUntil: 0 };
-export async function systemLogin(password: unknown) {
-  const expected = process.env.SYSTEM_PASSWORD;
-  if (!expected) throw new AuthError(texts('err.systemLoginOff'), 403);
+// ------------------------------------------------------------------ konto system: kod z maila (od 2026-11-13)
+// Plan właściciela: oracle-cloud/vm-prod/admin/docs/plan-logowanie-system-kodem.md. Hasła systemowego nie ma nigdzie:
+// „system” w polu e-mail → kod (6 cyfr, jednorazowy, SYSTEM_CODE_TTL_MS) zawsze na stały adres z ustawień instalacji
+// (systemEmail: SYSTEM_EMAIL, bez niego MAIL_ADMIN), nigdy z formularza; w mailu adres IP, z którego zamówiono kod.
+// Bez poczty (środowisko testowe, npm run local, nowa instalacja) albo bez adresu kod trafia do dziennika serwera.
+// Limity: nowy kod najwyżej raz na RESEND_MS i SYSTEM_CODES_PER_HOUR razy na godzinę; MAX_ATTEMPTS błędnych kodów
+// unieważnia kod i blokuje logowanie system (wysłanie i wpisanie kodu) na SYSTEM_LOCK_MS. Polecenie awaryjne
+// (core/cli.ts, --kod-awaryjny) wypisuje kod w terminalu serwera bez poczty i zdejmuje blokadę oraz limit na godzinę.
+// Stan jest w auth_codes (purpose system-login / system-sent / system-lock, email 'system'), a nie w pamięci,
+// bo polecenie awaryjne to osobny proces. Zamówienie, błędny kod, blokada i logowanie trafiają do dziennika serwera.
+export const SYSTEM_CODE_TTL_MS = 5 * 60 * 1000;
+export const SYSTEM_CODES_PER_HOUR = 5;
+export const SYSTEM_LOCK_MS = 15 * 60 * 1000;
+const SYSTEM_SENT_WINDOW_MS = 60 * 60 * 1000;
+const SYSTEM_PURPOSES: AuthCodePurpose[] = ['system-login', 'system-sent', 'system-lock'];
+
+/** adres kodów konta system: ustawienie instalacji, nigdy wpisany w kod (kod jest publiczny, a cudza instalacja
+ *  wysyłałaby kody właścicielowi); pusty = adres administratora, bez obu kod idzie do dziennika serwera */
+export const systemEmail = () => (setting('SYSTEM_EMAIL') || setting('MAIL_ADMIN') || '').trim();
+
+const minutes = (ms: number) => Math.round(ms / 60_000);
+const lockedError = (seconds: number) =>
+  new AuthError(texts('err.systemLocked', { minutes: Math.max(1, Math.ceil(seconds / 60)) }), 429, seconds, { locked: true });
+
+async function systemLockSeconds(now: number): Promise<number> {
+  const lock = await AuthCodeModel.findOne({ purpose: 'system-lock', email: SYSTEM_LOGIN, expiresAt: { $gt: new Date(now) } })
+    .sort({ expiresAt: -1 }).lean<AuthCodeEntry>();
+  return lock ? Math.ceil((new Date(lock.expiresAt).getTime() - now) / 1000) : 0;
+}
+
+// POST /auth/system: nowy kod konta system (poprzedni przestaje działać). delivery: 'mail' albo 'log' (kod w dzienniku).
+export async function startSystemLogin(ip: string, lang: Lang = DEFAULT_LANG) {
   const now = Date.now();
-  if (systemFailures.lockedUntil > now) {
-    throw new AuthError(texts('err.tooManyTryMinute'), 429, Math.ceil((systemFailures.lockedUntil - now) / 1000));
+  const locked = await systemLockSeconds(now);
+  if (locked) {
+    console.warn(`[konta] system: zamówienie kodu z IP ${ip} odrzucone, blokada jeszcze ${locked} s`);
+    throw lockedError(locked);
   }
-  const ok = typeof password === 'string'
-    && crypto.timingSafeEqual(Buffer.from(sha256(password)), Buffer.from(sha256(expected)));
-  if (!ok) {
-    systemFailures.count += 1;
-    if (systemFailures.count >= SYSTEM_MAX_FAILURES) {
-      systemFailures.count = 0;
-      systemFailures.lockedUntil = now + SYSTEM_LOCK_MS;
-    }
-    throw new AuthError(texts('err.wrongPassword'), 401);
+  // ślady wysłanych kodów z ostatniej godziny (TTL usuwa starsze), od najstarszego
+  const sent = await AuthCodeModel.find({ purpose: 'system-sent', email: SYSTEM_LOGIN, expiresAt: { $gt: new Date(now) } })
+    .sort({ createdAt: 1 }).lean<AuthCodeEntry[]>();
+  const last = sent[sent.length - 1];
+  if (last && now - new Date(last.createdAt).getTime() < RESEND_MS) {
+    const wait = Math.ceil((RESEND_MS - (now - new Date(last.createdAt).getTime())) / 1000);
+    throw new AuthError(texts('err.codeRecently', { wait }), 429, wait);
   }
-  systemFailures.count = 0;
+  if (sent.length >= SYSTEM_CODES_PER_HOUR) {
+    const wait = Math.max(1, Math.ceil((new Date(sent[0].expiresAt).getTime() - now) / 1000));
+    console.warn(`[konta] system: zamówienie kodu z IP ${ip} odrzucone, ${sent.length} kodów w ciągu godziny`);
+    throw new AuthError(texts('err.systemCodesHourly', { minutes: Math.ceil(wait / 60) }), 429, wait);
+  }
+  const to = systemEmail();
+  const delivery: SystemCodeDelivery = to && mailConfigured() ? 'mail' : 'log';
+  // przekaźnik poczty bez sterownika w sieci: błąd przed utworzeniem kodu (jak przy zwykłym logowaniu)
+  if (delivery === 'mail') await assertMailAvailable();
   const user = await ensureSystemUser();
-  return { token: await createSession(String(user._id)), created: false, user: publicUser(user) };
+  const code = newCode();
+  const expiresAt = new Date(now + SYSTEM_CODE_TTL_MS);
+  await AuthCodeModel.deleteMany({ purpose: 'system-login', email: SYSTEM_LOGIN });
+  const doc = await AuthCodeModel.create({
+    purpose: 'system-login', email: SYSTEM_LOGIN, codeHash: codeHash(SYSTEM_LOGIN, code), expiresAt, ip, delivery,
+  });
+  await AuthCodeModel.create({ purpose: 'system-sent', email: SYSTEM_LOGIN, ip, delivery, expiresAt: new Date(now + SYSTEM_SENT_WINDOW_MS) });
+  if (delivery === 'mail') {
+    try {
+      await sendMail(systemLoginMail(to, code, expiresAt, ip, {
+        minutes: minutes(SYSTEM_CODE_TTL_MS), attempts: MAX_ATTEMPTS, lock: minutes(SYSTEM_LOCK_MS),
+      }, mailLang(user, lang), new Date(now)));
+    } catch (error) {
+      // kod nie dotarł, więc nie zostaje; ślad wysłania zostaje, żeby ponowienia nie zalewały serwera poczty
+      await AuthCodeModel.deleteOne({ _id: doc._id });
+      console.error(`[konta] system: nie udało się wysłać kodu (IP ${ip}); bez poczty: node dist/server.js --kod-awaryjny`, error);
+      throw new AuthError(texts('err.systemMailFailed'), 503);
+    }
+    console.log(`[konta] system: kod wysłany na adres z ustawień, zamówiony z IP ${ip}`);
+  } else {
+    const why = to ? 'poczta nie jest ustawiona' : 'brak adresu SYSTEM_EMAIL i MAIL_ADMIN';
+    console.log(`[konta] system: kod logowania ${formatCode(code)}, ważny do ${until(expiresAt, 'pl')} (${why}; zamówiony z IP ${ip})`);
+  }
+  return {
+    delivery, expiresInSeconds: Math.round(SYSTEM_CODE_TTL_MS / 1000), resendAfterSeconds: Math.round(RESEND_MS / 1000),
+  };
+}
+
+// POST /auth/system/verify {code}: sesja konta system (klient pyta potem o zapamiętanie, jak u innych kont).
+export async function verifySystemLogin(codeValue: unknown, ip: string) {
+  const now = Date.now();
+  const locked = await systemLockSeconds(now);
+  if (locked) throw lockedError(locked);
+  const code = typeof codeValue === 'string' ? codeValue.replace(/\s/g, '') : '';
+  if (!/^\d{6}$/.test(code)) throw new AuthError(texts('err.codeDigits'));
+  const doc = await AuthCodeModel.findOne({ purpose: 'system-login', email: SYSTEM_LOGIN, expiresAt: { $gt: new Date(now) } })
+    .sort({ createdAt: -1 }).lean<AuthCodeEntry>();
+  if (!doc) throw new AuthError(texts('err.codeExpired'));
+  if (doc.codeHash === codeHash(SYSTEM_LOGIN, code)) {
+    // usunięcie przed utworzeniem sesji: przy dwóch żądaniach naraz kod działa tylko w jednym
+    const used = await AuthCodeModel.findOneAndDelete({ _id: doc._id }).lean<AuthCodeEntry>();
+    if (!used) throw new AuthError(texts('err.codeExpired'));
+    const user = await ensureSystemUser();
+    const how = used.delivery === 'emergency' ? 'kodem awaryjnym' : used.delivery === 'log' ? 'kodem z dziennika serwera' : 'kodem z maila';
+    console.log(`[konta] system: zalogowano ${how} z IP ${ip}`);
+    return { token: await createSession(String(user._id)), created: false, user: publicUser(user) };
+  }
+  const failed = await AuthCodeModel.findOneAndUpdate({ _id: doc._id }, { $inc: { attempts: 1 } }, { new: true }).lean<AuthCodeEntry>();
+  if (!failed) throw new AuthError(texts('err.codeExpired'));
+  console.warn(`[konta] system: błędny kod z IP ${ip} (${failed.attempts}/${MAX_ATTEMPTS})`);
+  if (failed.attempts < MAX_ATTEMPTS) throw new AuthError(texts('err.wrongCodeLeft', { left: MAX_ATTEMPTS - failed.attempts }));
+  await AuthCodeModel.deleteMany({ purpose: 'system-login', email: SYSTEM_LOGIN });
+  await AuthCodeModel.create({ purpose: 'system-lock', email: SYSTEM_LOGIN, ip, expiresAt: new Date(now + SYSTEM_LOCK_MS) });
+  console.warn(`[konta] system: ${MAX_ATTEMPTS} błędnych kodów (ostatni z IP ${ip}), kod unieważniony, logowanie system`
+    + ` zablokowane na ${minutes(SYSTEM_LOCK_MS)} min; blokadę zdejmuje node dist/server.js --kod-awaryjny`);
+  throw lockedError(Math.round(SYSTEM_LOCK_MS / 1000));
+}
+
+// Polecenie awaryjne (core/cli.ts, --kod-awaryjny; tylko na serwerze, bez poczty): zdejmuje blokadę i limit kodów
+// na godzinę, unieważnia wysłany kod i zwraca nowy, ważny SYSTEM_CODE_TTL_MS.
+export async function issueEmergencySystemCode() {
+  await ensureSystemUser();
+  await AuthCodeModel.deleteMany({ purpose: { $in: SYSTEM_PURPOSES }, email: SYSTEM_LOGIN });
+  const code = newCode();
+  const expiresAt = new Date(Date.now() + SYSTEM_CODE_TTL_MS);
+  await AuthCodeModel.create({
+    purpose: 'system-login', email: SYSTEM_LOGIN, codeHash: codeHash(SYSTEM_LOGIN, code), expiresAt, delivery: 'emergency',
+  });
+  return { code, expiresAt };
 }
 
 // ------------------------------------------------------------------ wersja demo (2026-10-21)

@@ -1,6 +1,7 @@
 // Konta użytkowników (kolekcja users, od 2026-10-11): logowanie kodem z maila, dane osobowe, jedna lokalizacja
 // konta i układ listy sterowników (szachownica i ukryte kafelki, osobno dla każdego użytkownika). Użytkownik systemowy
-// (login „system”, hasło w SYSTEM_PASSWORD) to dokument z isSystem i bez e-maila; widzi wszystkie sterowniki.
+// (login „system”, od 2026-11-13 kod z maila na adres SYSTEM_EMAIL z ustawień zamiast hasła SYSTEM_PASSWORD) to
+// dokument z isSystem i bez e-maila; widzi wszystkie sterowniki.
 import mongoose, { Schema } from 'mongoose';
 
 export interface UserLocation {

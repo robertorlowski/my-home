@@ -37,7 +37,7 @@ npm install
 npm run local    # local MongoDB, server on port 4001, web app on port 5173
 ```
 
-In production the server runs in Docker on Oracle Cloud (https://dom.mojeturnie.pl). It reads `MONGODB_URI` and `SYSTEM_PASSWORD` from the environment and the remaining settings from the database, changed on the system account screen. For local work, a template is in `server/.env.example`.
+In production the server runs in Docker on Oracle Cloud (https://dom.mojeturnie.pl). It reads `MONGODB_URI` from the environment and the remaining settings from the database, changed on the system account screen. The "system" account has no password (since 2026-11-13): its sign-in code goes to the address in the `SYSTEM_EMAIL` setting (empty: `MAIL_ADMIN`; without mail it is written to the server log), and `node dist/server.js --kod-awaryjny` on the server prints an emergency code. For local work, a template is in `server/.env.example`.
 
 ## Documentation
 
