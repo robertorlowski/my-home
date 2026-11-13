@@ -2,7 +2,7 @@
 // i /api/device/properties (ustawienia wybranego urządzenia). Używane przez App, stronę Devices,
 // popup DeviceEditModal, Harmonogramy pompy oraz widoki hydroforu.
 import { Requests } from './http';
-import { AppSetting, DatabaseStats, Device, DeviceDefinition, DeviceProperties, DeviceShare, DeviceTiles, DeviceType, FirmwareSummary, FirmwareUpdateRequest, MailKeyInfo, OperationsDay, OutdoorConditions, PushRule, PushSettings, PushSubscriptionInfo, User, WeatherTile } from './types';
+import { AppSetting, DatabaseStats, Device, DeviceDefinition, DeviceProperties, DeviceShare, DeviceTiles, DeviceType, FirmwareSummary, FirmwareUpdateRequest, OperationsDay, OutdoorConditions, PushRule, PushSettings, PushSubscriptionInfo, User, WeatherTile } from './types';
 
 // Urządzenia wszystkich rodzajów: lista, nazwa, sterownik domyślny i ustawienia (properties).
 export class DeviceRequests {
@@ -57,15 +57,6 @@ export class DeviceRequests {
   // bez zlecenia sterownik niczego nie pobiera. Rzuca wyjątek z komunikatem serwera.
   static requestFirmwareUpdate(rootId: string): Promise<FirmwareUpdateRequest> {
     return Requests.postJson(`/devices/${encodeURIComponent(rootId)}/firmware-update`);
-  }
-
-  // przekaźnik poczty: zatwierdzenie klucza płytki (odcisk z karty, zgodny z /install płytki) i jego usunięcie
-  static approveMailKey(rootId: string, fingerprint: string): Promise<MailKeyInfo> {
-    return Requests.json<MailKeyInfo>('POST', `/devices/${encodeURIComponent(rootId)}/mail-key`, { fingerprint });
-  }
-
-  static revokeMailKey(rootId: string): Promise<void> {
-    return Requests.json<void>('DELETE', `/devices/${encodeURIComponent(rootId)}/mail-key`);
   }
 
   static cancelFirmwareUpdate(rootId: string): Promise<void> {

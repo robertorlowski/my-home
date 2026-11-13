@@ -37,7 +37,7 @@ Server details, passwords (without values) and procedures are in the private `or
 | `sessions` | login sessions (token hash) | 21 | 5 KB | TTL `expiresAt` |
 | `auth_codes` | codes and links from e-mails (hashes) | 0 | — | TTL `expiresAt` |
 | `device_shares` | controller shares | 1 | 1 KB | unlimited |
-| `app_settings` | application settings (mail, push, background jobs) | 1 | 1 KB | one document |
+| `app_settings` | application settings (mail, push, background jobs, QNAP address) | 1 | 1 KB | one document |
 | **Controllers** | | | | |
 | `devices` | controllers, their settings and pump schedules | 5 | 3 KB | unlimited |
 | `operation_log` | operation log ("Operacje" tab) | 110 | 40 KB | TTL 5 days |
@@ -64,7 +64,7 @@ Server details, passwords (without values) and procedures are in the private `or
 | **Other** | | | | |
 | `weather_tiles` | weather tiles | 4 | 1 KB | at most 8 per account |
 | `push_subscriptions` | Web Push subscriptions | 2 | 1 KB | removed after a 404 / 410 error |
-| `mail_outbox` | mail queue for the mail relay | 0 | — | TTL one day |
+| `mail_outbox` | mail queue for the mail relay; removed from the code on 2026-11-13, to be removed from the database after the deployment | 0 | — | TTL one day |
 
 The `hp`, `pv` and `pellet_boiler_pelux200` data are compressed on disk (about 50 MB together instead of 350 MB).
 
@@ -93,7 +93,7 @@ A controller share: `rootId`, `ownerId`, the invited person's `email`, `userId` 
 
 ### `app_settings`
 
-One document with the settings changed on the system account screen: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (since 2026-11-13: the address of the `system` account sign-in codes), `MAIL_RELAY`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`) and `updatedAt`. `_id` is the database name, so a copy of production restored as `hpdb_test` has the `hpdb` document and the test environment does not use it. Secret values are stored in plain form; the screen does not show them. Only `MONGODB_URI` stays outside the database (`SYSTEM_PASSWORD` is not used since 2026-11-13: the `system` account signs in with a code from the e-mail).
+One document with the settings changed on the system account screen: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (since 2026-11-13: the address of the `system` account sign-in codes), `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`, since 2026-11-13 `QNAP_ADRES` (the QNAP address:port in the home network for the trial commands through `co`; no field on the screen)) and `updatedAt`. `values.MAIL_RELAY` (sending through controllers) was removed from the code on 2026-11-13; it is to be removed from the database after the deployment (below) and is ignored until then. `_id` is the database name, so a copy of production restored as `hpdb_test` has the `hpdb` document and the test environment does not use it. Secret values are stored in plain form; the screen does not show them. Only `MONGODB_URI` stays outside the database (`SYSTEM_PASSWORD` is not used since 2026-11-13: the `system` account signs in with a code from the e-mail).
 
 ## Controllers
 
@@ -112,13 +112,13 @@ A controller:
 - `properties`: settings of all controller types in one object. Pump: `work_mode` (`MANUAL`, `AUTO`, `OFF`; `M`, `A`, `CWU` and the `co_*`, `cwu_*` pairs are former values), `temp_min`, `temp_max`. Water pressure tank: `compressor_seconds` (1–3600). Boiler: `poll_interval_seconds` (30–3600), `pellet_price_per_ton`. Switch: `default_on_minutes` (0–10080, 0 = no limit). The default `work_mode` is added to every type.
 - `schedules`: embedded pump schedules (other controllers have their own schedule collections).
 - `pumpConfig {connection, tankLiters, pvDtu, pvForce}` (pump), `boilerConfig {heatPumpRootId}` (boiler linked to the pump).
-- `mailKey {publicKey, fingerprint, approvedAt, seenAt}` and `mailKeyPending`: the controller's mail relay key.
+- `mailKey {publicKey, fingerprint, approvedAt, seenAt}` and `mailKeyPending`: the mail relay board key (the switch and `co`, since 2026-10-17). Removed from the code on 2026-11-13 together with the relay; to be removed from the database after the deployment (below), ignored until then.
 
 Index: `{ownerId}`. Old documents may have a `settings` field from the former time settings model; the schema ignores it.
 
 ### `operation_log`
 
-A log entry: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (description of the change), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (controller requests whose status the log copies). Indexes: `{rootId, at}`, `{refs}` and a TTL on `at` after 5 days.
+A log entry: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (description of the change), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (controller requests whose status the log copies). Indexes: `{rootId, at}`, `{refs}` and a TTL on `at` after 5 days. The trial QNAP commands (since 2026-11-13) leave only an entry at the `co` controller: `action` `QNAP: <polecenie> — HTTP <status>`, `status` `done` or `error`, source "Polecenie na serwerze (--qnap)"; the database does not store the QNAP answer.
 
 ### `firmware_images` and `firmware_offers`
 
@@ -177,7 +177,7 @@ A schedule entry: `mode` (`heat-pump` or `pellet`), `type` (`cwu` or `season`), 
 
 - **`weather_tiles`**: `name`, `lat`, `lon`, `ownerId`, `sortOrder`, `hidden`, `home` (the "Dom" tile, created when the server starts), `current` (the browser's current location, without coordinates); index `{ownerId}`. Weather is not stored.
 - **`push_subscriptions`**: a Web Push subscription of a browser or phone: `userId`, `endpoint` (unique), `keys {p256dh, auth}`, `label`, `lastUsedAt`; index `{userId}`.
-- **`mail_outbox`**: the mail queue for sending through controllers (an option in Settings, off by default since 2026-11-07): `to`, `subject`, `raw` (MIME message), `status`, `attempts`, `leasedBy`, `leaseUntil`, `receipt`, `sentBy`, `sentAt`, `error`, `expiresAt`. Indexes: `{status, createdAt}` and a TTL one day after creation.
+- **`mail_outbox`**: the mail queue for sending through controllers (2026-10-17 – 2026-11-13; the model was removed from the code, the collection is to be removed after the deployment, below): `to`, `subject`, `raw` (MIME message), `status`, `attempts`, `leasedBy`, `leaseUntil`, `receipt`, `sentBy`, `sentAt`, `error`, `expiresAt`. Indexes: `{status, createdAt}` and a TTL one day after creation.
 
 ## Changing the data model
 
@@ -185,6 +185,16 @@ A schedule entry: `mode` (`heat-pump` or `pellet`), `type` (`cwu` or `season`), 
 - **New collection with controller data:** a `rootId` field, so that account deletion covers it. A configuration collection: add it to the copy to Atlas (`vm-prod/sync-atlas.js` in `oracle-cloud`).
 - **Removing a collection, field or index from the code:** remove it from the production and test databases too, after a backup. Mongoose does not do it.
 - **Reading data from a computer:** an SSH tunnel and the `myhome_test` account for the test database. Do not change production by hand without a backup.
+
+## To remove after the deployment (2026-11-13)
+
+Leftovers of the mail relay through controllers, removed from the code on 2026-11-13. Remove them from `hpdb` and `hpdb_test` after the server is deployed, after a backup (rule above). Until then the code ignores these values.
+
+| Item | What to do |
+|---|---|
+| `devices`: the `mailKey` and `mailKeyPending` fields | remove from all documents (`$unset`) |
+| collection `mail_outbox` | drop |
+| `app_settings`: `values.MAIL_RELAY` | remove (`$unset`) |
 
 ## Cleanup 2026-11-08
 

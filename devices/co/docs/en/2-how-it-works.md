@@ -52,6 +52,7 @@ flowchart TD
 
 - **The fast read** after a series of commands checks whether the pump accepted them and sends the fresh state at once; the regular cycle then starts over.
 - **The WebSocket `operation` message** forces an earlier `POST /api/hp/add`.
+- **A QNAP command** (since 1.4.0, trial): the WebSocket message `{"typ":"qnap"}` waits in RAM for an idle bus; then the controller sends one `POST` to the QNAP in the home network (at most 10 s, the loop waits) and sends the answer back as `{"typ":"qnap_wynik"}` over the same WebSocket ([technical documentation](3-technical-documentation.md#qnap-commands-since-140-trial)).
 - **No answer from the pump** means `heatPumpLost()`: the first reading after it comes back resends the whole state to the pump.
 - Telemetry is sent even with the pump disconnected (with an empty `HP`), so the server returns the operating mode.
 

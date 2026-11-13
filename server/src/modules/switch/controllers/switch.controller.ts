@@ -7,8 +7,6 @@ import { getDeviceInfo } from '../../../core/services/device-info.service';
 import { warsawDayBoundsUTC } from '../../../core/time';
 import { firmwareOfferForRoot } from '../../../core/services/firmware.service';
 import { serverBaseUrl } from '../../../core/controllers/firmware.controller';
-import { setWeatherFromController } from '../../../core/services/meteo.service';
-import { switchWeatherQueries } from '../../../core/services/weather-tile.service';
 import {
   listActivations, listRelays, parseStateReport, relayCount, renameRelay, reportState, setRelayMode,
 } from '../services/switch.service';
@@ -31,23 +29,11 @@ const handleError = (res: Response, error: unknown) => {
   return res.status(500).json({ message: String(error) });
 };
 
-// Miejsca pogody w odpowiedzi tylko wtedy, gdy włącznik może ich nie mieć (2026-10-29, limit transferu Render):
-// pierwsze zgłoszenie po starcie serwera, zmiana listy, restart płytki (uptimeS mniejszy niż w poprzednim
-// zgłoszeniu) i co WEATHER_RESEND_MS na wypadek zgubionej odpowiedzi. Firmware (devices/common/weather,
-// WeatherPlaces.update) bez weather_queries i weather_query zostawia swoją listę bez zmian.
-const WEATHER_RESEND_MS = 10 * 60 * 1000;
-const weatherSent = new Map<string, { key: string; at: number; uptimeS?: number }>();
-
-function shouldSendWeather(rootId: string, key: string, uptimeS: number | undefined, now: number): boolean {
-  const previous = weatherSent.get(rootId);
-  const rebooted = uptimeS === undefined || previous?.uptimeS === undefined || uptimeS < previous.uptimeS;
-  const send = !previous || previous.key !== key || rebooted || now - previous.at >= WEATHER_RESEND_MS;
-  weatherSent.set(rootId, send ? { key, at: now, uptimeS } : { ...previous, uptimeS });
-  return send;
-}
-
-// POST /switch/state {uptimeS?, relays: [{on, changedS}], diag?, weather?} → {relays: [{on, offAfterS?}], firmware?, weather_query?, weather_queries?}
+// POST /switch/state {uptimeS?, relays: [{on, changedS}], diag?} → {relays: [{on, offAfterS?}], firmware?}
 // firmware: oferta OTA tylko przy zleceniu „Aktualizuj” z aplikacji (core/services/firmware.service.ts).
+// Pogoda (weather w zgłoszeniu, weather_query / weather_queries w odpowiedzi; firmware 1.1.3–1.3.7) usunięta
+// 2026-11-13: pogodę pobiera serwer. Pole weather od starszego firmware jest pomijane, a bez weather_queries starszy
+// włącznik zostaje przy swojej liście miejsc, w praktyce pustej (od 2026-11-07 serwer wysyłał mu pustą listę).
 export async function postSwitchState(req: Request, res: Response) {
   const report = parseStateReport(req.body);
   if (!report) return res.status(400).json({ message: 'Nieprawidłowy stan przekaźników.' });
@@ -60,18 +46,8 @@ export async function postSwitchState(req: Request, res: Response) {
     // restart z włączeniem przekaźnika)
     const diag = parseControllerDiag(req.body);
     if (diag) await noteControllerDiag(rootId, diag, report.uptimeS);
-    // pogoda z Open-Meteo pobrana przez włącznik z domowego łącza (od 1.1.3; core/services/meteo.service.ts)
-    setWeatherFromController((req.body as { weather?: unknown } | undefined)?.weather);
     const firmware = await firmwareOfferForRoot(rootId, serverBaseUrl(req));
-    // weather_query: dom (włącznik 1.1.3 pobiera jedno miejsce); weather_queries: kafelki pogody (od 1.2.0). Od
-    // 2026-11-07 pogodę pobiera serwer, więc lista jest zwykle pusta (włącznik wtedy nic nie pobiera); weather_query
-    // tylko przy niepustej liście (pierwsze jest wtedy miejsce domu albo pierwszy kafelek bez świeżej pogody)
-    const queries = await switchWeatherQueries();
-    const [first] = queries;
-    const weather = shouldSendWeather(rootId, JSON.stringify(queries), report.uptimeS, Date.now())
-      ? { ...(first ? { weather_query: { lat: first.lat, lon: first.lon } } : {}), weather_queries: queries }
-      : {};
-    return res.status(200).json({ relays, ...(firmware ? { firmware } : {}), ...weather });
+    return res.status(200).json({ relays, ...(firmware ? { firmware } : {}) });
   } catch (error) {
     return handleError(res, error);
   }

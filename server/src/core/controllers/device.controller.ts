@@ -11,7 +11,6 @@ import {
   createDevice, getDeviceProperties, listDevices, parseBoilerConfig, parsePumpConfig, registerDevice, setDevicesOrder,
   updateDeviceData, updateDeviceProperties,
 } from '../services/device.service'
-import { mailConfigFor, mailKeyInfo, recordMailKey } from '../services/mail-relay.service';
 import { getDeviceTypeModule } from '../device-types';
 import { getDeviceInfo } from '../services/device-info.service';
 import { getDeviceTiles } from '../services/tile.service';
@@ -44,8 +43,6 @@ const toPublicDevice = (device: DeviceDocument) => ({
   ipSeenAt: device.ipSeenAt,
   pumpConfig: device.pumpConfig ?? undefined,
   boilerConfig: device.boilerConfig ?? undefined,
-  // przekaźnik poczty (włącznik, co): odcisk zatwierdzonego i czekającego klucza płytki
-  mailKey: mailKeyInfo(device),
 });
 
 // Ustawienia, które sterownik pobiera w odpowiedzi na zgłoszenie (tylko rodzaje, które je mają).
@@ -96,8 +93,8 @@ async function userDevices(sessionUser: UserEntry) {
     const publicDevice = toPublicDevice(device);
     return {
       ...publicDevice,
-      // wersja demo: bez numeru seryjnego, adresu IP i klucza poczty
-      ...(demo ? { deviceId: '', ipAddress: undefined, ipSeenAt: undefined, mailKey: undefined } : {}),
+      // wersja demo: bez numeru seryjnego i adresu IP
+      ...(demo ? { deviceId: '', ipAddress: undefined, ipSeenAt: undefined } : {}),
       id: rootId,
       access: entry.role,
       ...(entry.role === 'shared' ? { tabs: entry.tabs } : {}),
@@ -196,8 +193,6 @@ export async function registerDeviceEntry(
     );
     const typeModule = getDeviceTypeModule(device.deviceType);
     await typeModule.onRegister?.(String(device._id), device.deviceId, req.body as Record<string, unknown>);
-    // przekaźnik poczty: klucz publiczny płytki (nowy czeka na zatwierdzenie w aplikacji)
-    await recordMailKey(device, (req.body as Record<string, unknown>).mailKey);
     // ustawienia z aplikacji idą w tej odpowiedzi (hydrofor): w dzienniku „dostarczona”
     if (typeModule.propertiesOnRegister && !created) await setStatusByRef(String(device._id), 'properties', ['pending'], 'delivered');
     // oferta firmware (OTA) tylko przy zleceniu „Aktualizuj”; zgłoszenie z oferowaną wersją je kasuje
@@ -205,12 +200,10 @@ export async function registerDeviceEntry(
       ? await firmwareOfferForDevice(device, serverBaseUrl(req))
       : undefined;
     const settings = controllerSettings(device) as object | undefined;
-    // dane SMTP zaszyfrowane kluczem płytki (tylko zatwierdzony klucz, MAIL_RELAY=1); płytka trzyma je w RAM
-    const mail = mailConfigFor(device);
+    // pole mailKey ze zgłoszenia starszego firmware (przekaźnik poczty, usunięty 2026-11-13) jest pomijane
     return res.status(created ? 201 : 200).json({
       ...toPublicDevice(device),
       settings: firmware ? { ...settings, firmware } : settings,
-      ...(mail ? { mail } : {}),
     });
   } catch (error) {
     return res.status(400).json({ message: String(error) });

@@ -11,7 +11,7 @@ The system controls a domestic heat pump (CHPC) from the cloud, collects data fr
 - **Water pressure tank.** At every start of the water pump the tank controller runs the air compressor for a while and sends the run times to the cloud. From that the application calculates water consumption: pump run time × pump flow derived from manual water meter readings.
 - **Switch.** An ESP32 controller with a relay (the first one controls a water heater element) reports the relay states every 5 s and receives a command in the reply: on for a time, on without a limit, or off. The command follows from the mode chosen in the application and from the schedule (days as for the heat pump, no temperatures). The application shows the state and the activation history.
 - **Pellet boiler.** A separate boiler controller (ESP32-C3 with an RS-485 module, [devices/pellet-boiler-pelux200](../../devices/pellet-boiler-pelux200/README.md), Polish) acts as an ecoNET module on the bus of the ecoMAX controller of a Plum Pellux 200 boiler: it receives the state, temperatures, fuel and outputs of the boiler (to the cloud every few minutes), reads the controller settings and, on request from the application, changes parameters (Heat pump / Pellet mode, season, DHW and mixer set points, switching the controller on and off). The application also has a DHW and boiler-operation schedule, separate for both modes. Until 2026-10-02 the boiler was served by the `co` controller (its second role).
-- **Weather and mail.** Since 2026-11-07 the server fetches the Open-Meteo weather for the home and the weather tiles, and the switch and `co` only as a fallback when the server gets none for 25 min. Clicking a tile opens a page with the forecast. Since 2026-11-07 the server sends the application's mails, that is login codes and invitations; sending through controllers remains an option in Settings.
+- **Weather and mail.** The server fetches the Open-Meteo weather for the home and the weather tiles (since 2026-11-07); since 2026-11-13 it is the only source, because the fallback fetching by the switch and `co` was removed. Clicking a tile opens a page with the forecast. The server sends the application's mails, that is login codes and invitations (since 2026-11-07); sending through the controllers at home was removed on 2026-11-13.
 
 ## System diagram
 
@@ -98,4 +98,4 @@ Application and production server: `https://dom.mojeturnie.pl`. Server environme
 ## Other documents
 
 - [MongoDB database](database.md) — collections, fields, indexes, retention and rules for model changes.
-- [CLAUDE.md](../CLAUDE.md) — guide for Claude Code and detailed rules of the whole chain (Polish).
+- [CLAUDE.md](../../CLAUDE.md) — guide for Claude Code and detailed rules of the whole chain (Polish).

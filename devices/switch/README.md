@@ -1,6 +1,6 @@
 # Włącznik — sterownik `switch`
 
-Sterownik na gotowej płytce „ESP32 Relay AC X1” (ESP32-WROOM-32E, przekaźnik 30 A, zasilacz 230 V na płytce), który włącza i wyłącza odbiornik 230 V według poleceń z My Home: harmonogram, włączenie na czas albo bez limitu, wyłączenie. Zgłasza się do chmury sam, a nowe wersje firmware pobiera przez sieć (OTA).
+Sterownik na gotowej płytce „ESP32 Relay AC X1” (ESP32-WROOM-32E, przekaźnik 30 A, zasilacz 230 V na płytce), który włącza i wyłącza odbiornik 230 V według poleceń z My Home: harmonogram, włączenie na czas albo bez limitu, wyłączenie. Zgłasza się do chmury sam, a nowe wersje firmware pobiera przez sieć (OTA). Do wersji 1.3.7 pobierał też pogodę z Open-Meteo i wysyłał maile aplikacji (przekaźnik poczty); od 1.4.0 (2026-11-13) robi to tylko serwer.
 
 Dokumentacja: **[1. Opis biznesowy](docs/1-opis-biznesowy.md)** (z listą kontrolną przed wdrożeniem) · [2. Zasada działania](docs/2-zasada-dzialania.md) · [3. Dokumentacja techniczna](docs/3-dokumentacja-techniczna.md) (schematy podłączenia, pierwsze wgranie) · [English](docs/en/1-business-description.md). Strona chmury i aplikacji: [moduł switch](../../docs/moduly/switch/1-opis-biznesowy.md).
 
@@ -10,7 +10,7 @@ Dokumentacja: **[1. Opis biznesowy](docs/1-opis-biznesowy.md)** (z listą kontro
 cp src/secrets.example.h src/secrets.h   # nazwa i hasło AP, login /install, domyślne Wi-Fi
 pio run                                  # build (esp32dev, produkcja: https://dom.mojeturnie.pl/api/)
 pio run -e esp32dev-local                # build do testu z lokalnym serwerem (npm run local; adres w platformio.ini)
-pio test -e native                       # testy logiki na PC (11)
+pio test -e native                       # testy logiki na PC (18)
 pio device monitor                       # konsola (UART0, 115200, złącze P1 i przejściówka USB-TTL)
 ```
 

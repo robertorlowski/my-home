@@ -42,7 +42,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej (jeden przekaźnik „Bojler”
 
 ![Ustawienia](img/ustawienia.png)
 
-*Ustawienia (dwie kolumny): po lewej karty „Przekaźniki” (nazwy) i „Czas włączenia” (domyślny czas w minutach, 0 = bez limitu); po prawej karta „Sterownik” z nazwą, SN, Root ID, liczbą przekaźników, adresem IP, wersją firmware ze stanem i przyciskiem „Aktualizuj firmware” (ołówek otwiera okno „Dane sterownika”) oraz karta „Udostępnianie”.*
+*Ustawienia (dwie kolumny): po lewej karty „Przekaźniki” (nazwy) i „Czas włączenia” (domyślny czas w minutach, 0 = bez limitu); po prawej karta „Sterownik” z nazwą, SN, Root ID, liczbą przekaźników, adresem IP, wersją firmware ze stanem i przyciskiem „Aktualizuj firmware” (ołówek otwiera okno „Dane sterownika”) oraz karta „Udostępnianie”. Zrzut pokazuje jeszcze wiersz „Poczta” (klucz płytki przekaźnika poczty), usunięty 2026-11-13; zrzut do powtórzenia po wdrożeniu.*
 
 ## Tryby przekaźnika
 

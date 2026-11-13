@@ -13,6 +13,10 @@
 
 Without `co` the pump runs on its own with its last settings, but it cannot be controlled from the application and no data is collected.
 
+The controller fetches no weather and sends no application mail: only the server does it, and on Oracle it has its own IP address. In versions 1.3.0–1.3.4 `co` was the switch's fallback for both; since 1.4.0 (2026-11-13) no controller is a fallback any more.
+
+Since 1.4.0 (2026-11-13, trial) `co` also carries commands from the server to the QNAP in the home network (state, network restart, restart) when the QNAP cannot be reached from outside. Around 2026-12-13 we check whether it was used; if not, the feature will be removed.
+
 Since 2026-10-03 the Pellux 200 pellet boiler is read by a separate board — [devices/pellet-boiler-pelux200](../../../pellet-boiler-pelux200/README.md) (Polish). On 2026-10-01–02 it was a second role of `co`.
 
 ## Who uses it
@@ -32,6 +36,7 @@ Since 2026-10-03 the Pellux 200 pellet boiler is read by a separate board — [d
 | PV mode | forced pump start when PV produces at least 2000 W |
 | Work without the cloud | button: `OFF` (pump stopped), `MANUAL_CO`, `MANUAL_CWU` |
 | Local view | colour display and a web page on the home network |
+| QNAP commands (trial, since 1.4.0) | `stan`, `restart_sieci`, `restart` from a command on the server, passed on to the QNAP in the home network; the controller only carries the signed command and sends back the answer |
 
 ## Display and controller pages
 
@@ -64,6 +69,7 @@ The first press only shows the mode; further presses move on: `OFF → CLOUD →
 - The `MyHome-HeatPump-XXXX` access point is open (no password) and runs only for the first minutes or when Wi-Fi or the cloud is missing.
 - The `/install` login and password are written in the code; the `/` and `/telemetry.json` pages are open to anyone on the home network.
 - The controller does not verify the server certificate (HTTPS without checking).
+- A QNAP command does not help when the QNAP network card has no link: then no network request reaches it.
 
 ## Glossary
 

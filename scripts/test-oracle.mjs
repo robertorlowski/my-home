@@ -86,8 +86,10 @@ const serverEnv = {
   // Kod z telefonu (TOTP): klucze środowiska testowego są w bazie logowanie_test (konto myhome_test nie ma dostępu do
   // produkcyjnej bazy logowanie); LOGOWANIE_KLUCZ przychodzi z pliku testu.
   LOGIN_KEYS_DB: settings.LOGIN_KEYS_DB || 'logowanie_test',
-  SMTP_HOST: '', SMTP_PORT: '', SMTP_USER: '', SMTP_PASS: '', MAIL_FROM: '', MAIL_ADMIN: '', MAIL_RELAY: '', SYSTEM_EMAIL: '',
+  SMTP_HOST: '', SMTP_PORT: '', SMTP_USER: '', SMTP_PASS: '', MAIL_FROM: '', MAIL_ADMIN: '', SYSTEM_EMAIL: '',
   VAPID_PUBLIC_KEY: '', VAPID_PRIVATE_KEY: '', VAPID_SUBJECT: '',
+  // polecenia dla QNAP-a (próbnie od 2026-11-13) tylko z serwera produkcyjnego
+  QNAP_POLECENIA_KLUCZ: '', QNAP_ADRES: '',
 };
 
 // Wszystkie uruchomione procesy, żeby dało się je razem zamknąć.

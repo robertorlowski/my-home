@@ -37,7 +37,7 @@ Szczegóły serwera, hasła (bez wartości) i procedury są w prywatnym repozyto
 | `sessions` | sesje logowania (skrót tokenu) | 21 | 5 KB | TTL `expiresAt` |
 | `auth_codes` | kody i linki z maila (skróty) | 0 | — | TTL `expiresAt` |
 | `device_shares` | udostępnienia sterowników | 1 | 1 KB | bez limitu |
-| `app_settings` | ustawienia aplikacji (poczta, push, zadania w tle) | 1 | 1 KB | jeden dokument |
+| `app_settings` | ustawienia aplikacji (poczta, push, zadania w tle, adres QNAP-a) | 1 | 1 KB | jeden dokument |
 | **Sterowniki** | | | | |
 | `devices` | sterowniki, ich ustawienia i harmonogramy pompy | 5 | 3 KB | bez limitu |
 | `operation_log` | dziennik operacji (zakładka „Operacje”) | 110 | 40 KB | TTL 5 dni |
@@ -64,7 +64,7 @@ Szczegóły serwera, hasła (bez wartości) i procedury są w prywatnym repozyto
 | **Pozostałe** | | | | |
 | `weather_tiles` | kafelki pogody | 4 | 1 KB | najwyżej 8 na konto |
 | `push_subscriptions` | subskrypcje Web Push | 2 | 1 KB | kasowane po błędzie 404 / 410 |
-| `mail_outbox` | kolejka maili dla przekaźnika poczty | 0 | — | TTL doba |
+| `mail_outbox` | kolejka maili dla przekaźnika poczty; usunięta z kodu 2026-11-13, do usunięcia z bazy po wdrożeniu | 0 | — | TTL doba |
 
 Dane `hp`, `pv` i `pellet_boiler_pelux200` są na dysku skompresowane (razem ok. 50 MB zamiast 350 MB).
 
@@ -93,7 +93,7 @@ Udostępnienie sterownika: `rootId`, `ownerId`, `email` osoby zaproszonej, `user
 
 ### `app_settings`
 
-Jeden dokument z ustawieniami zmienianymi na ekranie konta systemowego: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (od 2026-11-13: adres kodów logowania konta `system`), `MAIL_RELAY`, `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`) i `updatedAt`. `_id` to nazwa bazy, więc kopia produkcji odtworzona jako `hpdb_test` ma dokument `hpdb` i środowisko testowe go nie użyje. Wartości sekretów są w bazie jawnie, ekran ich nie pokazuje. Poza bazą zostaje tylko `MONGODB_URI` (`SYSTEM_PASSWORD` od 2026-11-13 nie jest używane: konto `system` loguje się kodem z maila).
+Jeden dokument z ustawieniami zmienianymi na ekranie konta systemowego: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (od 2026-11-13: adres kodów logowania konta `system`), `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`, od 2026-11-13 `QNAP_ADRES` (adres:port QNAP-a w sieci domowej dla próbnych poleceń przez `co`; bez pola na ekranie)) i `updatedAt`. `values.MAIL_RELAY` (wysyłka przez sterowniki) usunięto z kodu 2026-11-13; w bazie do usunięcia po wdrożeniu (niżej), do tego czasu pomijane. `_id` to nazwa bazy, więc kopia produkcji odtworzona jako `hpdb_test` ma dokument `hpdb` i środowisko testowe go nie użyje. Wartości sekretów są w bazie jawnie, ekran ich nie pokazuje. Poza bazą zostaje tylko `MONGODB_URI` (`SYSTEM_PASSWORD` od 2026-11-13 nie jest używane: konto `system` loguje się kodem z maila).
 
 ## Sterowniki
 
@@ -112,13 +112,13 @@ Sterownik:
 - `properties`: ustawienia wszystkich rodzajów w jednym obiekcie. Pompa: `work_mode` (`MANUAL`, `AUTO`, `OFF`; `M`, `A`, `CWU` i pary `co_*`, `cwu_*` to dawne wartości), `temp_min`, `temp_max`. Hydrofor: `compressor_seconds` (1–3600). Kocioł: `poll_interval_seconds` (30–3600), `pellet_price_per_ton`. Włącznik: `default_on_minutes` (0–10080, 0 = bez limitu). Domyślne `work_mode` dopisuje się każdemu rodzajowi.
 - `schedules`: osadzone harmonogramy pompy (inne sterowniki mają własne kolekcje harmonogramów).
 - `pumpConfig {connection, tankLiters, pvDtu, pvForce}` (pompa), `boilerConfig {heatPumpRootId}` (kocioł połączony z pompą).
-- `mailKey {publicKey, fingerprint, approvedAt, seenAt}` i `mailKeyPending`: klucz przekaźnika poczty sterownika.
+- `mailKey {publicKey, fingerprint, approvedAt, seenAt}` i `mailKeyPending`: klucz płytki przekaźnika poczty (włącznik i `co`, od 2026-10-17). Usunięte z kodu 2026-11-13 razem z przekaźnikiem; w bazie do usunięcia po wdrożeniu (niżej), do tego czasu pomijane.
 
 Indeksy: `{ownerId}`. Stare dokumenty mogą mieć pole `settings` z dawnego modelu ustawień czasowych; schemat je pomija.
 
 ### `operation_log`
 
-Wpis dziennika: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (opis zmiany), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (zlecenia sterownika, których status przepisuje dziennik). Indeksy: `{rootId, at}`, `{refs}` i TTL na `at` po 5 dniach.
+Wpis dziennika: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (opis zmiany), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (zlecenia sterownika, których status przepisuje dziennik). Indeksy: `{rootId, at}`, `{refs}` i TTL na `at` po 5 dniach. Próbne polecenia dla QNAP-a (od 2026-11-13) zostawiają tylko wpis przy sterowniku `co`: `action` `QNAP: <polecenie> — HTTP <status>`, `status` `done` albo `error`, źródło „Polecenie na serwerze (--qnap)”; odpowiedzi QNAP-a baza nie zapisuje.
 
 ### `firmware_images` i `firmware_offers`
 
@@ -177,7 +177,7 @@ Wpis harmonogramu: `mode` (`heat-pump` albo `pellet`), `type` (`cwu` albo `seaso
 
 - **`weather_tiles`**: `name`, `lat`, `lon`, `ownerId`, `sortOrder`, `hidden`, `home` (kafelek „Dom”, tworzony przy starcie serwera), `current` (bieżąca lokalizacja przeglądarki, bez współrzędnych); indeks `{ownerId}`. Pogody nie zapisuje.
 - **`push_subscriptions`**: subskrypcja Web Push przeglądarki lub telefonu: `userId`, `endpoint` (unikalny), `keys {p256dh, auth}`, `label`, `lastUsedAt`; indeks `{userId}`.
-- **`mail_outbox`**: kolejka maili dla wysyłki przez sterowniki (opcja w Ustawieniach, od 2026-11-07 domyślnie wyłączona): `to`, `subject`, `raw` (wiadomość MIME), `status`, `attempts`, `leasedBy`, `leaseUntil`, `receipt`, `sentBy`, `sentAt`, `error`, `expiresAt`. Indeksy: `{status, createdAt}` i TTL dobę po utworzeniu.
+- **`mail_outbox`**: kolejka maili dla wysyłki przez sterowniki (2026-10-17 – 2026-11-13; model usunięty z kodu, kolekcja do usunięcia po wdrożeniu, niżej): `to`, `subject`, `raw` (wiadomość MIME), `status`, `attempts`, `leasedBy`, `leaseUntil`, `receipt`, `sentBy`, `sentAt`, `error`, `expiresAt`. Indeksy: `{status, createdAt}` i TTL dobę po utworzeniu.
 
 ## Zmiany w modelu danych
 
@@ -185,6 +185,16 @@ Wpis harmonogramu: `mode` (`heat-pump` albo `pellet`), `type` (`cwu` albo `seaso
 - **Nowa kolekcja z danymi sterownika:** pole `rootId`, żeby usunięcie konta ją objęło. Kolekcja konfiguracji: dopisać ją do kopii do Atlasa (`vm-prod/sync-atlas.js` w `oracle-cloud`).
 - **Usunięcie kolekcji, pola albo indeksu z kodu:** usunąć je też w bazie produkcyjnej i testowej, po kopii zapasowej. Mongoose sam tego nie robi.
 - **Odczyt danych z komputera:** tunel SSH i konto `myhome_test` dla bazy testowej. Produkcji nie zmieniać ręcznie bez kopii.
+
+## Do usunięcia po wdrożeniu (2026-11-13)
+
+Pozostałości po przekaźniku poczty przez sterowniki, usuniętym z kodu 2026-11-13. Usunąć w `hpdb` i `hpdb_test` po wdrożeniu serwera, po kopii zapasowej (zasada wyżej). Do tego czasu kod pomija te wartości.
+
+| Element | Co zrobić |
+|---|---|
+| `devices`: pola `mailKey` i `mailKeyPending` | usunąć ze wszystkich dokumentów (`$unset`) |
+| kolekcja `mail_outbox` | usunąć |
+| `app_settings`: `values.MAIL_RELAY` | usunąć (`$unset`) |
 
 ## Porządki 2026-11-08
 

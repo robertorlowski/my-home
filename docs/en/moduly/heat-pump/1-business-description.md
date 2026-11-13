@@ -56,7 +56,7 @@ The user interface is in Polish; the screenshots show it as is. They come from t
 
 ![Settings](../../../moduly/heat-pump/img/ustawienia.png)
 
-*Settings (two columns): on the left the "Ustaw" card — the command for the controller: mode Ręczny / Automatyczny / Wyłączony, temperature from–to, power limit, EEV min / max, EEV superheat, toggles for forced start and circulation pumps (greyed ones show the pump's state while the pump drives them itself), the "Zmień" button. On the right the cards "Błędy sterownika" (last error, counter, "Odblokuj" and "Restart sterownika"), "Sterownik" (name, SN, Root ID, IP address, firmware with state, the "Poczta" row with the mail relay key state — `co` from 1.3.0, "Aktualizuj firmware"; the pencil opens the "Dane sterownika" dialog) and "Udostępnianie" (sharing).*
+*Settings (two columns): on the left the "Ustaw" card — the command for the controller: mode Ręczny / Automatyczny / Wyłączony, temperature from–to, power limit, EEV min / max, EEV superheat, toggles for forced start and circulation pumps (greyed ones show the pump's state while the pump drives them itself), the "Zmień" button. On the right the cards "Błędy sterownika" (last error, counter, "Odblokuj" and "Restart sterownika"), "Sterownik" (name, SN, Root ID, IP address, firmware with state, "Aktualizuj firmware"; the pencil opens the "Dane sterownika" dialog) and "Udostępnianie" (sharing). The screenshot still shows the "Poczta" (mail) row (the mail relay key state, `co` 1.3.0–1.3.4), removed on 2026-11-13; the screenshot is to be retaken after the deployment.*
 
 ![Schedule](../../../moduly/heat-pump/img/harmonogramy.png)
 

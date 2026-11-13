@@ -12,7 +12,6 @@ import { DeviceShareModel } from '../models/device-share.model';
 import { DeviceModel } from '../models/device.model';
 import { UserEntry, UserLocation, UserModel } from '../models/user.model';
 import { forgetDeviceInfo } from './device-info.service';
-import { assertMailAvailable } from './mail-relay.service';
 import {
   adminEmail, clientBaseUrl, deleteAccountMail, emailChangeMail, emailChangedMail, formatCode, loginMail, mailConfigured,
   phoneDisableMail, registrationAdminMail, sendMail, systemLoginMail, until,
@@ -224,8 +223,6 @@ const mailLang = (user: UserEntry | null | undefined, requested: Lang): Lang => 
 export async function startLogin(emailValue: unknown, origin?: string, lang: Lang = DEFAULT_LANG) {
   const email = normalizeEmail(emailValue);
   if (!email) throw new AuthError(texts('err.emailInvalid'));
-  // przekaźnik poczty bez sterownika w sieci: błąd przed utworzeniem kodu (inaczej kolejna próba czekałaby 60 s)
-  await assertMailAvailable();
   const existing = await UserModel.findOne({ email }).lean<UserEntry>();
   const { code, token, expiresAt } = await createCode('login', email, { link: true });
   const url = `${clientBaseUrl(origin)}/login?token=${encodeURIComponent(token as string)}`;
@@ -311,8 +308,6 @@ export async function startSystemLogin(ip: string, lang: Lang = DEFAULT_LANG) {
   }
   const to = systemEmail();
   const delivery: SystemCodeDelivery = to && mailConfigured() ? 'mail' : 'log';
-  // przekaźnik poczty bez sterownika w sieci: błąd przed utworzeniem kodu (jak przy zwykłym logowaniu)
-  if (delivery === 'mail') await assertMailAvailable();
   const user = await ensureSystemUser();
   const code = newCode();
   const expiresAt = new Date(now + SYSTEM_CODE_TTL_MS);
@@ -601,7 +596,6 @@ export const cancelPhoneSetup = (sessionToken: string) => { pendingSetups.delete
 export async function sendPhoneDisableCode(user: UserEntry, ip: string, lang: Lang = DEFAULT_LANG) {
   if (user.isSystem) return startSystemLogin(ip, lang);
   if (!user.email) throw new AuthError(texts('err.totpOff'));
-  await assertMailAvailable();
   const { code, expiresAt } = await createCode('totp-disable', user.email, { userId: String(user._id) });
   await sendMail(phoneDisableMail(user.email, code, expiresAt, mailLang(user, lang)));
   return { delivery: 'mail' as const, expiresInSeconds: Math.round(CODE_TTL_MS / 1000), resendAfterSeconds: Math.round(RESEND_MS / 1000) };
@@ -732,7 +726,6 @@ export async function startEmailChange(user: UserEntry, emailValue: unknown, lan
   if (!email) throw new AuthError(texts('err.emailInvalid'));
   if (email === user.email) throw new AuthError(texts('err.sameEmail'));
   if (await UserModel.exists({ email })) throw new AuthError(texts('err.emailTaken'), 409);
-  await assertMailAvailable();
   const { code, expiresAt } = await createCode('email-change', email, { userId: String(user._id) });
   await sendMail(emailChangeMail(email, code, expiresAt, mailLang(user, lang)));
   return { email, resendAfterSeconds: Math.round(RESEND_MS / 1000) };
@@ -755,7 +748,6 @@ export async function verifyEmailChange(user: UserEntry, codeValue: unknown) {
 export async function startDeleteAccount(user: UserEntry, origin?: string, lang: Lang = DEFAULT_LANG) {
   if (user.isSystem || !user.email) throw new AuthError(texts('err.systemNoDelete'), 403);
   const devices = await DeviceModel.countDocuments({ ownerId: String(user._id) });
-  await assertMailAvailable();
   const { token } = await createCode('delete-account', user.email, { userId: String(user._id), link: true });
   const url = `${clientBaseUrl(origin)}/account/delete?token=${encodeURIComponent(token as string)}`;
   await sendMail(deleteAccountMail(user.email, url, devices, mailLang(user, lang)));

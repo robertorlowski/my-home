@@ -57,10 +57,6 @@ const CONTROLLER_ROUTES = new Set([
   'GET /pellet-boiler-pelux200/commands/next',
   'POST /pellet-boiler-pelux200/commands/result',
   'POST /switch/state',
-  // przekaźnik poczty (treść zaszyfrowana kluczem płytki, mail-relay.service.ts)
-  'GET /mail/config',
-  'GET /mail/next',
-  'POST /mail/result',
 ]);
 
 function isPublic(req: Request) {
@@ -73,9 +69,11 @@ function isPublic(req: Request) {
   return req.header(INTERNAL_TOKEN_HEADER) === INTERNAL_TOKEN;
 }
 
-// Ścieżki bez rootId tylko dla użytkownika systemowego: pliki firmware, zajętość bazy, ręczne dodanie urządzenia.
+// Ścieżki bez rootId tylko dla użytkownika systemowego: pliki firmware, zajętość bazy, ręczne dodanie urządzenia,
+// polecenia dla QNAP-a (od 2026-11-13; kontroler i tak przyjmuje je tylko z tokenem wewnętrznym).
 function systemOnly(req: Request) {
   if (req.path.startsWith('/firmware/') && req.method !== 'GET') return true;
+  if (req.path.startsWith('/qnap/')) return true;
   if (req.path === '/devices/db-stats' || req.path === '/settings' || req.path === '/settings/read') return true;
   return req.method === 'POST' && req.path === '/devices';
 }
@@ -86,7 +84,7 @@ const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // (deviceId = MAC płytki) jest w rekordach telemetrii, a sam SN wystarcza do poleceń sterownika (PUT /switch/mode ze
 // źródłem controller); e-mail, adres i położenie to dane właściciela. Kontrolery dodatkowo zaokrąglają współrzędne
 // kafelków pogody i anonimizują dziennik operacji.
-const DEMO_HIDDEN_KEYS = new Set(['deviceId', 'ipAddress', 'ipSeenAt', 'mailKey', 'mailKeyPending', 'email', 'street', 'postalCode', 'city', 'location', 'endpoint']);
+const DEMO_HIDDEN_KEYS = new Set(['deviceId', 'ipAddress', 'ipSeenAt', 'email', 'street', 'postalCode', 'city', 'location', 'endpoint']);
 export function scrubDemo(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(scrubDemo);
   if (value && typeof value === 'object') {

@@ -15,8 +15,8 @@ import {
 import { deleteFirmware, downloadFirmware, getFirmware, updateFirmwareOffer, uploadFirmware } from './controllers/firmware.controller'
 import { getTemperature } from './controllers/meteo.controller'
 import { putSettings, readSettings } from './controllers/settings.controller'
-import { approveDeviceMailKey, getMailConfig, getNextMail, postMailResult, revokeDeviceMailKey } from './controllers/mail-relay.controller'
 import { getOperations } from './controllers/operation-log.controller'
+import { postQnapPolecenie } from './controllers/qnap.controller'
 import { deletePushSubscription, getPushSettings, postPushSubscription, postPushTest, putPushRules } from './controllers/push.controller'
 import { getDatabaseStatsEntry } from './controllers/database.controller'
 import { getDeviceTilesEntry } from './controllers/device.controller'
@@ -75,9 +75,6 @@ router.put('/devices/:rootId', updateDevice)
 // przycisk „Aktualizuj” w Ustawieniach sterownika: zlecenie aktualizacji firmware i jego odwołanie
 router.post('/devices/:rootId/firmware-update', requestDeviceFirmwareUpdate)
 router.delete('/devices/:rootId/firmware-update', cancelDeviceFirmwareUpdate)
-// przekaźnik poczty (włącznik, co): zatwierdzenie i usunięcie klucza płytki (użytkownik systemowy)
-router.post('/devices/:rootId/mail-key', approveDeviceMailKey)
-router.delete('/devices/:rootId/mail-key', revokeDeviceMailKey)
 // udostępnianie sterownika z wyborem zakładek (właściciel)
 router.get('/devices/:rootId/shares', getDeviceShares)
 router.post('/devices/:rootId/shares', addDeviceShare)
@@ -85,11 +82,6 @@ router.put('/devices/:rootId/shares/:id', updateDeviceShare)
 router.delete('/devices/:rootId/shares/:id', removeDeviceShare)
 router.get('/device/properties', getProperties)
 router.put('/device/properties', updateProperties)
-
-// Przekaźnik poczty: sterownik pobiera zaszyfrowane dane SMTP i maile, odsyła wynik (?rootId=&deviceId=, bez logowania)
-router.get('/mail/config', getMailConfig)
-router.get('/mail/next', getNextMail)
-router.post('/mail/result', postMailResult)
 
 // Firmware sterowników przez sieć (OTA): oferta, wgranie pliku, pobranie.
 // Plik .bin to surowa treść żądania (application/octet-stream), bez multipart.
@@ -115,6 +107,10 @@ router.delete('/weather-tiles/:id', deleteWeatherTile)
 
 // dziennik operacji sterownika z dnia (zakładka „Operacje”)
 router.get('/operations', getOperations)
+
+// polecenia dla QNAP-a w sieci domowej przez sterownik co (od 2026-11-13, próbnie; services/qnap.service.ts): tylko
+// polecenie --qnap na serwerze (token wewnętrzny), bez przycisku w aplikacji
+router.post('/qnap/polecenia', postQnapPolecenie)
 
 // powiadomienia Web Push konta (karta „Powiadomienia” w /account; bez rootId, wymaga zalogowania)
 router.get('/push/settings', getPushSettings)

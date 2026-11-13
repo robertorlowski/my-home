@@ -44,7 +44,7 @@ The screenshots come from the local demo database (one relay "Bojler", data from
 
 ![Settings](../../../moduly/switch/img/ustawienia.png)
 
-*Settings (two columns): on the left the cards "Przekaźniki" (relay names) and "Czas włączenia" (default on time in minutes, 0 = no limit); on the right the "Sterownik" card with the name, SN, Root ID, number of relays, IP address, firmware version with state and the "Aktualizuj firmware" button (the pencil opens the "Dane sterownika" dialog) and the "Udostępnianie" (sharing) card.*
+*Settings (two columns): on the left the cards "Przekaźniki" (relay names) and "Czas włączenia" (default on time in minutes, 0 = no limit); on the right the "Sterownik" card with the name, SN, Root ID, number of relays, IP address, firmware version with state and the "Aktualizuj firmware" button (the pencil opens the "Dane sterownika" dialog) and the "Udostępnianie" (sharing) card. The screenshot still shows the "Poczta" (mail) row (the mail relay board key), removed on 2026-11-13; the screenshot is to be retaken after the deployment.*
 
 ## Relay modes
 

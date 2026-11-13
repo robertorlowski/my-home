@@ -1,6 +1,6 @@
 // Testy pogody pobieranej przez serwer (od 2026-11-07, core/services/weather-fetch.service.ts; baza
 // w mongodb-memory-server): zapytanie do Open-Meteo jak w firmware, odczyt jednego i wielu miejsc, zapis pogody
-// kafelków, a przy pobieraniu przez serwer sterowniki dostają miejsca tylko zapasowo (włącznik, potem co).
+// kafelków; sterowniki nie dostają miejsc i nie dostarczają pogody (zapas z włącznika i co usunięty 2026-11-13).
 import request from 'supertest'
 import mongoose from 'mongoose'
 import { MongoMemoryServer } from 'mongodb-memory-server'
@@ -9,8 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import app from '../src/core/app'
 import { DeviceModel } from '../src/core/models/device.model'
 import { WeatherTileModel } from '../src/core/models/weather-tile.model'
-import { backupWeatherQueries, switchWeatherQueries, weatherQueries } from '../src/core/services/weather-tile.service'
-import { setServerWeatherActive, setWeatherFromController, WEATHER_BACKUP_AFTER_MS } from '../src/core/services/meteo.service'
+import { weatherQueries } from '../src/core/services/weather-tile.service'
 import { fetchServerWeather, openMeteoUrl, parseOpenMeteo } from '../src/core/services/weather-fetch.service'
 
 const current = (temperature: number) => ({
@@ -29,12 +28,10 @@ describe('Pogoda pobierana przez serwer', () => {
     await mongoose.connect(mongoServer.getUri())
   })
   afterAll(async () => {
-    setServerWeatherActive(false)
     await mongoose.disconnect()
     await mongoServer.stop()
   })
   beforeEach(async () => {
-    setServerWeatherActive(false)
     await WeatherTileModel.deleteMany({})
     await DeviceModel.deleteMany({})
   })
@@ -78,27 +75,16 @@ describe('Pogoda pobierana przez serwer', () => {
       .rejects.toThrow('Open-Meteo HTTP 429')
   })
 
-  it('przy pobieraniu przez serwer włącznik i co dostają miejsca tylko zapasowo', async () => {
+  it('włącznik nie dostaje miejsc pogody, a jego pole weather (firmware do 1.3.7) jest pomijane', async () => {
     const device = (await request(app).post('/api/devices/register').send({ deviceId: 'AABBCCDDEE01', deviceType: 'switch' })).body
     const krakow = (await request(app).post('/api/weather-tiles').send({ name: 'Kraków', lat: 50.06, lon: 19.94 }).expect(201)).body
-    const home = (await request(app).get('/api/weather-tiles')).body[0]
-    setServerWeatherActive(true)
+    expect((await weatherQueries()).map((query) => query.id)).toContain(krakow.id)
 
-    // tuż po starcie pobierania: włącznik dostaje pustą listę (wyłącza u siebie pobieranie), bez weather_query
     const answer = await request(app).post(`/api/switch/state?rootId=${device.rootId}`)
-      .send({ uptimeS: 60, relays: [{ on: false, changedS: 60 }] }).expect(200)
-    expect(answer.body.weather_queries).toEqual([])
+      .send({ uptimeS: 60, relays: [{ on: false, changedS: 60 }], weather: [{ id: krakow.id, ...reading(9.5) }] }).expect(200)
+    expect(answer.body.weather_queries).toBeUndefined()
     expect(answer.body.weather_query).toBeUndefined()
-
-    // serwer nie dostarczył pogody od WEATHER_BACKUP_AFTER_MS: włącznik dostaje wszystkie miejsca
-    const later = new Date(Date.now() + WEATHER_BACKUP_AFTER_MS + 60_000)
-    expect((await switchWeatherQueries(later)).map((query) => query.id)).toEqual([home.id, krakow.id])
-    // serwer ma świeżą pogodę domu: włącznik tylko Kraków
-    setWeatherFromController([{ id: home.id, ...reading(3) }], later, 'server')
-    expect((await switchWeatherQueries(later)).map((query) => query.id)).toEqual([krakow.id])
-    // co: tylko gdy nie ma świeżej pogody ani od serwera, ani od włącznika
-    expect((await backupWeatherQueries(later)).map((query) => query.id)).toEqual([krakow.id])
-    setWeatherFromController([{ id: krakow.id, ...reading(5) }], later, 'switch')
-    expect(await backupWeatherQueries(later)).toEqual([])
+    expect(answer.body.relays).toHaveLength(1)
+    expect((await request(app).get('/api/weather-tiles')).body.find((t: { id: string }) => t.id === krakow.id).weather).toBeNull()
   })
 })

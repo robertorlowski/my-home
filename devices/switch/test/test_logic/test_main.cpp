@@ -111,24 +111,16 @@ void test_state_report_with_diag()
   diag.wifiDrops = 2;
   diag.rssi = -63;
   diag.httpMs = 840;
-  // od 1.3.2: pamięć i pogoda
+  // od 1.3.2: pamięć (pogoda w diagnostyce do 1.3.7)
   diag.heapFree = 61000;
   diag.heapMin = 30500;
   diag.heapBlock = 40000;
   diag.netHttpResets = 1;
   diag.netWifiReconnects = 4;
-  diag.weatherPlaces = 2;
-  diag.weatherOk = 3;
-  diag.weatherFail = 5;
-  diag.weatherCode = -1;
-  diag.weatherTls = -32512;
-  diag.weatherHeapBlock = 12000;
-  diag.weatherAtMs = 1000;
   const std::string json = buildStateReport(bank, 4000, &diag);
   TEST_ASSERT_EQUAL_STRING("{\"uptimeS\":4,\"relays\":[{\"on\":false,\"changedS\":4}],"
     "\"diag\":{\"reset\":\"brownout\",\"boot\":7,\"wifiDrops\":2,\"rssi\":-63,\"httpMs\":840,"
-    "\"heapFree\":61000,\"heapMin\":30500,\"heapBlock\":40000,\"net\":{\"http\":1,\"wifi\":4},\"weather\":{\"places\":2,\"ok\":3,\"fail\":5,"
-    "\"code\":-1,\"tls\":-32512,\"heapBlock\":12000,\"agoS\":3}}}", json.c_str());
+    "\"heapFree\":61000,\"heapMin\":30500,\"heapBlock\":40000,\"net\":{\"http\":1,\"wifi\":4}}}", json.c_str());
 }
 
 void test_apply_state_response()

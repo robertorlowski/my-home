@@ -7,7 +7,6 @@
 #include <string>
 
 #include <relays.hpp>
-#include <weather.hpp>
 
 // Diagnostyka sterownika w zgłoszeniu stanu (od 1.1.2, 2026-10-14: płytka restartowała się przy
 // włączaniu bojlera 1,5–2 kW): przyczyna ostatniego startu (esp_reset_reason, np. "brownout" = spadek
@@ -27,24 +26,14 @@ struct ControllerDiag {
   // od 1.3.7 (net_recovery.hpp): od startu nowe połączenia z serwerem i ponowne łączenia z Wi-Fi z braku łączności
   uint32_t netHttpResets = 0;
   uint32_t netWifiReconnects = 0;
-  // pogoda: liczba miejsc z chmury, udane i nieudane pobrania od startu, wynik ostatniej próby (kod HTTP albo ujemny
-  // błąd HTTPClient, 0 = jeszcze nie było), błąd mbedtls z WiFiClientSecure (0 = brak), największy blok sterty tuż
-  // przed próbą i chwila próby (millis, 0 = nie było)
-  uint32_t weatherPlaces = 0;
-  uint32_t weatherOk = 0;
-  uint32_t weatherFail = 0;
-  int32_t weatherCode = 0;
-  int32_t weatherTls = 0;
-  uint32_t weatherHeapBlock = 0;
-  uint32_t weatherAtMs = 0;
+  // diagnostyka pogody (weather {places, ok, fail, code, tls, heapBlock, agoS}) była w 1.3.2–1.3.7; od 1.4.0 bez pogody
 };
 
 // Zgłoszenie stanu: {"uptimeS":N,"relays":[{"on":true,"changedS":12},…],"diag":{…}}.
 // changedS — od ilu sekund przekaźnik jest w obecnym stanie; serwer liczy z tego czas
-// włączenia i wyłączenia w historii, także po przerwie w łączności. diag tylko, gdy podane; weather (od 1.1.3,
-// od 1.2.0 wiele miejsc, weather.hpp) tylko odczyty ważne i nie starsze niż WEATHER_MAX_AGE_MS.
-std::string buildStateReport(const RelayBank &bank, uint32_t nowMs, const ControllerDiag *diag = nullptr,
-  const WeatherPlaces *weather = nullptr);
+// włączenia i wyłączenia w historii, także po przerwie w łączności. diag tylko, gdy podane. Pole weather (pogoda
+// z Open-Meteo, 1.1.3–1.3.7) od 1.4.0 nie istnieje: pogodę pobiera serwer.
+std::string buildStateReport(const RelayBank &bank, uint32_t nowMs, const ControllerDiag *diag = nullptr);
 
 // Odpowiedź na zgłoszenie stanu: {"relays":[{"on":true,"offAfterS":1200,"mode":"schedule"},…]}.
 // Stosuje polecenia do bank (pomijając przekaźniki z niewysłaną zmianą lokalną). Zwraca

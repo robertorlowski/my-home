@@ -2,15 +2,14 @@
 // edycji (ControllerCardTitle → popup DeviceEditModal), lista .kv: Nazwa, SN, Root ID (skrócony, „kopiuj”), Adres IP
 // (DeviceAddressRow), Firmware z chipem stanu i Ostatnie zgłoszenie (FirmwareRows) oraz .actions z „Aktualizuj firmware”
 // (FirmwareActions). Strona Ustawienia wstawia <ControllerCard device={device} onEdit={…} /> w .stack / .grid-settings
-// zamiast składać wiersze samodzielnie. Dane IP i firmware z GET /api/devices (useCurrentDevice). Włącznik i pompa
-// ciepła mają też wiersz „Poczta” (MailKeyRow: klucz płytki przekaźnika poczty).
+// zamiast składać wiersze samodzielnie. Dane IP i firmware z GET /api/devices (useCurrentDevice). Wiersz „Poczta”
+// (klucz płytki przekaźnika poczty) był tu od 2026-10-17 do 2026-11-13, do usunięcia przekaźnika.
 import { ReactNode, useState } from 'react';
 import { canEditDevice, Device } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ControllerCardTitle } from './ControllerCardTitle';
 import { DeviceAddressRow, useCurrentDevice } from './DeviceAddress';
 import { FirmwareActions, FirmwareRows, useFirmwareStatus } from './FirmwareStatus';
-import { MailKeyRow } from './MailKeyRow';
 import { useLang } from '../i18n';
 import './firmwareStatus.css';
 
@@ -25,7 +24,7 @@ export const ControllerCard: React.FC<{
   const { user } = useAuth();
   const { t } = useLang();
   const isDemo = !!user?.isDemo;
-  const { current, reload } = useCurrentDevice(device);
+  const { current } = useCurrentDevice(device);
   const firmware = useFirmwareStatus(device);
   const [copied, setCopied] = useState(false);
 
@@ -53,7 +52,6 @@ export const ControllerCard: React.FC<{
         {children}
         <DeviceAddressRow current={current} />
         <FirmwareRows state={firmware} />
-        <MailKeyRow current={current} reload={reload} />
       </dl>
       <FirmwareActions state={firmware} />
     </section>

@@ -30,7 +30,7 @@ import {
 } from '../src/core/services/totp.service'
 
 const KEY = crypto.randomBytes(32).toString('base64')
-const ENV_KEYS = ['AUTH_DISABLED', 'LOGOWANIE_KLUCZ', 'LOGIN_KEYS_DB', 'SYSTEM_EMAIL', 'MAIL_ADMIN', 'SMTP_HOST', 'MAIL_RELAY', 'CLIENT_URL']
+const ENV_KEYS = ['AUTH_DISABLED', 'LOGOWANIE_KLUCZ', 'LOGIN_KEYS_DB', 'SYSTEM_EMAIL', 'MAIL_ADMIN', 'SMTP_HOST', 'CLIENT_URL']
 const savedEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]))
 const restoreEnv = () => {
   for (const key of ENV_KEYS) {
@@ -175,7 +175,7 @@ describe('Kod z telefonu: logowanie, rejestracja, wyłączenie', () => {
     process.env.LOGIN_KEYS_DB = DB
     process.env.SYSTEM_EMAIL = 'wlasciciel@example.com'
     process.env.CLIENT_URL = 'https://app.example'
-    for (const key of ['SMTP_HOST', 'MAIL_RELAY', 'MAIL_ADMIN']) delete process.env[key]
+    for (const key of ['SMTP_HOST', 'MAIL_ADMIN']) delete process.env[key]
     resetSettingsCache()
     resetTotpIndex()
     mongoServer = await MongoMemoryServer.create()
@@ -361,7 +361,7 @@ describe('Kod z telefonu: konto bazy bez dostępu do bazy kluczy', () => {
     process.env.AUTH_DISABLED = '0'
     process.env.LOGOWANIE_KLUCZ = KEY
     process.env.LOGIN_KEYS_DB = 'logowanie'
-    for (const key of ['SMTP_HOST', 'MAIL_RELAY']) delete process.env[key]
+    for (const key of ['SMTP_HOST']) delete process.env[key]
     resetTotpIndex()
     // konto bazy aplikacji z rolą tylko do własnej bazy, jak myhome przed dodaniem roli do „logowanie”
     mongoServer = await MongoMemoryServer.create({

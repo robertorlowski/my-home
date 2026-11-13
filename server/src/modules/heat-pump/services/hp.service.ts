@@ -62,16 +62,16 @@ export const getHpContactAt = (rootId: string): Date | undefined => lastContactB
 // przyrost od tamtej chwili pokazuje, czy CHPC milczy (serial_read_timeout), czy odpowiada uszkodzoną ramką
 // (hp_json_error, serial_receive_overflow). Tylko w pamięci; liczniki co zerują się przy jego restarcie.
 // Od co 1.2.5 (bus_diagnostics.hpp) także serial_unexpected_frame, hp_late_frame, hp_last_ok_s, echo aktywnego
-// zlecenia diag i zrzuty diag_hp_raw / diag_bus. Od co 1.3.2 wynik zapasowego pobierania pogody: weather_ok,
-// weather_fail (liczniki od startu co) i weather_code (kod HTTP ostatniego pobrania).
+// zlecenia diag i zrzuty diag_hp_raw / diag_bus. Liczniki zapasowej pogody weather_ok, weather_fail i weather_code
+// (co 1.3.2–1.3.4) są pomijane od 2026-11-13: co od 1.4.0 nie pobiera pogody.
 const DIAGNOSTIC_KEYS = [
   'serial_queue_overflow', 'serial_read_timeout', 'serial_receive_overflow', 'pv_crc_error', 'hp_json_error',
   'pv_frame_error', 'cloud_http_status', 'cloud_request_error', 'websocket_disconnect', 'cloud_response_parse_error',
   'operation_validation_error', 'preference_validation_error', 'serial_unexpected_frame', 'hp_late_frame',
-  'hp_last_ok_s', 'weather_ok', 'weather_fail', 'weather_code',
+  'hp_last_ok_s',
 ] as const;
 // wartości, które nie są licznikami (kod HTTP, wiek w sekundach): bez przyrostu
-const NOT_COUNTERS = new Set<string>(['cloud_http_status', 'hp_last_ok_s', 'weather_code']);
+const NOT_COUNTERS = new Set<string>(['cloud_http_status', 'hp_last_ok_s']);
 const DIAGNOSTIC_OBJECTS = ['diag', 'diag_hp_raw', 'diag_bus'] as const;
 type HpCounters = Partial<Record<(typeof DIAGNOSTIC_KEYS)[number], number>>;
 type HpCountersAt = { at: Date; counters: HpCounters };

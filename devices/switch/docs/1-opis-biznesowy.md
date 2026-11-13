@@ -48,7 +48,7 @@ Od wersji 1.3.5 strony sterownika są po angielsku (bez wyboru języka); niżej 
   - **„Schedule”**: powrót do harmonogramu (bez chmury wyłącza przekaźnik).
   
   Karta „Wi-Fi and cloud”: sieć, adres, sygnał, stan połączenia z chmurą.
-- **Instalacja** (`/install`, strona „Setup”, login i hasło): Wi-Fi, wgranie pliku firmware, SN, Root ID, liczba przekaźników, stan zgłoszenia, odcisk klucza poczty („Key fingerprint”).
+- **Instalacja** (`/install`, strona „Setup”, login i hasło): Wi-Fi, wgranie pliku firmware, SN, Root ID, liczba przekaźników, stan zgłoszenia (do 1.3.7 także karta „Mail” z odciskiem klucza poczty, „Key fingerprint”).
 
 ## Dla kogo
 
@@ -65,7 +65,9 @@ Od wersji 1.3.5 strony sterownika są po angielsku (bez wyboru języka); niżej 
 6. **W aplikacji**: nazwa przekaźnika (Ustawienia), harmonogram, ewentualnie gwiazdka „domyślny”.
 7. **Kolejne wersje** przez sieć (strona firmware w aplikacji albo `/install`).
 
-Stan wdrożenia: od 2026-10-03 na produkcji działa jeden włącznik, przekaźnik nazwany „Bojler”; firmware 1.3.1 (2026-10-17). Poza przekaźnikiem włącznik pełni dwie role dla całej aplikacji, bo stoi w sieci domowej, a serwer na Render nie może: od 1.1.3 **pobiera pogodę** z Open-Meteo dla domu i kafelków pogody (od 1.2.0 wiele miejsc, co 15 min na miejsce), a od 1.3.0 jest **przekaźnikiem poczty** — wysyła maile aplikacji (kody logowania, zaproszenia) przez SMTP z danymi, które dostaje z chmury zaszyfrowane własnym kluczem P-256 i trzyma tylko w pamięci; klucz zatwierdza użytkownik systemowy w aplikacji po porównaniu odcisku ze stroną `/install`. Szczegóły: CLAUDE.md, punkty 5d i 5f.
+Stan wdrożenia: od 2026-10-03 na produkcji działa jeden włącznik, przekaźnik nazwany „Bojler”. Firmware 1.4.0 (2026-11-13) czeka na wdrożenie po serwerze.
+
+Do wersji 1.3.7 włącznik pełnił też dwie role dla całej aplikacji, bo stał w sieci domowej, a serwer na Renderze nie mógł: od 1.1.3 **pobierał pogodę** z Open-Meteo dla domu i kafelków pogody (od 1.2.0 wiele miejsc, co 15 min na miejsce; od 2026-11-07 już tylko zapasowo), a od 1.3.0 był **przekaźnikiem poczty** — wysyłał maile aplikacji przez SMTP z danymi zaszyfrowanymi własnym kluczem płytki. Od 1.4.0 (2026-11-13, decyzja właściciela) obu ról nie ma: serwer na Oracle ma własny adres IP, sam pobiera pogodę i wysyła maile. Szczegóły: CLAUDE.md, punkty 5d i 5f.
 
 ## Ograniczenia
 

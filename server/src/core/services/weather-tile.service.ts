@@ -13,12 +13,12 @@
 import { Types } from 'mongoose';
 import { DeviceModel } from '../models/device.model';
 import { WeatherTileDocument, WeatherTileModel } from '../models/weather-tile.model';
-import { getWeatherFor, serverWeatherActive, setHomeWeatherKey, weatherStale, WEATHER_LOCATION, Weather } from './meteo.service';
+import { getWeatherFor, setHomeWeatherKey, WEATHER_LOCATION, Weather } from './meteo.service';
 import { appendToViewerOrder, placeForViewer, setViewerHidden, TileViewer, viewersHiding } from './tile-layout.service';
 
 export const MAX_WEATHER_TILES = 8;
-// tyle miejsc przyjmuje włącznik (WEATHER_MAX_PLACES w devices/switch/src/weather.hpp)
-const MAX_SWITCH_PLACES = 8;
+// najwyżej tyle miejsc w jednym zapytaniu serwera do Open-Meteo (dom i widoczne kafelki; weather-fetch.service)
+const MAX_WEATHER_PLACES = 8;
 const NAME_MAX = 40;
 // promień „przy domu” dla temperatury z czujnika kotła
 export const NEAR_HOME_KM = 3;
@@ -85,8 +85,7 @@ const toPublic = (tile: WeatherTileDocument): WeatherTile => ({
 });
 
 // Kafelek „Dom” z WEATHER_LOCATION, gdy go nie ma (pierwsze uruchomienie po wdrożeniu); przed sterownikami
-// (sortOrder -1). Zapamiętuje jego id w meteo.service, żeby pogoda ze starszego włącznika i GET /temperature
-// dotyczyły domu.
+// (sortOrder -1). Zapamiętuje jego id w meteo.service, żeby GET /temperature i pasek nad listą dotyczyły domu.
 export async function ensureHomeWeatherTile(): Promise<WeatherTileDocument> {
   let home = await WeatherTileModel.findOne({ home: true }).lean<WeatherTileDocument>();
   if (!home) {
@@ -176,17 +175,17 @@ export async function setWeatherTilesOrder(entries: { id: string; index: number 
   })));
 }
 
-// Wynik weatherQueries w pamięci (2026-10-29, limit transferu Render): włącznik pyta co 5 s, a pompa przy każdym
-// hp/add, a za każdym razem to 3 zapytania do bazy. Kasowany przy dodaniu, zmianie (także ukryciu) i usunięciu
+// Wynik weatherQueries w pamięci (2026-10-29, limit transferu Render): włącznik pyta co 5 s (do 2026-11-13 także
+// pompa przy każdym hp/add), a za każdym razem to 3 zapytania do bazy. Kasowany przy dodaniu, zmianie (także ukryciu) i usunięciu
 // kafelka; po minucie liczony od nowa na wypadek zmiany inną drogą (np. usunięcie konta z kafelkami).
 const WEATHER_QUERIES_TTL_MS = 60_000;
 type WeatherQuery = { id: string; lat: number; lon: number };
 let weatherQueriesCache: { at: number; queries: WeatherQuery[] } | null = null;
 const forgetWeatherQueries = () => { weatherQueriesCache = null; };
 
-// Miejsca do pobrania pogody (serwer, zapasowo włącznik i co): dom zawsze (GET /temperature), pozostałe tylko widoczne dla
-// właściciela (kafelek bez właściciela: ukryty wspólnie albo przez użytkownika systemowego); najwyżej tyle, ile
-// przyjmuje włącznik, najstarsze kafelki pierwsze.
+// Miejsca do pobrania pogody przez serwer (weather-fetch.service): dom zawsze (GET /temperature), pozostałe tylko
+// widoczne dla właściciela (kafelek bez właściciela: ukryty wspólnie albo przez użytkownika systemowego); najwyżej
+// MAX_WEATHER_PLACES, najstarsze kafelki pierwsze.
 export async function weatherQueries(now = Date.now()): Promise<WeatherQuery[]> {
   if (weatherQueriesCache && now - weatherQueriesCache.at < WEATHER_QUERIES_TTL_MS) return weatherQueriesCache.queries;
   const home = await ensureHomeWeatherTile();
@@ -199,23 +198,8 @@ export async function weatherQueries(now = Date.now()): Promise<WeatherQuery[]> 
     const system = hiding.find((viewer) => viewer.isSystem);
     return system ? system.hidden.has(id) : !!tile.hidden;
   };
-  const queries = [home, ...tiles.filter((tile) => !hidden(tile))].slice(0, MAX_SWITCH_PLACES)
+  const queries = [home, ...tiles.filter((tile) => !hidden(tile))].slice(0, MAX_WEATHER_PLACES)
     .map((tile) => ({ id: String(tile._id), lat: tile.lat as number, lon: tile.lon as number }));
   weatherQueriesCache = { at: now, queries };
   return queries;
-}
-
-// Miejsca dla włącznika (odpowiedź POST /switch/state): przy pobieraniu przez serwer (od 2026-11-07,
-// weather-fetch.service) tylko te bez świeżej pogody od serwera; zwykle pusta lista, która wyłącza pobieranie
-// we włączniku. Bez pobierania przez serwer (testy) wszystkie.
-export async function switchWeatherQueries(now = new Date()): Promise<WeatherQuery[]> {
-  const queries = await weatherQueries();
-  return serverWeatherActive() ? queries.filter((query) => weatherStale(query.id, 'server', now)) : queries;
-}
-
-// Miejsca dla zapasowego pobierania przez sterownik co (odpowiedź POST /hp/add, co od 1.3.1): bez świeżej pogody od
-// serwera (gdy pobiera) i od włącznika (meteo.service, weatherStale); pusta lista = serwer albo włącznik działa.
-export async function backupWeatherQueries(now = new Date()): Promise<WeatherQuery[]> {
-  return (await weatherQueries()).filter((query) => weatherStale(query.id, 'switch', now)
-    && (!serverWeatherActive() || weatherStale(query.id, 'server', now)));
 }

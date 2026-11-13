@@ -14,8 +14,8 @@ The module is responsible for:
 - **user accounts**: login by e-mail and code, account data, sharing a controller with another person with a choice of tabs;
 - **the shared look**: the controller bar with tabs, the bottom navigation on a phone, the light and dark theme, Polish or English language, dialogs, the "Sterownik" card and the operations log;
 - **menus and screens that depend on the controller kind** (the heat pump has schedules, the water pressure tank and photovoltaics do not);
-- **shared services**: outdoor temperature (the boiler sensor, otherwise the forecast), the weather of the home and of the weather tiles (Open-Meteo, fetched by the server, by the switch as a fallback), a weather page with a forecast, the Polish public holiday calendar, fast notifications to the controller and the browser (WebSocket);
-- **mail**: login codes and notifications are sent by the server; optionally the controllers at home can send them (the switch, with `co` as a fallback).
+- **shared services**: outdoor temperature (the boiler sensor, otherwise the forecast), the weather of the home and of the weather tiles (Open-Meteo, fetched by the server), a weather page with a forecast, the Polish public holiday calendar, fast notifications to the controller and the browser (WebSocket);
+- **mail**: login codes and notifications are sent by the server (sending through the controllers at home, possible since 2026-10-17, was removed on 2026-11-13).
 - **application settings**: the system account has My details, Notifications and Settings in the left menu. The Settings tab (mail, the system account code address, application addresses, demo, notification keys, background jobs) opens without an extra password (since 2026-11-13).
 
 ## Who uses it
@@ -29,7 +29,7 @@ The module is responsible for:
 
 | Action | Where |
 |---|---|
-| Log in | login screen: e-mail → code from the mail (or a link from the mail); after login the question "Zapamiętać?" (remember?) — a remembered session lasts 90 days. The mail is sent by a controller at home; when none is online the screen says "Poczta jest chwilowo niedostępna…" (mail temporarily unavailable) |
+| Log in | login screen: e-mail → code from the mail (or a link from the mail); after login the question "Zapamiętać?" (remember?) — a remembered session lasts 90 days. The mail is sent by the server |
 | Turn on notifications on the phone and in the browser | "Moje dane" → the "Powiadomienia" (notifications) card → "Włącz na tym urządzeniu" (browser consent), then tick the events for each controller: compressor start / stop, pump error, boiler kindling and burn-out, boiler alarm, relay on / off, water pump start, controller stopped / resumed responding; "domyślne" ticks the most important ones. Quiet hours from–to hold everything except urgent events (error, alarm). Notifications are enabled on each device separately, the choice of events is shared by the account; "Wyślij próbne" sends a test |
 | Show the installation to someone without an account | login screen → "Zobacz wersję demo": a read-only view of the controllers of the owner configured on the server (every attempt to change something ends with a message), without serial numbers, addresses or the home location; a yellow "Wersja demo" bar with "Wyjdź"; the session lasts 2 hours |
 | Have the app on the phone | Chrome on Android: menu → "Add to Home screen" (a PWA with an icon, no address bar, opens without network with a "Brak połączenia" screen); iPhone: Share → "Add to Home Screen". The Android package (TWA, `android/`) can be installed from an `.apk` file or, eventually, from Google Play |
@@ -68,7 +68,7 @@ The user interface is in Polish; the screenshots below show it as is.
 |---|---|
 | ![Weather page](../../../moduly/core/img/pogoda.png) | ![Weather page on a phone](../../../moduly/core/img/pogoda-telefon.png) |
 
-*The weather page (click on a weather tile): tabs Teraz, Najbliższe dni, Słońce i PV, Ogrzewanie, Powietrze, Wiatr i opady — like controller views: in the side menu on a computer, in the bottom navigation with "More" on a phone. "Teraz" is a card with the temperature, sky description, the day's high and low, apparent temperature, wind, humidity, pressure and sun hours, a strip of the next 48 hours (icon, temperature, precipitation probability) and tomorrow's temperature. The current conditions come from the reading fetched by the switch; the forecast and air quality are fetched by the browser directly from Open-Meteo.*
+*The weather page (click on a weather tile): tabs Teraz, Najbliższe dni, Słońce i PV, Ogrzewanie, Powietrze, Wiatr i opady — like controller views: in the side menu on a computer, in the bottom navigation with "More" on a phone. "Teraz" is a card with the temperature, sky description, the day's high and low, apparent temperature, wind, humidity, pressure and sun hours, a strip of the next 48 hours (icon, temperature, precipitation probability) and tomorrow's temperature. The current conditions come from the reading fetched by the server; the forecast and air quality are fetched by the browser directly from Open-Meteo.*
 
 | Phone — bar and bottom navigation | Phone — "Więcej" |
 |---|---|
@@ -78,7 +78,7 @@ The user interface is in Polish; the screenshots below show it as is.
 
 ![Login](../../../moduly/core/img/logowanie.png)
 
-*Login: a card with the e-mail address; the code and the link arrive by mail. The theme icon already works on this screen. The mail is sent by the switch at home (with the `co` controller as a fallback), so it arrives within seconds; without a controller online the login gets a "mail unavailable" message, and the system user logs in with a password.*
+*Login: a card with the e-mail address; the code and the link arrive by mail. The theme icon already works on this screen. The mail is sent by the server and arrives within seconds. The system user types "system" and gets a code at the fixed address from the settings (since 2026-11-13; before that a password).*
 
 ![My data](../../../moduly/core/img/konto.png)
 
@@ -107,10 +107,10 @@ The user interface is in Polish; the screenshots below show it as is.
 - **A controller cannot be deleted in the application.** Deleting it requires a change in the database.
 - **Some data lives in server memory** (latest telemetry, manual operations, device info). A server restart clears it; the controller restores it with its next report.
 - **The outdoor temperature** comes from the outdoor sensor of the pellet boiler; without a boiler or without a fresh reading, from the Open-Meteo forecast for the home.
-- **Mail through controllers is optional.** By default the server sends mail. With "Send through controllers" on, mails (login codes, invitations, confirmations) are sent by the switch, with `co` as a fallback. When both are then offline, login by code does not work ("Poczta jest chwilowo niedostępna"); the system account with a password remains. The key of a board that is to receive the mail credentials is approved by the system user after comparing the fingerprint with the board's `/install` page.
+- **Only the server sends mail.** Without mail configured on the server, mails (login codes, invitations, confirmations) only go to its log. Sending through the controllers at home (since 2026-10-17, needed on Render, which blocked the mail ports) was removed on 2026-11-13.
 - **Notifications depend on the browser.** On an iPhone they work only in the application added to the home screen (iOS 16.4+), not at all in incognito mode, and Android may delay them while saving battery. The temperature on the "Dom" tile comes from the boiler's outdoor sensor when the boiler delivers a fresh reading (up to 15 min); with the boiler off it comes from the weather model, which in the valley is off by a few degrees at night.
 - **The demo is public.** Anyone who knows the application address sees the owner's installation data (temperatures, history, schedules). The server hides sensitive data and blocks writes, but the view itself is open; it is switched off by removing `DEMO_OWNER_EMAIL` from the server configuration.
-- **The server fetches the weather.** Since 2026-11-07 current conditions are fetched by the server on Oracle, which has its own IP address (on Render the address was shared with other services and Open-Meteo rejected the requests). When the server gets no weather for 25 min, the switch fetches it over the home connection, then the `co` controller; without any of them the strip and weather tiles show the last reading, then the forecast.
+- **Only the server fetches the weather.** Since 2026-11-07 current conditions are fetched by the server on Oracle, which has its own IP address (on Render the address was shared with other services and Open-Meteo rejected the requests). Since 2026-11-13 the controllers do not fetch it even as a fallback. When the server gets no weather, the strip and weather tiles show the last reading (up to 45 min), then the forecast.
 
 ## Glossary
 
@@ -127,7 +127,7 @@ The user interface is in Polish; the screenshots below show it as is.
 | **Simple tile** (kafelek prosty) | the switch or boiler tile on the list with big buttons instead of values (2026-10-20); two such tiles fit on a phone screen without scrolling |
 | **Tile** (kafelek) | a field on the controller list: a controller with its current state or the weather of a town |
 | **Weather page** | the screen behind a weather tile: current conditions, forecast, sun and PV, heating, air, wind and precipitation |
-| **Mail relay** (przekaźnik poczty) | a controller at home (the switch, `co` as a fallback) that sends the application's mails; it receives the mail credentials encrypted with its own key and keeps them only in memory |
+| **Mail relay** (przekaźnik poczty) | formerly (2026-10-17 – 2026-11-13) a controller at home (the switch, `co` as a fallback) that could send the application's mails instead of the server; removed |
 | **Web Push notification** | a system message on the phone or in the browser about a controller event; the browser stores a subscription, the server sends through the browser's push service |
 | **Demo mode** (wersja demo) | public entry without a password from the login screen: a read-only session on the owner's account, 2 hours, without sensitive data |
 | **PWA / TWA** | a web application installed from the browser ("Add to Home screen") / its wrapper as an Android application for Google Play (the `android/` directory) |

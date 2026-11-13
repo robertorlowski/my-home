@@ -1,10 +1,10 @@
 // Pogoda z Open-Meteo pobierana przez serwer (od 2026-11-07). Na Renderze serwer dzielił adres IP z innymi usługami
 // i Open-Meteo odrzucało zapytania (limit na adres), dlatego od 2026-10-15 pobierały ją sterowniki z domowego łącza.
-// Na Oracle (vm-prod) serwer ma własny adres 158.101.211.105, więc pobiera sam: jedno zapytanie na wszystkie miejsca
+// Na Oracle (vm-prod) serwer ma własny adres IP, więc pobiera sam: jedno zapytanie na wszystkie miejsca
 // z weatherQueries (dom i widoczne kafelki), co FETCH_INTERVAL_MS, po błędzie po RETRY_MS, a od razu po zmianie listy
-// miejsc. Odczyty trafiają do meteo.service jako źródło 'server'. Włącznik i co pobierają już tylko zapasowo, gdy
-// serwer nie ma świeżej pogody dla miejsca od WEATHER_BACKUP_AFTER_MS (meteo.service, weatherStale).
-import { setServerWeatherActive, setWeatherFromController } from './meteo.service';
+// miejsc. Odczyty trafiają do meteo.service (setWeatherReadings). To jedyne źródło pogody: zapas z włącznika i co
+// usunięto 2026-11-13 (firmware 1.4.0).
+import { setWeatherReadings } from './meteo.service';
 import { weatherQueries } from './weather-tile.service';
 
 export const FETCH_INTERVAL_MS = 15 * 60 * 1000;
@@ -52,7 +52,7 @@ export async function fetchServerWeather(places: Place[], now = new Date(), fetc
   const response = await fetcher(openMeteoUrl(places), { signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
   const readings = parseOpenMeteo(await response.json(), places);
-  setWeatherFromController(readings, now, 'server');
+  setWeatherReadings(readings, now);
   return readings.length === places.length;
 }
 
@@ -82,10 +82,9 @@ async function check() {
   }
 }
 
-// Start przy uruchomieniu serwera (server.ts); od tej chwili sterowniki dostają miejsca tylko zapasowo.
+// Start przy uruchomieniu serwera (server.ts).
 export function startServerWeather() {
   if (timer) return;
-  setServerWeatherActive(true);
   void check();
   timer = setInterval(() => void check(), CHECK_MS);
   timer.unref();

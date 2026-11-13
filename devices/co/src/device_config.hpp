@@ -36,7 +36,11 @@ struct DeviceConfig {
 // weather_ok, weather_fail, weather_code w telemetrii (widoczne w GET /hp/diagnostics).
 // 1.3.3: strony i ekran sterownika po angielsku (T. out zamiast T. zew, MANUAL zamiast RECZNY).
 // 1.3.4: adres chmury dom.mojeturnie.pl (Oracle) zamiast chpc-web.onrender.com.
-constexpr const char *FW_VERSION = "1.3.4";
+// 1.4.0: bez zapasowego przekaźnika poczty i zapasowej pogody (serwer na Oracle ma własny adres IP i sam wysyła
+// maile oraz pobiera pogodę): bez mailKey w zgłoszeniu, bez weather_queries / weather i liczników weather_*;
+// próbnie (przegląd ok. 13.12.2026) polecenia dla QNAP-a w sieci domowej: wiadomość WebSocket {typ:"qnap"} → POST
+// do QNAP-a → {typ:"qnap_wynik"} (qnap_relay.hpp), bez danych QNAP-a w hp/add.
+constexpr const char *FW_VERSION = "1.4.0";
 
 // Wspólna przestrzeń NVS; main.cpp trzyma w niej też tryb sterownika ("mode").
 constexpr const char *PREFERENCES_NAMESPACE = "hp";

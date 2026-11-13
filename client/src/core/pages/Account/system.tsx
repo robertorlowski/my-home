@@ -76,9 +76,9 @@ function SettingField({ item, value, cleared, onChange, onClear }: {
   const { t } = useLang();
   const label = t(`settings.key.${item.key}`);
   const hint = <small className="help">{t(`settings.hint.${item.key}`)}</small>;
-  if (item.kind === 'relay' || item.kind === 'jobs') {
-    const on = item.kind === 'relay' ? '1' : 'on';
-    const off = item.kind === 'relay' ? '0' : 'off';
+  if (item.kind === 'jobs') {
+    const on = 'on';
+    const off = 'off';
     return (
       <label className="field">
         <span>{label}</span>

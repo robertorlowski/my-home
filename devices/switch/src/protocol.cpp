@@ -3,8 +3,7 @@
 
 #include <firmware.hpp>
 
-std::string buildStateReport(const RelayBank &bank, uint32_t nowMs, const ControllerDiag *diag,
-  const WeatherPlaces *weather)
+std::string buildStateReport(const RelayBank &bank, uint32_t nowMs, const ControllerDiag *diag)
 {
   JsonDocument document;
   document["uptimeS"] = nowMs / 1000;
@@ -28,17 +27,7 @@ std::string buildStateReport(const RelayBank &bank, uint32_t nowMs, const Contro
     JsonObject net = item["net"].to<JsonObject>();
     net["http"] = diag->netHttpResets;
     net["wifi"] = diag->netWifiReconnects;
-    JsonObject weatherDiag = item["weather"].to<JsonObject>();
-    weatherDiag["places"] = diag->weatherPlaces;
-    weatherDiag["ok"] = diag->weatherOk;
-    weatherDiag["fail"] = diag->weatherFail;
-    weatherDiag["code"] = diag->weatherCode;
-    weatherDiag["tls"] = diag->weatherTls;
-    weatherDiag["heapBlock"] = diag->weatherHeapBlock;
-    // sekundy od ostatniej próby; bez próby pole pominięte
-    if (diag->weatherAtMs != 0) weatherDiag["agoS"] = (nowMs - diag->weatherAtMs) / 1000;
   }
-  if (weather) weather->write(document, nowMs);
   std::string body;
   serializeJson(document, body);
   return body;

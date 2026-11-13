@@ -56,7 +56,7 @@ Zrzuty pochodzą z lokalnej bazy demonstracyjnej z danymi z 13.10.2026 (wygląd 
 
 ![Ustawienia](img/ustawienia.png)
 
-*Ustawienia (dwie kolumny): po lewej karta „Ustaw” — polecenie do sterownika: tryb Ręczny / Automatyczny / Wyłączony, temperatura od–do, limit mocy, EEV min / max, przegrzanie EEV, przełączniki wymuszenia pracy i pomp obiegowych (wyszarzone pokazują stan z pompy, gdy pompa steruje nimi sama), przycisk „Zmień”. Po prawej karty „Błędy sterownika” (ostatni błąd, licznik, „Odblokuj” i „Restart sterownika”), „Sterownik” (nazwa, SN, Root ID, adres IP, firmware ze stanem, wiersz „Poczta” ze stanem klucza przekaźnika poczty — `co` od 1.3.0, „Aktualizuj firmware”; ołówek otwiera okno „Dane sterownika”) i „Udostępnianie”.*
+*Ustawienia (dwie kolumny): po lewej karta „Ustaw” — polecenie do sterownika: tryb Ręczny / Automatyczny / Wyłączony, temperatura od–do, limit mocy, EEV min / max, przegrzanie EEV, przełączniki wymuszenia pracy i pomp obiegowych (wyszarzone pokazują stan z pompy, gdy pompa steruje nimi sama), przycisk „Zmień”. Po prawej karty „Błędy sterownika” (ostatni błąd, licznik, „Odblokuj” i „Restart sterownika”), „Sterownik” (nazwa, SN, Root ID, adres IP, firmware ze stanem, „Aktualizuj firmware”; ołówek otwiera okno „Dane sterownika”) i „Udostępnianie”. Zrzut pokazuje jeszcze wiersz „Poczta” (stan klucza przekaźnika poczty, `co` 1.3.0–1.3.4), usunięty 2026-11-13; zrzut do powtórzenia po wdrożeniu.*
 
 ![Harmonogram](img/harmonogramy.png)
 

@@ -16,9 +16,15 @@
 //   systemowym (wgrywanie firmware). JSON = treść application/json, --bin = treść ze standardowego wejścia jako
 //   application/octet-stream (plik .bin). W dzienniku operacji sterownika: „system”, źródło „Polecenie na serwerze”.
 //   Odpowiedź serwera na standardowe wyjście, status HTTP na standardowe wyjście błędów; kod wyjścia 0 tylko przy 2xx.
+// --qnap stan|restart_sieci|restart [ROOT_ID]: polecenie dla QNAP-a przez sterownik co (od 2026-11-13, próbnie;
+//   services/qnap.service.ts), np. docker exec my-home-prod node dist/server.js --qnap restart_sieci
+//   Żądanie do serwera działającego obok (jak --api, token wewnętrzny), bo tylko on ma połączenie WebSocket ze
+//   sterownikiem; czeka na wynik do QNAP_CZEKAJ_MS. Wynik (status HTTP QNAP-a i jego odpowiedź) na standardowe
+//   wyjście, kod wyjścia 0 tylko przy statusie 200.
 import mongoose from 'mongoose';
 import { INTERNAL_TOKEN_HEADER, internalApiUrl, internalTokenFile, readInternalToken } from './internal';
 import { issueEmergencySystemCode, SYSTEM_CODE_TTL_MS } from './services/auth.service';
+import { QNAP_POLECENIA } from './services/qnap.service';
 import { formatCode, until } from './services/mail.service';
 import { operationHeaders, systemMeta } from './services/operation-log.service';
 import { base32Decode, TOTP_STEP_S, totpCode } from './services/totp.service';
@@ -30,7 +36,7 @@ export type CliOptions = {
   printError?: (text: string) => void;
 };
 
-const COMMANDS = ['--kod-awaryjny', '--kod-totp', '--api'];
+const COMMANDS = ['--kod-awaryjny', '--kod-totp', '--api', '--qnap'];
 export const isCliCommand = (args: string[]) => args.some((arg) => COMMANDS.includes(arg));
 
 const USAGE = [
@@ -39,6 +45,7 @@ const USAGE = [
   '  --kod-totp KLUCZ                                 bieżący kod z aplikacji na telefonie dla klucza base32 (testy)',
   "  --api GET|POST|PUT|DELETE /ścieżka ['{json}']    żądanie do API serwera bez logowania",
   '  --api PUT /firmware/<rodzaj>/<wersja> --bin < plik.bin',
+  `  --qnap ${QNAP_POLECENIA.join('|')} [ROOT_ID]       polecenie dla QNAP-a przez sterownik co (czeka do 20 s)`,
 ].join('\n');
 
 const METHODS = new Set(['GET', 'POST', 'PUT', 'DELETE']);
@@ -51,6 +58,8 @@ export async function runCli(args: string[], options: CliOptions = {}): Promise<
   if (totp >= 0) return phoneCode(args[totp + 1] ?? '', print, printError);
   const at = args.indexOf('--api');
   if (at >= 0) return apiCall(args.slice(at + 1), options, print, printError);
+  const qnap = args.indexOf('--qnap');
+  if (qnap >= 0) return qnapCall(args.slice(qnap + 1), print, printError);
   printError(USAGE);
   return 2;
 }
@@ -92,6 +101,40 @@ function phoneCode(key: string, print: (text: string) => void, printError: (text
   const left = TOTP_STEP_S - Math.floor(now / 1000) % TOTP_STEP_S;
   print(`Kod z aplikacji: ${formatCode(totpCode(secret, now))} (jeszcze ${left} s), następny: ${formatCode(totpCode(secret, now + TOTP_STEP_S * 1000))}`);
   return 0;
+}
+
+// --qnap: POST /qnap/polecenia na serwerze działającym obok; serwer wysyła polecenie przez WebSocket sterownika co
+async function qnapCall(args: string[], print: (text: string) => void, printError: (text: string) => void): Promise<number> {
+  const [polecenie, rootId] = args;
+  if (!polecenie || !(QNAP_POLECENIA as readonly string[]).includes(polecenie)) {
+    printError(USAGE);
+    return 2;
+  }
+  const token = readInternalToken();
+  if (!token) {
+    printError(`Brak ${internalTokenFile()}: serwer nie działa na tym komputerze (w tym kontenerze) albo nie zapisał klucza.`);
+    return 1;
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${internalApiUrl()}/qnap/polecenia`, {
+      method: 'POST',
+      headers: { [INTERNAL_TOKEN_HEADER]: token, 'Content-Type': 'application/json', ...operationHeaders(systemMeta('Polecenie na serwerze (--qnap)')) },
+      body: JSON.stringify({ polecenie, ...(rootId ? { rootId } : {}) }),
+    });
+  } catch (error) {
+    printError(`Serwer nie odpowiada (${internalApiUrl()}): ${String(error)}`);
+    return 1;
+  }
+  const text = await response.text();
+  if (text) print(text);
+  printError(`HTTP ${response.status}`);
+  if (!response.ok) return 1;
+  try {
+    return (JSON.parse(text) as { status?: number }).status === 200 ? 0 : 1;
+  } catch {
+    return 1;
+  }
 }
 
 async function readAll(stdin: AsyncIterable<Buffer | string>): Promise<Buffer> {

@@ -51,17 +51,6 @@ export type DeviceProperties = {
 
 // rootId to _id dokumentu w MongoDB, deviceId to SN sterownika (MAC ESP32); pusta nazwa
 // oznacza sterownik zarejestrowany automatycznie (w interfejsie deviceLabel pokazuje wtedy deviceId).
-// Przekaźnik poczty (2026-10-17): płytka wysyła maile z domowego łącza; klucz płytki zatwierdza użytkownik systemowy.
-export interface MailKeyInfo {
-  fingerprint?: string;
-  approvedAt?: string;
-  pendingFingerprint?: string;
-  /** ostatnie pytanie płytki o maile (tylko w pamięci serwera) */
-  seenAt?: string;
-  /** MAIL_RELAY=1 na serwerze */
-  relayEnabled: boolean;
-}
-
 export type Device = {
   rootId: string;
   deviceType: DeviceType;
@@ -84,8 +73,6 @@ export type Device = {
   // adres IPv4 sterownika w sieci lokalnej z ostatniego zgłoszenia i czas zgłoszenia (ISO)
   ipAddress?: string;
   ipSeenAt?: string;
-  // przekaźnik poczty (włącznik, pompa ciepła): odcisk zatwierdzonego klucza płytki i klucza czekającego na zatwierdzenie
-  mailKey?: MailKeyInfo;
   // pompa ciepła: definicja z okna „Dane sterownika”; brak = jeszcze nie ustawiona
   pumpConfig?: PumpConfig;
   // kocioł pelletowy: powiązana pompa ciepła (null = kocioł tylko na pellecie)

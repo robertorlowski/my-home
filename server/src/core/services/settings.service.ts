@@ -14,7 +14,6 @@ export const SETTING_GROUPS = ['mail', 'app', 'push', 'server'] as const;
 export type SettingGroup = (typeof SETTING_GROUPS)[number];
 
 const DEFINITIONS = {
-  MAIL_RELAY: { group: 'mail', kind: 'relay' },
   SMTP_HOST: { group: 'mail', kind: 'text' },
   SMTP_PORT: { group: 'mail', kind: 'port' },
   SMTP_USER: { group: 'mail', kind: 'text' },
@@ -29,6 +28,9 @@ const DEFINITIONS = {
   VAPID_PRIVATE_KEY: { group: 'push', kind: 'secret' },
   VAPID_SUBJECT: { group: 'push', kind: 'text' },
   BACKGROUND_JOBS: { group: 'server', kind: 'jobs' },
+  // adres:port QNAP-a w sieci domowej dla poleceń przez sterownik co (od 2026-11-13, próbnie, qnap.service.ts); bez
+  // pola w aplikacji (hidden), zapis: --api PUT /settings '{"values":{"QNAP_ADRES":"…"}}' albo zmienna środowiska
+  QNAP_ADRES: { group: 'server', kind: 'hostport', hidden: true },
 } as const;
 
 export type SettingKey = keyof typeof DEFINITIONS;
@@ -57,12 +59,21 @@ export async function loadSettings(): Promise<void> {
 
 export type SettingView = { key: SettingKey; group: SettingGroup; kind: string; isSet: boolean; value?: string };
 
-// Widok dla ekranu ustawień: wartości z bazy, bez sekretów i bez wartości ze środowiska.
-export const settingsView = (): SettingView[] => SETTING_KEYS.map((key) => {
+// Widok dla ekranu ustawień: wartości z bazy, bez sekretów i bez wartości ze środowiska; bez ustawień ukrytych (hidden).
+export const settingsView = (): SettingView[] => SETTING_KEYS.filter((key) => !('hidden' in DEFINITIONS[key])).map((key) => {
   const { group, kind } = DEFINITIONS[key];
   const value = values[key];
   return { key, group, kind, isSet: value !== undefined, ...(kind !== 'secret' && value !== undefined ? { value } : {}) };
 });
+
+/** „a.b.c.d:port” w sieci prywatnej (10/8, 172.16/12, 192.168/16), jak sprawdza firmware co i usługa na QNAP-ie */
+export function isPrivateHostPort(text: string): boolean {
+  const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}):(\d{1,5})$/.exec(text);
+  if (!match) return false;
+  const [a, b, c, d, port] = match.slice(1).map(Number);
+  if ([a, b, c, d].some((part) => part > 255) || port < 1 || port > 65535) return false;
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
 
 const isEmail = (text: string) => /^[^\s@]+@[^\s@]+$/.test(text);
 const isHttpUrl = (text: string) => {
@@ -78,8 +89,8 @@ const VALIDATORS: Record<string, (text: string) => boolean> = {
   secret: () => true,
   email: isEmail,
   port: (text) => /^\d{1,5}$/.test(text) && Number(text) >= 1 && Number(text) <= 65535,
-  relay: (text) => text === '1' || text === '0',
   jobs: (text) => text === 'on' || text === 'off',
+  hostport: isPrivateHostPort,
   urls: (text) => text.split(',').every((url) => isHttpUrl(url.trim())),
 };
 

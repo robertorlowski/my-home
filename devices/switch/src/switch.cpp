@@ -9,12 +9,10 @@
 // Kontrakt z chmurą: POST devices/register (rootId, settings.default_on_minutes, oferta OTA),
 // POST switch/state (polecenia i oferta OTA), PUT switch/mode, WebSocket /ws?rootId=. NVS: przestrzeń „sw”.
 // OTA tylko na zlecenie z aplikacji („Aktualizuj”): chmura wysyła ofertę wyłącznie wtedy (od 1.1.0
-// także w odpowiedzi na stan, więc bez restartu). Od 1.1.3 co 15 min pobiera pogodę z Open-Meteo dla współrzędnych
-// z chmury (weather_queries, starsza chmura: weather_query) i wysyła ją w zgłoszeniu stanu (weather.hpp).
-// Od 1.3.0 przekaźnik poczty (devices/common/mail_relay): klucz płytki w zgłoszeniu (mailKey), komunikat WebSocket
-// „mail” budzi zadanie, które wysyła maile chmury z domowego łącza (dane SMTP z chmury, tylko w RAM).
-// Od 1.3.1 kod pogody jest współdzielony z `co` przez devices/common/weather.
+// także w odpowiedzi na stan, więc bez restartu).
 // Od 1.3.7 naprawa łączności bez odpowiedzi serwera: nowe połączenie, ponowne Wi-Fi, restart (net_recovery.hpp).
+// Pogoda z Open-Meteo (1.1.3–1.3.7) i przekaźnik poczty (1.3.0–1.3.7) usunięte w 1.4.0 (2026-11-13): serwer na Oracle
+// ma własny adres IP i sam pobiera pogodę oraz wysyła maile. Klucz poczty zapisany w NVS przez 1.3.x zostaje nieużywany.
 #include <Arduino.h>
 #include <cstdarg>
 #include <HTTPClient.h>
@@ -29,12 +27,10 @@
 #include <mbedtls/sha256.h>
 
 #include <firmware.hpp>
-#include <mail_relay.hpp>
 #include <net_recovery.hpp>
 #include <ota.hpp>
 #include <protocol.hpp>
 #include <relays.hpp>
-#include <weather.hpp>
 #include <secrets.h>
 
 namespace {
@@ -110,13 +106,6 @@ uint32_t wifiConnectedSinceMs = 0;
 // poprzedniej wymiany HTTP w exchangeState().
 ControllerDiag diag;
 constexpr const char *KEY_BOOTS = "boots";
-
-// Pogoda z Open-Meteo dla miejsc z chmury (weather.hpp, od 1.1.3; od 1.2.0 wiele miejsc = kafelki pogody),
-// wysyłana w zgłoszeniu stanu.
-WeatherPlaces weatherPlaces;
-
-// Przekaźnik poczty (od 1.3.0): własne zadanie FreeRTOS, pętla podaje mu Root ID, odpowiedź na zgłoszenie i „mail”.
-mail_relay::MailRelay mailRelay;
 
 // Naprawa łączności (od 1.3.7): czas od ostatniej odpowiedzi serwera i kolejne kroki.
 NetRecovery netRecovery;
@@ -269,14 +258,13 @@ void forgetRootIdOnError()
   logf("chmura: HTTP %d, zgłoszę się ponownie", lastHttpStatus);
   rootId = "";
   preferences.remove(KEY_ROOT_ID);
-  mailRelay.setDevice("", serial);
   registeredThisBoot = false;
   lastRegisterAttemptMs = 0;
   stopWebSocket();
 }
 
 // Komunikaty WebSocket serwera: {"type":"operation"} po zmianie trybu albo harmonogramu
-// w aplikacji i {"type":"mail"} dla przekaźnika poczty. Pozostałe ("update" dla przeglądarek) są pomijane.
+// w aplikacji. Pozostałe ("update" dla przeglądarek) są pomijane.
 void handleWebSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 {
   if (type == WStype_CONNECTED) {
@@ -289,8 +277,6 @@ void handleWebSocketEvent(WStype_t type, uint8_t *payload, size_t length)
       const char *kind = message["type"] | "";
       // zmiana w aplikacji: zgłoszenie stanu w najbliższym obiegu pętli (nie w callbacku)
       if (strcmp(kind, "operation") == 0) exchangeDue = true;
-      // mail w kolejce chmury albo zatwierdzony klucz: zadanie przekaźnika poczty pyta od razu
-      else if (strcmp(kind, "mail") == 0) mailRelay.wake();
     }
   }
 }
@@ -318,8 +304,6 @@ void registerDevice()
   request["version"] = FW_VERSION;
   request["ip"] = WiFi.localIP().toString();
   request["relays"] = RELAY_COUNT;
-  // klucz publiczny płytki dla przekaźnika poczty (chmura zatwierdza go w aplikacji)
-  if (mailRelay.publicKey().length() > 0) request["mailKey"] = mailRelay.publicKey();
   String body;
   serializeJson(request, body);
 
@@ -344,8 +328,6 @@ void registerDevice()
     preferences.putUShort(KEY_DEFAULT_MINUTES, minutes);
   }
   otaOfferReceived = parseOtaOffer(reply["settings"], otaOffer);
-  mailRelay.setDevice(rootId, serial);
-  mailRelay.onRegisterReply(reply["mail"]);
   registeredThisBoot = true;
   exchangeDue = true;
   if (!webSocketStarted) startWebSocket();
@@ -385,10 +367,9 @@ void exchangeState(uint32_t nowMs)
   diag.heapFree = ESP.getFreeHeap();
   diag.heapMin = ESP.getMinFreeHeap();
   diag.heapBlock = ESP.getMaxAllocHeap();
-  diag.weatherPlaces = weatherPlaces.size();
   diag.netHttpResets = netRecovery.httpResets();
   diag.netWifiReconnects = netRecovery.wifiReconnects();
-  const std::string body = buildStateReport(bank, nowMs, &diag, &weatherPlaces);
+  const std::string body = buildStateReport(bank, nowMs, &diag);
   const uint32_t sentMs = millis();
   const bool sent = send("POST", requestUrl("switch/state"), body.c_str(), &response);
   // czas tej wymiany idzie w następnym zgłoszeniu
@@ -407,8 +388,6 @@ void exchangeState(uint32_t nowMs)
   JsonDocument reply;
   const bool hadOffer = otaOfferReceived;
   otaOfferReceived = !deserializeJson(reply, response) && parseOtaOffer(reply.as<JsonVariantConst>(), otaOffer);
-  // miejsca do pogody (weather_queries, starsza chmura weather_query); zmiana położenia = pobranie od razu
-  if (!reply.isNull()) weatherPlaces.update(reply.as<JsonVariantConst>());
   if (otaOfferReceived && !hadOffer) logf("OTA: zlecona wersja %s", otaOffer.version.c_str());
   lastExchangeOkMs = millis();
   writeChanged(changed, "chmura");
@@ -598,8 +577,6 @@ void recoverNetwork(uint32_t nowMs)
 
 // Co 1 s z loop(): AP, naprawa łączności, zgłoszenie (co 30 s do skutku), zmiany lokalne, wymiana stanu
 // (co 5 s albo od razu po zmianie), OTA.
-void fetchWeather(size_t index, uint32_t nowMs);
-
 void tick(uint32_t nowMs)
 {
   updateAccessPoint(nowMs);
@@ -617,45 +594,6 @@ void tick(uint32_t nowMs)
   }
   if (registeredThisBoot && (exchangeDue || nowMs - lastExchangeMs >= EXCHANGE_INTERVAL_MS)) exchangeState(nowMs);
   if (registeredThisBoot && cloudOnline(nowMs)) tryFirmwareUpdate();
-  const int duePlace = weatherPlaces.dueIndex(nowMs);
-  if (duePlace >= 0) fetchWeather(static_cast<size_t>(duePlace), nowMs);
-}
-
-// Pogoda z Open-Meteo dla jednego miejsca (weather.hpp): blokujący GET (najwyżej kilka sekund; przekaźniki
-// trzymają stan, odliczanie włączeń liczy się z millis()). Nieudane pobranie zostawia poprzednią pogodę do
-// WEATHER_MAX_AGE_MS. Kolejne miejsca co WEATHER_SPACING_MS.
-// Od 1.3.4 zwykłe HTTP (WiFiClient): TLS po dobie pracy nie dostawał pamięci (mbedtls -0x7F00, weather.hpp).
-void fetchWeather(size_t index, uint32_t nowMs)
-{
-  const WeatherLocation location = weatherPlaces.at(index).location;
-  WiFiClient client;
-  HTTPClient request;
-  request.setConnectTimeout(HTTP_TIMEOUT_MS);
-  request.setTimeout(HTTP_TIMEOUT_MS);
-  bool ok = false;
-  WeatherReading reading;
-  // diagnostyka (od 1.3.2): największy blok sterty przed połączeniem, kod HTTP (ujemny = błąd połączenia
-  // HTTPClient); pole tls od 1.3.4 zawsze 0 (bez TLS), zostaje dla zgodności z chmurą
-  diag.weatherHeapBlock = ESP.getMaxAllocHeap();
-  diag.weatherAtMs = nowMs == 0 ? 1 : nowMs;
-  int code = 0;
-  if (request.begin(client, openMeteoUrl(location).c_str())) {
-    code = request.GET();
-    if (code == 200) {
-      const String body = request.getString();
-      ok = parseOpenMeteoCurrent(body.c_str(), body.length(), reading);
-      // 200 z odpowiedzią, której nie da się odczytać: osobny kod, żeby odróżnić od błędu połączenia
-      if (!ok) code = 1;
-    }
-    request.end();
-  }
-  diag.weatherTls = 0;
-  diag.weatherCode = code;
-  if (ok) diag.weatherOk++; else diag.weatherFail++;
-  weatherPlaces.onFetched(index, ok, reading, nowMs);
-  logf("pogoda %u/%u: %s (HTTP %d, blok %u B)", static_cast<unsigned>(index + 1),
-    static_cast<unsigned>(weatherPlaces.size()), ok ? "pobrana" : "błąd pobierania", code,
-    static_cast<unsigned>(diag.weatherHeapBlock));
 }
 
 // --- strony WWW ---
@@ -823,9 +761,6 @@ void handleInstall()
   page += "<div>Relays: <b>" + String(RELAY_COUNT) + "</b></div>";
   page += "<div>Wi-Fi: " + String(WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : String("not connected")) + "</div>";
   page += "<div>Registered in the cloud: " + String(registeredThisBoot ? "yes" : "no") + "</div></div>";
-  // przekaźnik poczty: odcisk klucza do porównania z aplikacją przed zatwierdzeniem
-  page += "<div class=\"card\"><h2>Mail</h2><div>Key fingerprint: <b>" + htmlEscape(mailRelay.fingerprint()) + "</b></div>";
-  page += "<div><small>" + htmlEscape(mailRelay.statusText()) + "</small></div></div>";
   // firmware na końcu strony (jak we wszystkich sterownikach)
   page += "<form method=\"post\" action=\"/install/firmware\" enctype=\"multipart/form-data\" class=\"card\"><h2>Firmware</h2>";
   page += "<div>Version: <b>" + String(FW_VERSION) + "</b></div>";
@@ -947,8 +882,6 @@ void setup()
   loadConfig();
   parseCloudUrl();
   serial = readSerial();
-  // klucz przekaźnika poczty (tworzony przy pierwszym starcie 1.3.0) i jego zadanie
-  if (!mailRelay.begin(preferences, cloudUrl)) logf("poczta: klucz niedostępny, przekaźnik poczty wyłączony");
   logf("start: firmware %s, SN %s, rootId %s, przekaźników %u, chmura %s", FW_VERSION, serial.c_str(),
     rootId.length() > 0 ? rootId.c_str() : "brak", static_cast<unsigned>(RELAY_COUNT), CLOUD_URL);
   logf("start: przyczyna %s, start nr %u", diag.reset, static_cast<unsigned>(diag.boot));

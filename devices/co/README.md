@@ -50,6 +50,17 @@ Cały system jest w repozytorium [robertorlowski/my-home](https://github.com/rob
   Ustawieniach) i zapisuje otrzymany Root ID w NVS, gdy jest inny niż
   zapisany. Znany SN dostaje z powrotem swój dotychczasowy Root ID. Gdy serwer odpowie 409 (Root ID należy do innego SN),
   sterownik kasuje Root ID i rejestruje się ponownie.
+- **Bez pogody i poczty** (od 1.4.0, 2026-11-13). W wersjach 1.3.0–1.3.4
+  sterownik był zapasem włącznika: pobierał pogodę z Open-Meteo i wysyłał maile
+  aplikacji (wspólne biblioteki `devices/common/weather` i
+  `devices/common/mail_relay`, usunięte 2026-11-13). Teraz robi to tylko serwer
+  na Oracle, który ma własny adres IP; włącznik od 1.4.0 też tego nie robi.
+- **Polecenia dla QNAP-a** (od 1.4.0, 2026-11-13, próbnie). Na wiadomość
+  WebSocket `{"typ":"qnap"}` z podpisanym poleceniem (`stan`, `restart_sieci`,
+  `restart`) sterownik wysyła je bez zmian `POST`-em do usługi na QNAP-ie w sieci
+  domowej i odsyła wynik `{"typ":"qnap_wynik"}`. Klucza nie zna, niczego nie
+  zapisuje i nie ponawia. Ok. 2026-12-13 sprawdzamy, czy było używane; bez
+  użycia funkcja zostanie usunięta. Opis: [dokumentacja techniczna](docs/3-dokumentacja-techniczna.md#polecenia-dla-qnap-a-od-140-próbnie).
 - **Punkt dostępowy** `MyHome-HeatPump-XXXX` (XXXX = ostatnie 4 znaki SN, otwarty, adres `10.10.10.1`; od 2026-10-10, wcześniej `HP-CO-setup`) startuje razem ze sterownikiem i jest
   wyłączany po 3 min stabilnego dostępu do chmury; wraca po 1 min bez Wi-Fi
   albo po 5 min bez odpowiedzi chmury.
@@ -80,7 +91,7 @@ Cały system jest w repozytorium [robertorlowski/my-home](https://github.com/rob
 | ESP32-WROOM (`esp32dev`) | — |
 | RS-485 (pompa CHPC `0x41`, DTU `0x69`) | `Serial`, 9600 b/s |
 | Wyświetlacz ST7735 | DC 12, CS 13, MOSI 14, CLK 27, RST 0 |
-| Przekaźniki CO / CWU | GPIO26 / GPIO25 |
+| Dawne przekaźniki CO / CWU | GPIO26 / GPIO25, wolne od 1.2.0 |
 | Zasilanie modułów | GPIO18 |
 | Przycisk trybu | GPIO5, z zewnętrznym rezystorem |
 | RTC DS3231 | I²C, synchronizacja z NTP co 6 h |
@@ -123,6 +134,10 @@ pio test -e native
 | [test_pv_data_processor](test/test_pv_data_processor/test_main.cpp) | parser odpowiedzi Modbus z DTU Hoymiles |
 | [test_modbus_frame](test/test_modbus_frame/test_main.cpp) | kodowanie ramek RS-485 i CRC |
 | [test_access_point_policy](test/test_access_point_policy/test_main.cpp) | kiedy wyłączyć i włączyć punkt dostępowy `MyHome-HeatPump-XXXX` |
+| [test_bus_diagnostics](test/test_bus_diagnostics/test_main.cpp) | diagnostyka magistrali na zlecenie z chmury |
+| [test_hp_link_watch](test/test_hp_link_watch/test_main.cpp) | kiedy uznać, że CHPC nie odpowiada |
+| [test_ota](test/test_ota/test_main.cpp) | oferta aktualizacji firmware z odpowiedzi `hp/add` |
+| [test_qnap_relay](test/test_qnap_relay/test_main.cpp) | polecenia dla QNAP-a: adres tylko z sieci prywatnej, ciało do 1 KB, podpis 64 znaki hex, wynik przycięty do 1 KB bez rozcinania znaku UTF-8 |
 
 **E2E całego łańcucha** (chpc ⇄ RS-485 ⇄ co ⇄ My Home ⇄ przeglądarka) są
 w `test/e2e/` w katalogu głównym My Home; instrukcja w `devices/chpc/test/README.md`.
@@ -138,6 +153,7 @@ lub interfejsów tych plików wymaga poprawki w `test/e2e/build-bridge.sh`.
 |---|---|
 | `main.cpp` | pętla główna: odczyty, przycisk, wymiana z chmurą |
 | `cloud_client` | HTTPS i WebSocket do My Home, rejestracja urządzenia |
+| `qnap_relay` | polecenia dla QNAP-a z WebSocketu: odczyt i sprawdzenie wiadomości, odpowiedź `qnap_wynik` (od 1.4.0) |
 | `operation_parser` | JSON operacji z chmury → struktury domenowe |
 | `operation_controller` | stan z chmury, tryby, efektywne komendy i przekaźniki |
 | `serial_bus`, `modbus_frame` | kolejka RS-485 z priorytetami, kodowanie ramek, CRC |
@@ -155,6 +171,9 @@ lub interfejsów tych plików wymaga poprawki w `test/e2e/build-bridge.sh`.
   wiodącym.
 - [docs/server-driven-refactor-2026-09-20.md](docs/server-driven-refactor-2026-09-20.md):
   obecna architektura, przepływ operacji, tryby, UART, chmura.
+- [docs/propozycja-qnap-2026-11-13.md](docs/propozycja-qnap-2026-11-13.md):
+  propozycja dostępu do QNAP-a przez sterownik z wariantami (historia; wdrożono
+  z niej tylko polecenia, inną drogą niż tam opisana).
 
 ## Licencja
 

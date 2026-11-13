@@ -3,12 +3,12 @@
 // udostępnienie sterownika, powiadomienie administratora o rejestracji. SMTP tylko ze zmiennych środowiskowych (SMTP_HOST,
 // SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM, MAIL_ADMIN; Render: Environment, lokalnie server/.env).
 // Bez SMTP_HOST (testy, środowisko bez poczty) mail trafia do outbox w pamięci i do logu.
-// MAIL_RELAY=1: serwer nie łączy się z pocztą, mail idzie do kolejki i wysyła go sterownik (mail-relay.service.ts).
+// Wysyłkę przez sterowniki (MAIL_RELAY=1, kolejka mail_outbox, 2026-10-17) usunięto 2026-11-13: serwer na Oracle łączy
+// się z pocztą sam, a żaden sterownik nie ma już przekaźnika poczty.
 // Office 365 wysyła tylko z adresu konta SMTP_USER, chyba że ma ono uprawnienie „Send As” do MAIL_FROM
 // (próba 2026-10-11: inny nadawca = 5.2.252 SendAsDenied), dlatego przy odmowie mail idzie z SMTP_USER.
 import { setting } from './settings.service';
 import nodemailer, { Transporter } from 'nodemailer';
-import { enqueueMail, relayEnabled } from './mail-relay.service';
 import { DEFAULT_LANG, Lang, locale } from '../i18n';
 
 export interface OutgoingMail {
@@ -44,15 +44,10 @@ export const resetMailTransport = () => { transport = null; };
 
 export const adminEmail = () => setting('MAIL_ADMIN') ?? '';
 
-/** poczta działa: SMTP z ustawień albo przekaźnik przez sterowniki; bez niej maile trafiają tylko do outbox i dziennika */
-export const mailConfigured = () => relayEnabled() || !!setting('SMTP_HOST');
+/** poczta działa: SMTP z ustawień; bez niej maile trafiają tylko do outbox i dziennika */
+export const mailConfigured = () => !!setting('SMTP_HOST');
 
 export async function sendMail(mail: OutgoingMail): Promise<void> {
-  // MAIL_RELAY=1 (Render na darmowym planie blokuje SMTP): mail wysyła sterownik z domowego łącza
-  if (relayEnabled()) {
-    await enqueueMail(mail);
-    return;
-  }
   const smtp = smtpTransport();
   if (!smtp) {
     outbox.push(mail);

@@ -52,6 +52,7 @@ flowchart TD
 
 - **Szybki odczyt** po serii komend sprawdza, czy pompa je przyjęła, i od razu wysyła świeży stan; zwykły cykl liczy się wtedy od nowa.
 - **Komunikat WebSocket `operation`** wymusza wcześniejszy `POST /api/hp/add`.
+- **Polecenie dla QNAP-a** (od 1.4.0, próbnie): wiadomość WebSocket `{"typ":"qnap"}` czeka w RAM na wolną magistralę; wtedy sterownik wysyła jeden `POST` do QNAP-a w sieci domowej (najwyżej 10 s, pętla czeka) i odsyła odpowiedź `{"typ":"qnap_wynik"}` tym samym WebSocketem ([dokumentacja techniczna](3-dokumentacja-techniczna.md#polecenia-dla-qnap-a-od-140-próbnie)).
 - **Brak odpowiedzi pompy** oznacza `heatPumpLost()`: pierwszy odczyt po powrocie wysyła do pompy cały stan od nowa.
 - Telemetria idzie także przy odłączonej pompie (z pustym `HP`), żeby serwer odesłał tryb pracy.
 

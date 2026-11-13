@@ -9,7 +9,6 @@ import {
   phoneStatus, publicUser, sendPhoneDisableCode, setRemember, startDeleteAccount, startEmailChange, setLanguage, startLogin,
   startPhoneSetup, startSystemLogin, updateProfile, verifyEmailChange, verifyLogin, verifyPhoneLogin, verifySystemLogin,
 } from '../services/auth.service';
-import { MailUnavailableError } from '../services/mail-relay.service';
 import { requestLang, t, texts } from '../i18n';
 
 // komunikaty w języku żądania (Accept-Language od klienta, inaczej język konta; core/i18n.ts)
@@ -19,8 +18,6 @@ const fail = (req: Request, res: Response, error: unknown) => {
     if (error.retryAfterSeconds) res.setHeader('Retry-After', String(error.retryAfterSeconds));
     return res.status(error.status).json({ message: error.messageFor(lang), retryAfterSeconds: error.retryAfterSeconds, ...error.extra });
   }
-  // przekaźnik poczty (MAIL_RELAY=1) bez sterownika w sieci: komunikat zamiast „Błąd serwera”
-  if (error instanceof MailUnavailableError) return res.status(error.status).json({ message: error.messageFor(lang) });
   console.error('[konta]', error);
   return res.status(500).json({ message: t(lang, 'err.server') });
 };

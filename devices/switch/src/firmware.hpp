@@ -24,7 +24,10 @@ constexpr const char *DEVICE_TYPE = "switch";
 // 1.3.7: naprawa łączności bez odpowiedzi serwera (net_recovery.hpp): nowe połączenie po 2 min, ponowne łączenie
 //        z routerem po 5 min i co 5 min, restart płytki po 15 min przy wyłączonych przekaźnikach (przyczyna no_cloud);
 //        2026-11-07 włącznik nie zgłaszał się ponad godzinę, router w jego sieci czasem się blokuje.
-constexpr const char *FW_VERSION = "1.3.7";
+// 1.4.0: bez pogody i przekaźnika poczty (2026-11-13, decyzja właściciela): serwer na Oracle ma własny adres IP i sam
+//        pobiera pogodę oraz wysyła maile. Bez mailKey w zgłoszeniu, bez weather w zgłoszeniu stanu i bez diag.weather;
+//        bez karty „Mail” na /install i bez devices/common (lib_extra_dirs).
+constexpr const char *FW_VERSION = "1.4.0";
 // Nazwa nadawana nowemu urządzeniu przy pierwszym zgłoszeniu.
 constexpr const char *DEVICE_NAME = "Włącznik";
 

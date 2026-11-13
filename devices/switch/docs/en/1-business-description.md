@@ -48,7 +48,7 @@ From version 1.3.5 the controller pages are in English (no language selection); 
   - **"Schedule"**: back to the schedule (without the cloud it switches the relay off).
 
   The "Wi-Fi and cloud" card: network, address, signal, cloud connection state.
-- **Installation** (`/install`, the "Setup" page, login and password): Wi-Fi, firmware file upload, SN, Root ID, number of relays, registration state, mail key fingerprint ("Key fingerprint").
+- **Installation** (`/install`, the "Setup" page, login and password): Wi-Fi, firmware file upload, SN, Root ID, number of relays, registration state (up to 1.3.7 also the "Mail" card with the mail key fingerprint, "Key fingerprint").
 
 ## Who uses it
 
@@ -65,7 +65,9 @@ From version 1.3.5 the controller pages are in English (no language selection); 
 6. **In the application**: relay name (Ustawienia), schedule, optionally the "default" star.
 7. **Further versions** over the network (firmware page in the application or `/install`).
 
-Deployment state: since 2026-10-03 one switch with firmware 1.0.3 runs in production, its relay named "Bojler" (water heater).
+Deployment state: since 2026-10-03 one switch runs in production, its relay named "Bojler" (water heater). Firmware 1.4.0 (2026-11-13) waits for deployment after the server.
+
+Up to version 1.3.7 the switch also had two roles for the whole application, because it sat in the home network and the server on Render could not do them: from 1.1.3 it **fetched the weather** from Open-Meteo for the home and the weather tiles (from 1.2.0 many places, every 15 min per place; since 2026-11-07 only as a fallback), and from 1.3.0 it was the **mail relay** — it sent the application's mails over SMTP with credentials encrypted with its own board key. Since 1.4.0 (2026-11-13, owner's decision) both roles are gone: the server on Oracle has its own IP address and fetches the weather and sends mail itself. Details: CLAUDE.md, sections 5d and 5f.
 
 ## Limitations
 

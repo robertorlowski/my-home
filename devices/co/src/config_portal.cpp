@@ -9,8 +9,6 @@
 #include <device_config.hpp>
 
 namespace {
-// przekaźnik poczty (od 1.3.0): odcisk klucza i stan na /install
-CloudClient *cloudSource = nullptr;
 
 WebServer server(80);
 const Telemetry *telemetrySource = nullptr;
@@ -183,7 +181,6 @@ placeholder="unchanged">
 <label for="rootid">Root ID</label>
 <input id="rootid" value="%ROOTID%" placeholder="none" readonly>
 %REGISTRATION%
-%MAIL%
 <button type="submit">%BUTTON%</button>
 <p class="sub" style="text-align:center;margin:22px 0 0"><a href="/">Telemetry view</a></p>
 </form></body></html>)HTML";
@@ -205,8 +202,8 @@ String escapeHtml(const String &value)
   return escaped;
 }
 
-// Wypełnia znaczniki %MESSAGE%, %SSID%, %SERIAL%, %ROOTID%, %REGISTRATION%, %MAIL%
-// i %BUTTON% w PAGE_TEMPLATE. Hasło Wi-Fi nigdy nie trafia do strony.
+// Wypełnia znaczniki %MESSAGE%, %SSID%, %SERIAL%, %ROOTID%, %REGISTRATION% i %BUTTON%
+// w PAGE_TEMPLATE. Hasło Wi-Fi nigdy nie trafia do strony.
 String renderPage(const String &message)
 {
   const DeviceConfig &config = deviceConfig();
@@ -219,11 +216,6 @@ String renderPage(const String &message)
     ? F("<p class=\"st on\">Registered in the cloud</p>")
     : F("<p class=\"st off\">Not registered. The controller registers "
         "once it is connected to the internet.</p>"));
-  // przekaźnik poczty: odcisk do porównania z aplikacją przed zatwierdzeniem klucza
-  page.replace("%MAIL%", cloudSource
-    ? "<label>Mail (board key)</label><input value=\"" + escapeHtml(cloudSource->mailFingerprint())
-      + "\" readonly><small>" + escapeHtml(cloudSource->mailStatus()) + "</small>"
-    : String());
   page.replace("%BUTTON%", deviceRegistered()
     ? F("Save and restart") : F("Register and restart"));
   return page;
@@ -302,12 +294,9 @@ void handleSave()
 }
 }
 
-void beginConfigPortal(const Telemetry &telemetry,
-  const PvTelemetry &pvTelemetry, CloudClient &cloud)
+void beginConfigPortal(const Telemetry &telemetry, const PvTelemetry &pvTelemetry)
 {
   if (running) return;
-
-  cloudSource = &cloud;
 
   telemetrySource = &telemetry;
   pvTelemetrySource = &pvTelemetry;

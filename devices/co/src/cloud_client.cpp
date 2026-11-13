@@ -2,14 +2,13 @@
 // i pobieranie obrazu firmware (OTA na zlecenie „Aktualizuj”, od 1.1.0).
 // Kontrakt: CLAUDE.md, punkty 3 (rejestracja, 404/409) i 8 (WebSocket).
 // Certyfikat serwera nie jest weryfikowany (brak CA w kliencie).
-// Od 1.3.0 zapasowy przekaźnik poczty (devices/common/mail_relay): klucz płytki w zgłoszeniu (mailKey),
-// zaszyfrowane dane SMTP z odpowiedzi do zadania przekaźnika, WebSocket „mail” je budzi.
+// Zapasowy przekaźnik poczty (1.3.0–1.3.4, devices/common/mail_relay) usunięty w 1.4.0: serwer na Oracle wysyła
+// maile sam. Klucz płytki, który 1.3.x zapisał w NVS, zostaje nieużywany.
 #include <cloud_client.hpp>
 
 #include <Update.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
-#include <Preferences.h>
 #include <device_config.hpp>
 #include <mbedtls/sha256.h>
 
@@ -60,13 +59,6 @@ CloudClient *CloudClient::instance = nullptr;
 void CloudClient::begin()
 {
   instance = this;
-  // klucz przekaźnika poczty w NVS sterownika (tworzony przy pierwszym starcie 1.3.0) i zadanie przekaźnika
-  Preferences preferences;
-  if (preferences.begin(PREFERENCES_NAMESPACE, false)) {
-    mailRelay.begin(preferences, CLOUD_BASE_URL);
-    preferences.end();
-  }
-  if (deviceRegistered()) mailRelay.setDevice(deviceConfig().rootId, deviceSerial());
   if (deviceRegistered()) startWebSocket();
 }
 
@@ -126,8 +118,6 @@ void CloudClient::registerDevice()
   request["deviceId"] = serial;
   request["version"] = FW_VERSION;
   request["ip"] = sentIp.toString();
-  // klucz publiczny płytki dla przekaźnika poczty (chmura zatwierdza go w aplikacji)
-  if (mailRelay.publicKey().length() > 0) request["mailKey"] = mailRelay.publicKey();
   String response = send(String(CLOUD_BASE_URL) + "devices/register", request);
   if (response.length() == 0) return;
 
@@ -152,8 +142,6 @@ void CloudClient::registerDevice()
     }
     stopWebSocket();
   }
-  mailRelay.setDevice(rootId, serial);
-  mailRelay.onRegisterReply(reply["mail"]);
   registeredIp = sentIp;
 }
 
@@ -162,6 +150,22 @@ bool CloudClient::takeOperationRequest()
   bool requested = operationRequested;
   operationRequested = false;
   return requested;
+}
+
+bool CloudClient::takeQnapRequest(QnapRequest &out)
+{
+  if (!qnapPending) return false;
+  qnapPending = false;
+  out = qnapRequest;
+  qnapRequest = QnapRequest();
+  return true;
+}
+
+void CloudClient::sendQnapResult(const std::string &json)
+{
+  if (!webSocketStarted) return;
+  String text(json.c_str());
+  webSocket.sendTXT(text);
 }
 
 String CloudClient::post(const String &path, const JsonDocument &data)
@@ -178,7 +182,6 @@ String CloudClient::post(const String &path, const JsonDocument &data)
     // The stored rootId belongs to another device. Forgetting it lets the
     // registration fetch the right one; the WebSocket reopens with it.
     clearRootId();
-    mailRelay.setDevice("", deviceSerial());
     registrationAttempted = false;
     registeredIp = IPAddress();
     stopWebSocket();
@@ -324,16 +327,6 @@ uint32_t CloudClient::webSocketDisconnectCount() const
   return webSocketDisconnects;
 }
 
-String CloudClient::mailStatus()
-{
-  return mailRelay.statusText();
-}
-
-String CloudClient::mailFingerprint() const
-{
-  return mailRelay.fingerprint();
-}
-
 void CloudClient::handleWebSocketEvent(
   WStype_t type, uint8_t *payload, size_t length)
 {
@@ -350,8 +343,21 @@ void CloudClient::handleWebSocketEvent(
       DeserializationError error = deserializeJson(message, payload, length);
       if (!error && message["rootId"] == deviceConfig().rootId.c_str()) {
         if (message["type"] == "operation") instance->operationRequested = true;
-        // mail w kolejce chmury albo zatwierdzony klucz: przekaźnik poczty pyta od razu (własne zadanie)
-        else if (message["type"] == "mail") instance->mailRelay.wake();
+      }
+      // polecenie dla QNAP-a (od 1.4.0): złe pole albo drugie polecenie w trakcie pierwszego = odpowiedź od razu
+      // ze statusem 0; poprawne czeka w RAM na wolną magistralę (main.cpp, relayQnapRequest)
+      if (!error) {
+        QnapRequest request;
+        std::string problem;
+        const QnapParse parsed = parseQnapRequest(message.as<JsonVariantConst>(), request, problem);
+        if (parsed == QnapParse::Invalid) {
+          instance->sendQnapResult(buildQnapResult(request.id, 0, problem));
+        } else if (parsed == QnapParse::Ok && instance->qnapPending) {
+          instance->sendQnapResult(buildQnapResult(request.id, 0, "sterownik wykonuje poprzednie polecenie"));
+        } else if (parsed == QnapParse::Ok) {
+          instance->qnapRequest = request;
+          instance->qnapPending = true;
+        }
       }
       break;
     }

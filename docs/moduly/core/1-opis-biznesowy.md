@@ -14,8 +14,8 @@ Moduł odpowiada za:
 - **konta użytkowników**: logowanie e-mailem i kodem, dane konta, udostępnianie sterownika innej osobie z wyborem zakładek;
 - **wspólny wygląd**: pasek sterownika z zakładkami, dolną nawigację na telefonie, motyw jasny i ciemny, język polski albo angielski, okna dialogowe, kartę „Sterownik” i dziennik operacji;
 - **menu i ekrany zależne od rodzaju sterownika** (pompa ma harmonogramy, hydrofor i fotowoltaika nie);
-- **wspólne usługi**: temperaturę zewnętrzną (czujnik kotła, bez niego prognoza), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez serwer, zapasowo przez włącznik), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
-- **pocztę**: kody logowania i powiadomienia wysyła serwer; opcjonalnie mogą je wysyłać sterowniki w domu (włącznik, zapasowo `co`).
+- **wspólne usługi**: temperaturę zewnętrzną (czujnik kotła, bez niego prognoza), pogodę domu i miejscowości z kafelków (Open-Meteo, pobierana przez serwer), stronę pogody z prognozą, kalendarz polskich świąt, szybkie powiadamianie sterownika i przeglądarki (WebSocket);
+- **pocztę**: kody logowania i powiadomienia wysyła serwer (wysyłkę przez sterowniki w domu, możliwą od 2026-10-17, usunięto 2026-11-13).
 - **ustawienia aplikacji**: konto systemowe ma w menu po lewej Moje dane, Powiadomienia i Ustawienia. Zakładka Ustawienia (poczta, adres kodów konta system, adresy aplikacji, wersja demo, klucze powiadomień, zadania w tle) otwiera się bez dodatkowego hasła (od 2026-11-13).
 
 ## Dla kogo
@@ -29,7 +29,7 @@ Moduł odpowiada za:
 
 | Czynność | Gdzie |
 |---|---|
-| Zalogować się | ekran logowania: e-mail → kod z maila (albo link z maila); po zalogowaniu pytanie „Zapamiętać?” — sesja zapamiętana trwa 90 dni. Mail wysyła sterownik w domu; gdy żaden nie jest w sieci, ekran pokazuje „Poczta jest chwilowo niedostępna…” |
+| Zalogować się | ekran logowania: e-mail → kod z maila (albo link z maila); po zalogowaniu pytanie „Zapamiętać?” — sesja zapamiętana trwa 90 dni. Mail wysyła serwer |
 | Włączyć powiadomienia na telefon i w przeglądarce | „Moje dane” → karta „Powiadomienia” → „Włącz na tym urządzeniu” (zgoda przeglądarki), potem dla każdego sterownika zaznaczyć zdarzenia: start / stop sprężarki, błąd pompy, rozpalanie i wygaszenie kotła, alarm kotła, włączenie / wyłączenie przekaźnika, uruchomienie hydroforu, sterownik przestał / znów odpowiada; „domyślne” zaznacza najważniejsze. Cisza nocna od–do wstrzymuje wszystko poza pilnymi (błąd, alarm). Powiadomienia włącza się na każdym urządzeniu osobno, wybór zdarzeń jest wspólny dla konta; „Wyślij próbne” sprawdza, czy dochodzą |
 | Pokazać instalację komuś bez konta | ekran logowania → „Zobacz wersję demo”: podgląd sterowników właściciela wskazanego na serwerze, tylko do odczytu (każda próba zmiany kończy się komunikatem), bez numerów seryjnych, adresów i położenia domu; żółty pasek „Wersja demo” i „Wyjdź”; sesja 2 godziny |
 | Mieć aplikację na telefonie | Chrome na Androidzie: menu → „Dodaj do ekranu głównego” (aplikacja PWA z ikoną, bez paska adresu, otwiera się także bez sieci z ekranem „Brak połączenia”); iPhone: Udostępnij → „Do ekranu początkowego”. Pakiet Androida (TWA, `android/`) można zainstalować z pliku `.apk` albo docelowo z Google Play |
@@ -66,7 +66,7 @@ Moduł odpowiada za:
 |---|---|
 | ![Strona pogody](img/pogoda.png) | ![Strona pogody na telefonie](img/pogoda-telefon.png) |
 
-*Strona pogody (kliknięcie kafelka pogody): zakładki Teraz, Najbliższe dni, Słońce i PV, Ogrzewanie, Powietrze, Wiatr i opady — jak widoki sterownika: w bocznym menu na komputerze, w dolnej nawigacji z „Więcej” na telefonie. „Teraz” to karta z temperaturą, opisem nieba, maksimum i minimum dnia, temperaturą odczuwalną, wiatrem, wilgotnością, ciśnieniem i godzinami słońca, pasek najbliższych 48 godzin (ikona, temperatura, prawdopodobieństwo opadu) i jutrzejsza temperatura. Bieżące warunki pochodzą z pomiaru pobranego przez włącznik, prognozę i jakość powietrza przeglądarka pobiera wprost z Open-Meteo.*
+*Strona pogody (kliknięcie kafelka pogody): zakładki Teraz, Najbliższe dni, Słońce i PV, Ogrzewanie, Powietrze, Wiatr i opady — jak widoki sterownika: w bocznym menu na komputerze, w dolnej nawigacji z „Więcej” na telefonie. „Teraz” to karta z temperaturą, opisem nieba, maksimum i minimum dnia, temperaturą odczuwalną, wiatrem, wilgotnością, ciśnieniem i godzinami słońca, pasek najbliższych 48 godzin (ikona, temperatura, prawdopodobieństwo opadu) i jutrzejsza temperatura. Bieżące warunki pochodzą z odczytu pobranego przez serwer, prognozę i jakość powietrza przeglądarka pobiera wprost z Open-Meteo.*
 
 | Telefon — pasek i dolna nawigacja | Telefon — „Więcej” |
 |---|---|
@@ -76,7 +76,7 @@ Moduł odpowiada za:
 
 ![Logowanie](img/logowanie.png)
 
-*Logowanie: karta z adresem e-mail; kod i link przychodzą mailem. Ikona motywu działa już na tym ekranie. Mail wysyła włącznik w domu (zapasowo sterownik `co`), więc dociera w kilka sekund; bez sterownika w sieci logowanie dostaje komunikat o niedostępnej poczcie, a użytkownik systemowy loguje się hasłem.*
+*Logowanie: karta z adresem e-mail; kod i link przychodzą mailem. Ikona motywu działa już na tym ekranie. Mail wysyła serwer i dociera w kilka sekund. Użytkownik systemowy wpisuje „system” i dostaje kod na stały adres z ustawień (od 2026-11-13; wcześniej logował się hasłem).*
 
 ![Moje dane](img/konto.png)
 
@@ -105,10 +105,10 @@ Moduł odpowiada za:
 - **Sterownika nie da się usunąć z aplikacji.** Usunięcie wymaga zmiany w bazie danych.
 - **Część danych jest w pamięci serwera** (ostatnia telemetria, operacje ręczne, dane urządzeń). Restart serwera je czyści; sterownik odtwarza je przy kolejnej wysyłce.
 - **Temperatura zewnętrzna** pochodzi z czujnika zewnętrznego kotła pelletowego; bez kotła albo bez świeżego odczytu z prognozy Open-Meteo dla domu.
-- **Poczta przez sterowniki jest opcją.** Domyślnie maile wysyła serwer. Po włączeniu „Wysyłki przez sterowniki” maile (kody logowania, zaproszenia, potwierdzenia) wysyła włącznik, a zapasowo `co`. Gdy oba są wtedy bez sieci, logowanie kodem nie działa (komunikat „Poczta jest chwilowo niedostępna”); zostaje konto systemowe z hasłem. Klucz płytki, która ma dostać dane poczty, zatwierdza użytkownik systemowy po porównaniu odcisku ze stroną `/install` płytki.
+- **Maile wysyła tylko serwer.** Bez skonfigurowanej poczty na serwerze maile (kody logowania, zaproszenia, potwierdzenia) trafiają tylko do jego dziennika. Wysyłkę przez sterowniki w domu (od 2026-10-17, potrzebną na Renderze, który blokował porty poczty) usunięto 2026-11-13.
 - **Powiadomienia zależą od przeglądarki.** Na iPhonie działają tylko w aplikacji dodanej do ekranu początkowego (iOS 16.4+), w trybie incognito wcale, a Android potrafi opóźnić je przy oszczędzaniu baterii. Temperatura na kafelku „Dom” pochodzi z czujnika zewnętrznego kotła, gdy piec daje świeży pomiar (do 15 min); przy wyłączonym piecu z modelu pogodowego, który w dolinie myli się nocą o kilka stopni.
 - **Wersja demo jest publiczna.** Każdy, kto zna adres aplikacji, widzi dane instalacji właściciela (temperatury, historię, harmonogramy). Serwer ukrywa dane wrażliwe i blokuje zapisy, ale sam podgląd jest jawny; wyłącza się go, usuwając `DEMO_OWNER_EMAIL` z konfiguracji serwera.
-- **Pogodę pobiera serwer.** Od 2026-11-07 bieżące warunki pobiera serwer na Oracle, który ma własny adres IP (na Renderze adres był wspólny z innymi usługami i Open-Meteo odrzucało zapytania). Gdy serwer nie dostanie pogody przez 25 min, pobiera ją włącznik z domowego łącza, a po nim sterownik `co`; bez żadnego z nich pasek i kafelki pogody pokazują ostatni odczyt, a potem prognozę.
+- **Pogodę pobiera tylko serwer.** Od 2026-11-07 bieżące warunki pobiera serwer na Oracle, który ma własny adres IP (na Renderze adres był wspólny z innymi usługami i Open-Meteo odrzucało zapytania). Od 2026-11-13 sterowniki nie pobierają jej nawet zapasowo. Gdy serwer nie dostanie pogody, pasek i kafelki pogody pokazują ostatni odczyt (do 45 min), a potem prognozę.
 
 ## Słownik
 
@@ -125,7 +125,7 @@ Moduł odpowiada za:
 | **Kafelek prosty** | kafelek włącznika albo pieca na liście z dużymi przyciskami zamiast wartości (2026-10-20); dwa takie kafelki mieszczą się na ekranie telefonu bez przewijania |
 | **Kafelek** | pole na liście sterowników: sterownik z bieżącym stanem albo pogoda miejscowości |
 | **Strona pogody** | ekran po kliknięciu kafelka pogody: bieżące warunki, prognoza, słońce i PV, ogrzewanie, powietrze, wiatr i opady |
-| **Przekaźnik poczty** | sterownik w domu (włącznik, zapasowo `co`), który wysyła maile aplikacji; dane poczty dostaje zaszyfrowane swoim kluczem i trzyma tylko w pamięci |
+| **Przekaźnik poczty** | dawniej (2026-10-17 – 2026-11-13) sterownik w domu (włącznik, zapasowo `co`), który mógł wysyłać maile aplikacji zamiast serwera; usunięty |
 | **Powiadomienie Web Push** | komunikat systemowy na telefonie albo w przeglądarce o zdarzeniu sterownika; przeglądarka zapisuje subskrypcję, serwer wysyła przez usługę push przeglądarki |
 | **Wersja demo** | publiczne wejście bez hasła z ekranu logowania: sesja tylko do odczytu na koncie właściciela, 2 godziny, bez danych wrażliwych |
 | **PWA / TWA** | aplikacja webowa instalowana z przeglądarki („Dodaj do ekranu głównego”) / jej opakowanie w aplikację Androida do Google Play (katalog `android/`) |

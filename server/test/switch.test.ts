@@ -247,7 +247,7 @@ describe('Włącznik (switch)', () => {
       expect(diag).toMatchObject({ reset: 'brownout', boot: 6, httpMs: 900, resetText: 'spadek napięcia zasilania (brownout)' });
     });
 
-    it('przyjmuje pamięć sterty i wynik pobierania pogody (firmware 1.3.2)', async () => {
+    it('przyjmuje pamięć sterty (firmware 1.3.2); wynik pobierania pogody (do 1.3.7) jest pomijany', async () => {
       const { body } = await register('4CC382C520FB');
       const api = (path: string) => `/api/${path}?rootId=${body.rootId}`;
       const weather = { places: 2, ok: 3, fail: 5, code: -1, tls: -32512, heapBlock: 12000, agoS: 40 };
@@ -255,15 +255,8 @@ describe('Włącznik (switch)', () => {
         uptimeS: 600, relays: [{ on: false, changedS: 600 }],
         diag: { reset: 'software', boot: 9, wifiDrops: 0, rssi: -45, httpMs: 800, heapFree: 61000, heapMin: 30500, heapBlock: 40000, weather },
       }).expect(200);
-      let diag = (await request(app).get(api('switch/diagnostics')).expect(200)).body;
-      expect(diag).toMatchObject({ heapFree: 61000, heapMin: 30500, heapBlock: 40000, weather });
-      // błędna pogoda w diag jest pomijana, reszta zostaje
-      await request(app).post(api('switch/state')).send({
-        uptimeS: 605, relays: [{ on: false, changedS: 605 }],
-        diag: { reset: 'software', boot: 9, heapFree: 60000, weather: { places: 'dwa' } },
-      }).expect(200);
-      diag = (await request(app).get(api('switch/diagnostics')).expect(200)).body;
-      expect(diag.heapFree).toBe(60000);
+      const diag = (await request(app).get(api('switch/diagnostics')).expect(200)).body;
+      expect(diag).toMatchObject({ heapFree: 61000, heapMin: 30500, heapBlock: 40000 });
       expect(diag.weather).toBeUndefined();
     });
 
@@ -294,40 +287,18 @@ describe('Włącznik (switch)', () => {
     });
   });
 
-  describe('pogoda z Open-Meteo (firmware 1.1.3)', () => {
-    it('przyjmuje pogodę ze zgłoszenia, odsyła współrzędne, bez kotła temperatura z prognozy', async () => {
+  describe('bez pogody (firmware do 1.3.7 pobierał ją z Open-Meteo, od 2026-11-13 tylko serwer)', () => {
+    it('pole weather ze zgłoszenia jest pomijane, odpowiedź bez miejsc pogody', async () => {
       const { body } = await register('4CC382C520FA');
-      const state = (extra: object) => request(app).post(`/api/switch/state?rootId=${body.rootId}`)
-        .send({ uptimeS: 60, relays: [{ on: false, changedS: 60 }], ...extra }).expect(200);
-      const answer = await state({});
-      expect(answer.body.weather_query).toEqual({ lat: 49.374298, lon: 20.007237 });
-      await state({ weather: { temp: 6.1, code: 61, cloud: 90, precip: 1.2, rain: 1.2, snow: 0, wind: 12.5, day: 0, age_s: 30 } });
-      const now = (await request(app).get('/api/temperature').expect(200)).body;
-      // w tym teście nie ma odczytu kotła: temperatura z prognozy
-      expect(now).toMatchObject({ temperature: 6.1, temperatureSource: 'forecast' });
-      expect(now.weather).toMatchObject({ code: 61, cloudCover: 90, precipitation: 1.2, windSpeed: 12.5, isDay: false });
-      // błędna pogoda nie nadpisuje poprawnej
-      await state({ weather: { code: 'x' } });
-      expect((await request(app).get('/api/temperature').expect(200)).body.weather.code).toBe(61);
-    });
-
-    it('miejsca pogody tylko przy zmianie listy, po restarcie płytki i na początku', async () => {
-      const { body } = await register('4CC382C520FC');
-      const state = (uptimeS: number) => request(app).post(`/api/switch/state?rootId=${body.rootId}`)
-        .send({ uptimeS, relays: [{ on: false, changedS: uptimeS }] }).expect(200);
-      expect((await state(60)).body.weather_queries).toHaveLength(1);
-      // ta sama lista: bez pól, firmware zostawia swoją
-      const quiet = (await state(65)).body;
-      expect(quiet.weather_queries).toBeUndefined();
-      expect(quiet.weather_query).toBeUndefined();
-      expect(quiet.relays).toHaveLength(1);
-      // nowy kafelek pogody: nowa lista od razu
-      const tile = (await request(app).post('/api/weather-tiles').send({ name: 'Zakopane', lat: 49.3, lon: 19.95 }).expect(201)).body;
-      expect((await state(70)).body.weather_queries.map((q: { id: string }) => q.id)).toContain(tile.id);
-      expect((await state(75)).body.weather_queries).toBeUndefined();
-      // restart płytki (mniejszy czas pracy): lista od nowa
-      expect((await state(3)).body.weather_queries).toHaveLength(2);
-      await request(app).delete(`/api/weather-tiles/${tile.id}`).expect(204);
+      const answer = await request(app).post(`/api/switch/state?rootId=${body.rootId}`).send({
+        uptimeS: 60, relays: [{ on: false, changedS: 60 }],
+        weather: { temp: 6.1, code: 61, cloud: 90, precip: 1.2, rain: 1.2, snow: 0, wind: 12.5, day: 0, age_s: 30 },
+      }).expect(200);
+      expect(answer.body.weather_query).toBeUndefined();
+      expect(answer.body.weather_queries).toBeUndefined();
+      expect(answer.body.relays).toHaveLength(1);
+      // pogody nie ma, bo w testach serwer jej nie pobiera
+      expect((await request(app).get('/api/temperature').expect(200)).body.weather).toBeNull();
     });
   });
 

@@ -53,7 +53,7 @@ const wrongOf = (code: string) => (code === '000000' ? '111111' : '000000')
 
 describe('Konto system: kod zamiast hasła', () => {
   let mongoServer: MongoMemoryServer
-  const ENV_KEYS = ['AUTH_DISABLED', 'SMTP_HOST', 'MAIL_ADMIN', 'SYSTEM_EMAIL', 'MAIL_RELAY', 'SYSTEM_PASSWORD', 'PORT', 'INTERNAL_API_URL']
+  const ENV_KEYS = ['AUTH_DISABLED', 'SMTP_HOST', 'MAIL_ADMIN', 'SYSTEM_EMAIL', 'SYSTEM_PASSWORD', 'PORT', 'INTERNAL_API_URL']
   const savedEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]))
   let log: MockInstance<typeof console.log>
   // kod z dziennika serwera (bez poczty): ostatni wpis „[konta] system: kod logowania 123 456 …”
@@ -67,7 +67,7 @@ describe('Konto system: kod zamiast hasła', () => {
   })
 
   beforeEach(async () => {
-    for (const key of ['SMTP_HOST', 'MAIL_ADMIN', 'SYSTEM_EMAIL', 'MAIL_RELAY', 'SYSTEM_PASSWORD']) delete process.env[key]
+    for (const key of ['SMTP_HOST', 'MAIL_ADMIN', 'SYSTEM_EMAIL', 'SYSTEM_PASSWORD']) delete process.env[key]
     resetSettingsCache()
     resetMailTransport()
     smtp.sent.length = 0

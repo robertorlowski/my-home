@@ -90,9 +90,6 @@ export interface Device {
   firmwareSeenAt?: Date;
   /** zlecenie aktualizacji z aplikacji (wersja, kiedy); oferta idzie do sterownika tylko przy nim */
   firmwareUpdate?: { version: string; requestedAt: Date };
-  /** przekaźnik poczty (włącznik, co): zatwierdzony klucz publiczny płytki i klucz czekający na zatwierdzenie */
-  mailKey?: { publicKey: string; fingerprint: string; approvedAt: Date; seenAt?: Date };
-  mailKeyPending?: { publicKey: string; fingerprint: string; seenAt?: Date };
   /** adres IPv4 sterownika w sieci lokalnej z ostatniego zgłoszenia (pole ip) i kiedy */
   ipAddress?: string;
   ipSeenAt?: Date;
