@@ -1,6 +1,7 @@
 // Testy poleceń dla QNAP-a (qnap_relay.hpp, od 1.4.0): odczyt wiadomości WebSocket {"typ":"qnap",…}, adres tylko
 // z sieci prywatnej, ciało do 1 KB, podpis 64 znaki hex, odpowiedź {"typ":"qnap_wynik",…} z ciałem przyciętym do 1 KB
-// bez rozcinania znaku UTF-8.
+// bez rozcinania znaku UTF-8. Od 1.5.0 budzenie: wiadomość {"typ":"qnap_wybudz",…} z adresami MAC, odczyt adresu MAC
+// i treść pakietu budzącego Wake-on-LAN.
 // Uruchamianie: pio test -e native (plik .cpp włączany bezpośrednio).
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -110,6 +111,89 @@ void test_result_message_with_body_limit()
   TEST_ASSERT_EQUAL(QNAP_BODY_MAX, strlen(parsed["cialo"] | ""));
 }
 
+// przykładowe adresy MAC (administrowane lokalnie, nie istnieją)
+JsonDocument wakeMessage()
+{
+  JsonDocument document;
+  document["typ"] = "qnap_wybudz";
+  document["id"] = "0011223344556677";
+  JsonArray addresses = document["mac"].to<JsonArray>();
+  addresses.add("02:00:00:00:00:01");
+  addresses.add("02-00-00-AB-CD-EF");
+  return document;
+}
+
+void test_mac_address()
+{
+  MacAddress mac{};
+  TEST_ASSERT_TRUE(parseMacAddress("02:00:00:ab:cd:ef", mac));
+  const uint8_t expected[6] = {0x02, 0x00, 0x00, 0xAB, 0xCD, 0xEF};
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, mac.data(), 6);
+  TEST_ASSERT_TRUE(parseMacAddress("02-00-00-AB-CD-EF", mac));
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, mac.data(), 6);
+  TEST_ASSERT_FALSE(parseMacAddress("02:00:00:ab:cd", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("02:00:00:ab:cd:ef:01", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("02:00:00:ab:cd:eg", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("0200.00ab.cdef.00", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("020000abcdef", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("ff:ff:ff:ff:ff:ff", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("00:00:00:00:00:00", mac));
+  TEST_ASSERT_FALSE(parseMacAddress("", mac));
+}
+
+void test_magic_packet()
+{
+  MacAddress mac{};
+  TEST_ASSERT_TRUE(parseMacAddress("02:00:00:ab:cd:ef", mac));
+  uint8_t packet[QNAP_MAGIC_PACKET_SIZE];
+  memset(packet, 0x55, sizeof(packet));
+  buildMagicPacket(mac, packet);
+  TEST_ASSERT_EQUAL(102, static_cast<int>(sizeof(packet)));
+  for (size_t index = 0; index < 6; index++) TEST_ASSERT_EQUAL_UINT8(0xFF, packet[index]);
+  for (size_t repeat = 0; repeat < 16; repeat++) TEST_ASSERT_EQUAL_UINT8_ARRAY(mac.data(), packet + 6 + repeat * 6, 6);
+}
+
+void test_wake_request()
+{
+  QnapRequest request;
+  std::string error;
+  JsonDocument document = wakeMessage();
+  TEST_ASSERT_TRUE(parseQnapRequest(document.as<JsonVariantConst>(), request, error) == QnapParse::Ok);
+  TEST_ASSERT_TRUE(request.wake);
+  TEST_ASSERT_EQUAL_STRING("0011223344556677", request.id.c_str());
+  TEST_ASSERT_EQUAL(2, static_cast<int>(request.macs.size()));
+  const uint8_t second[6] = {0x02, 0x00, 0x00, 0xAB, 0xCD, 0xEF};
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(second, request.macs[1].data(), 6);
+  TEST_ASSERT_TRUE(request.body.empty());
+  TEST_ASSERT_TRUE(error.empty());
+
+  // zwykłe polecenie nie jest budzeniem
+  JsonDocument ordinary = message();
+  TEST_ASSERT_TRUE(parseQnapRequest(ordinary.as<JsonVariantConst>(), request, error) == QnapParse::Ok);
+  TEST_ASSERT_FALSE(request.wake);
+  TEST_ASSERT_TRUE(request.macs.empty());
+
+  // złe pola: odpowiedź od razu (Invalid z id), bez adresów
+  JsonDocument withoutAddresses = wakeMessage();
+  withoutAddresses.remove("mac");
+  TEST_ASSERT_TRUE(parseQnapRequest(withoutAddresses.as<JsonVariantConst>(), request, error) == QnapParse::Invalid);
+  TEST_ASSERT_EQUAL_STRING("0011223344556677", request.id.c_str());
+  TEST_ASSERT_FALSE(error.empty());
+  JsonDocument empty = wakeMessage();
+  empty["mac"].to<JsonArray>();
+  TEST_ASSERT_TRUE(parseQnapRequest(empty.as<JsonVariantConst>(), request, error) == QnapParse::Invalid);
+  JsonDocument tooMany = wakeMessage();
+  for (int index = 0; index < 3; index++) tooMany["mac"].add("02:00:00:00:00:09");
+  TEST_ASSERT_TRUE(parseQnapRequest(tooMany.as<JsonVariantConst>(), request, error) == QnapParse::Invalid);
+  JsonDocument badAddress = wakeMessage();
+  badAddress["mac"].add("ff:ff:ff:ff:ff:ff");
+  TEST_ASSERT_TRUE(parseQnapRequest(badAddress.as<JsonVariantConst>(), request, error) == QnapParse::Invalid);
+  TEST_ASSERT_TRUE(request.macs.empty());
+  JsonDocument withoutId = wakeMessage();
+  withoutId.remove("id");
+  TEST_ASSERT_TRUE(parseQnapRequest(withoutId.as<JsonVariantConst>(), request, error) == QnapParse::NotQnap);
+}
+
 int main()
 {
   UNITY_BEGIN();
@@ -117,5 +201,8 @@ int main()
   RUN_TEST(test_reads_request_without_changing_body);
   RUN_TEST(test_other_messages_and_bad_fields);
   RUN_TEST(test_result_message_with_body_limit);
+  RUN_TEST(test_mac_address);
+  RUN_TEST(test_magic_packet);
+  RUN_TEST(test_wake_request);
   return UNITY_END();
 }

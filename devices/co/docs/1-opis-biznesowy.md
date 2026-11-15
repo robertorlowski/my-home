@@ -15,7 +15,7 @@ Bez `co` pompa działa samodzielnie na ostatnich ustawieniach, ale nie da się n
 
 Sterownik nie pobiera pogody i nie wysyła maili aplikacji: robi to tylko serwer, który na Oracle ma własny adres IP. W wersjach 1.3.0–1.3.4 `co` był w obu sprawach zapasem włącznika; od 1.4.0 (2026-11-13) zapasu nie ma w żadnym sterowniku.
 
-Od 1.4.0 (2026-11-13, próbnie) `co` przewozi też polecenia z serwera do QNAP-a w sieci domowej (stan, restart sieci, restart), gdy QNAP nie jest widoczny z zewnątrz. Ok. 2026-12-13 sprawdzamy, czy było używane; bez użycia funkcja zostanie usunięta.
+Od 1.4.0 (2026-11-13, próbnie) `co` przewozi też polecenia z serwera do QNAP-a w sieci domowej (stan, restart sieci, restart), gdy QNAP nie jest widoczny z zewnątrz. Ok. 2026-12-13 sprawdzamy, czy było używane; bez użycia funkcja zostanie usunięta. Od 1.5.0 (2026-11-15) `co` ma też budzić QNAP-a, który usypia po bezczynności: na polecenie z serwera wysyła w sieci domowej pakiet budzący (Wake-on-LAN). To zastosowanie jest planowane na stałe; przegląd ok. 2026-12-13 dotyczy pozostałych poleceń. Wysyłka pakietu jest zrobiona, samo budzenie uśpionego QNAP-a czeka na sprawdzenie na sprzęcie.
 
 Od 2026-10-03 odczyt pieca pelletowego Pellux 200 działa na osobnej płytce — [devices/pellet-boiler-pelux200](../../pellet-boiler-pelux200/README.md). W dniach 2026-10-01–02 był drugą rolą `co`.
 
@@ -37,6 +37,7 @@ Od 2026-10-03 odczyt pieca pelletowego Pellux 200 działa na osobnej płytce —
 | Praca bez chmury | przycisk: `OFF` (pompa zatrzymana), `MANUAL_CO`, `MANUAL_CWU` |
 | Podgląd na miejscu | ekran kolorowy i strona WWW w sieci domowej |
 | Polecenia dla QNAP-a (próbnie, od 1.4.0) | `stan`, `restart_sieci`, `restart` z polecenia na serwerze, przekazane do QNAP-a w sieci domowej; sterownik tylko przewozi podpisane polecenie i odsyła odpowiedź |
+| Budzenie QNAP-a (od 1.5.0) | `wybudz` z polecenia na serwerze: sterownik wysyła w sieci domowej pakiet budzący (Wake-on-LAN) do uśpionego QNAP-a; pakiet niczego nie potwierdza, a budzenie na sprzęcie nie jest jeszcze sprawdzone |
 
 ## Ekran i strony sterownika
 

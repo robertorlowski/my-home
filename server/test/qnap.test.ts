@@ -20,12 +20,15 @@ import { DeviceModel } from '../src/core/models/device.model'
 import { OperationLogModel } from '../src/core/models/operation-log.model'
 import { issueEmergencySystemCode } from '../src/core/services/auth.service'
 import { cialoPolecenia, podpisCiala, QnapError, wyslijPolecenieQnap } from '../src/core/services/qnap.service'
+import { parseMacs } from '../src/core/services/settings.service'
 import { DeviceType } from '../src/core/types'
 import { createWsServer } from '../src/core/websocket'
 
 const KEY_HEX = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'
 // przykładowy adres z sieci prywatnej (repozytorium jest publiczne: bez prawdziwych adresów)
 const ADDRESS = '10.1.2.3:8250'
+// przykładowe adresy MAC (administrowane lokalnie, nie istnieją)
+const MACS = '02-00-00-00-00-01, 02:00:00:00:00:02'
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 type Message = Record<string, unknown>
@@ -180,6 +183,60 @@ describe('Polecenia dla QNAP-a przez sterownik co', () => {
     } finally {
       controller.socket.close()
       rmSync(internalTokenFile(port), { force: true })
+    }
+  })
+
+  it('wybudz: pakiet budzący do adresów MAC z QNAP_MAC, bez klucza i adresu; błąd bez QNAP_MAC; stary firmware milczy', async () => {
+    expect(parseMacs('AA-BB-CC-00-11-22, aa:bb:cc:00:11:23')).toEqual(['aa:bb:cc:00:11:22', 'aa:bb:cc:00:11:23'])
+    expect(parseMacs('aa:bb:cc:00:11')).toBeNull()
+    expect(parseMacs('ff:ff:ff:ff:ff:ff')).toBeNull()
+    expect(parseMacs('00:00:00:00:00:00')).toBeNull()
+    expect(parseMacs(Array(5).fill('aa:bb:cc:00:11:22').join(','))).toBeNull()
+
+    const noMac = await request(app).post('/api/qnap/polecenia').set(internal).send({ polecenie: 'wybudz' })
+    expect(noMac.status).toBe(503)
+    expect(noMac.body.message).toContain('QNAP_MAC')
+
+    // wybudz nie potrzebuje klucza ani adresu usługi: uśpiony QNAP nie odpowiada na HTTP
+    process.env.QNAP_MAC = MACS
+    delete process.env.QNAP_POLECENIA_KLUCZ
+    delete process.env.QNAP_ADRES
+    try {
+      const browser = await connect(pumpRoot, false)
+      const controller = await connect(pumpRoot, true)
+      controller.socket.on('message', (data) => {
+        const message = JSON.parse(data.toString()) as Message
+        if (message.typ !== 'qnap_wybudz') return
+        controller.socket.send(JSON.stringify({ typ: 'qnap_wynik', id: message.id, status: 200, cialo: '{"wyslano":12}' }))
+      })
+      const result = await wyslijPolecenieQnap({ polecenie: 'wybudz' })
+      expect(result).toMatchObject({ polecenie: 'wybudz', rootId: pumpRoot, status: 200, cialo: '{"wyslano":12}' })
+      const sent = controller.received.find((message) => message.typ === 'qnap_wybudz')!
+      expect(sent).toEqual({ typ: 'qnap_wybudz', id: result.id, mac: ['02:00:00:00:00:01', '02:00:00:00:00:02'] })
+      expect(browser.received.some((message) => message.typ === 'qnap_wybudz')).toBe(false)
+      expect(await OperationLogModel.findOne({ rootId: pumpRoot, action: /QNAP: wybudz/ }).sort({ at: -1 }).lean())
+        .toMatchObject({ action: 'QNAP: wybudz — pakiet budzący wysłany', status: 'done' })
+      controller.socket.close()
+      browser.socket.close()
+      await pause(50)
+
+      // sterownik z firmware sprzed 1.5.0 wiadomości qnap_wybudz nie zna i nie odpowiada
+      const old = await connect(pumpRoot, true)
+      expect(await wyslijPolecenieQnap({ polecenie: 'wybudz' }, undefined, 300)).toMatchObject({ status: 0, brakOdpowiedziSterownika: true })
+      // sterownik bez Wi-Fi do sieci domowej odsyła status 0 z opisem
+      old.socket.on('message', (data) => {
+        const message = JSON.parse(data.toString()) as Message
+        if (message.typ === 'qnap_wybudz') old.socket.send(JSON.stringify({ typ: 'qnap_wynik', id: message.id, status: 0, cialo: 'brak Wi-Fi' }))
+      })
+      expect(await wyslijPolecenieQnap({ polecenie: 'wybudz' })).toMatchObject({ status: 0, cialo: 'brak Wi-Fi' })
+      expect(await OperationLogModel.findOne({ rootId: pumpRoot, action: /QNAP: wybudz/ }).sort({ at: -1 }).lean())
+        .toMatchObject({ action: 'QNAP: wybudz — sterownik nie wysłał pakietu budzącego', status: 'error' })
+      old.socket.close()
+      await pause(50)
+    } finally {
+      delete process.env.QNAP_MAC
+      process.env.QNAP_POLECENIA_KLUCZ = KEY_HEX
+      process.env.QNAP_ADRES = ADDRESS
     }
   })
 

@@ -15,7 +15,7 @@ Without `co` the pump runs on its own with its last settings, but it cannot be c
 
 The controller fetches no weather and sends no application mail: only the server does it, and on Oracle it has its own IP address. In versions 1.3.0–1.3.4 `co` was the switch's fallback for both; since 1.4.0 (2026-11-13) no controller is a fallback any more.
 
-Since 1.4.0 (2026-11-13, trial) `co` also carries commands from the server to the QNAP in the home network (state, network restart, restart) when the QNAP cannot be reached from outside. Around 2026-12-13 we check whether it was used; if not, the feature will be removed.
+Since 1.4.0 (2026-11-13, trial) `co` also carries commands from the server to the QNAP in the home network (state, network restart, restart) when the QNAP cannot be reached from outside. Around 2026-12-13 we check whether it was used; if not, the feature will be removed. Since 1.5.0 (2026-11-15) `co` is also to wake the QNAP, which sleeps after inactivity: on a command from the server it sends a wake-up packet (Wake-on-LAN) in the home network. This use is planned as permanent; the review around 2026-12-13 covers the other commands. Sending the packet is implemented; waking a sleeping QNAP is still to be verified on the hardware.
 
 Since 2026-10-03 the Pellux 200 pellet boiler is read by a separate board — [devices/pellet-boiler-pelux200](../../../pellet-boiler-pelux200/README.md) (Polish). On 2026-10-01–02 it was a second role of `co`.
 
@@ -37,6 +37,7 @@ Since 2026-10-03 the Pellux 200 pellet boiler is read by a separate board — [d
 | Work without the cloud | button: `OFF` (pump stopped), `MANUAL_CO`, `MANUAL_CWU` |
 | Local view | colour display and a web page on the home network |
 | QNAP commands (trial, since 1.4.0) | `stan`, `restart_sieci`, `restart` from a command on the server, passed on to the QNAP in the home network; the controller only carries the signed command and sends back the answer |
+| Waking the QNAP (since 1.5.0) | `wybudz` (wake) from a command on the server: the controller sends a wake-up packet (Wake-on-LAN) in the home network to the sleeping QNAP; the packet confirms nothing, and waking has not been verified on the hardware yet |
 
 ## Display and controller pages
 

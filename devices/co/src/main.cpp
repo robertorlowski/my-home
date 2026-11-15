@@ -9,7 +9,8 @@
 // od 2026-11-07 serwer na Oracle ma własny adres IP i sam pobiera pogodę oraz wysyła maile.
 // Od 1.4.0 (próbnie, ok. 13.12.2026 przegląd użycia) przewozi polecenia dla QNAP-a w sieci domowej (qnap_relay.hpp,
 // relayQnapRequest): wiadomość WebSocket {typ:"qnap"} idzie POST-em do usługi na QNAP-ie, a jej odpowiedź wraca
-// wiadomością {typ:"qnap_wynik"}; bez zapisu, bez ponowień i bez danych QNAP-a w hp/add.
+// wiadomością {typ:"qnap_wynik"}; bez zapisu, bez ponowień i bez danych QNAP-a w hp/add. Od 1.5.0 także budzi
+// uśpionego QNAP-a: wiadomość {typ:"qnap_wybudz"} z adresami MAC to pakiet budzący Wake-on-LAN w sieci domowej (wakeQnap).
 // Od 1.2.0 tryb pracy MANUAL / AUTO / OFF z jedną temperaturą od–do, bez przekaźników CO/CWU,
 // przycisk OFF → CLOUD → MANUAL (ręczny lokalnie), konfiguracja pompy z chmury (PV, zbiornik).
 // Odczyt pieca Pellux 200 (ecoMAX) był tu do 2026-10-02; od 2026-10-03 działa
@@ -18,6 +19,7 @@
 #include <HTTPClient.h>
 #include <Preferences.h>
 #include <WiFi.h>
+#include <WiFiUdp.h>
 #include <access_point_policy.hpp>
 #include <bus_diagnostics.hpp>
 #include <cloud_client.hpp>
@@ -116,6 +118,9 @@ bool cloudPostPending = false;
 // razem najwyżej 10 s (umowa: limit czasu 10 s).
 constexpr uint16_t QNAP_CONNECT_TIMEOUT_MS = 4000;
 constexpr uint16_t QNAP_ANSWER_TIMEOUT_MS = 6000;
+// Budzenie QNAP-a (od 1.5.0): seria pakietów budzących, bo pojedynczy pakiet UDP może zginąć
+constexpr uint8_t QNAP_WAKE_REPEATS = 3;
+constexpr uint16_t QNAP_WAKE_GAP_MS = 100;
 bool pvReceived = false;
 unsigned long pvReceivedAt = 0;
 bool buttonStableState = false;
@@ -160,6 +165,7 @@ void scheduleNextDeviceRead();
 void applyControllerOutputs(void);
 void tryFirmwareUpdate();
 void relayQnapRequest(const QnapRequest &request);
+void wakeQnap(const QnapRequest &request);
 void processControlButton();
 void applyPendingControllerMode();
 void holdModeScreen();
@@ -680,6 +686,10 @@ void postTelemetryToCloud() {
 // z odpowiedzią QNAP-a (najwyżej 1 KB), brak połączenia jako status 0. Jedna próba, bez zapisu.
 void relayQnapRequest(const QnapRequest &request)
 {
+  if (request.wake) {
+    wakeQnap(request);
+    return;
+  }
   WiFiClient client;
   HTTPClient http;
   http.setConnectTimeout(QNAP_CONNECT_TIMEOUT_MS);
@@ -699,6 +709,44 @@ void relayQnapRequest(const QnapRequest &request)
     http.end();
   } else {
     answer = "zly adres QNAP-a";
+  }
+  cloudClient.sendQnapResult(buildQnapResult(request.id, status, answer));
+}
+
+// Budzenie QNAP-a (od 1.5.0, qnap_relay.hpp): pakiet budzący Wake-on-LAN do każdego adresu MAC z wiadomości, UDP port 9,
+// na adres rozgłoszeniowy podsieci Wi-Fi i na 255.255.255.255, QNAP_WAKE_REPEATS razy z przerwą (pakiet UDP może
+// zginąć, a uśpiona karta niczego nie potwierdza). Wynik: status 200 i liczba wysłanych pakietów albo status 0
+// z opisem (brak Wi-Fi, błąd wysyłki). Bez zapisu i bez ponowień poza tą serią.
+void wakeQnap(const QnapRequest &request)
+{
+  int status = 0;
+  std::string answer;
+  if (WiFi.status() != WL_CONNECTED) {
+    answer = "brak Wi-Fi";
+  } else {
+    const IPAddress local = WiFi.localIP();
+    const IPAddress mask = WiFi.subnetMask();
+    IPAddress subnetBroadcast;
+    for (uint8_t index = 0; index < 4; index++) subnetBroadcast[index] = local[index] | static_cast<uint8_t>(~mask[index]);
+    const IPAddress targets[] = {subnetBroadcast, IPAddress(255, 255, 255, 255)};
+    WiFiUDP udp;
+    uint8_t packet[QNAP_MAGIC_PACKET_SIZE];
+    unsigned sent = 0;
+    for (uint8_t repeat = 0; repeat < QNAP_WAKE_REPEATS; repeat++) {
+      if (repeat > 0) delay(QNAP_WAKE_GAP_MS);
+      for (const MacAddress &mac : request.macs) {
+        buildMagicPacket(mac, packet);
+        for (const IPAddress &target : targets) {
+          if (udp.beginPacket(target, QNAP_WAKE_PORT) && udp.write(packet, sizeof(packet)) == sizeof(packet) && udp.endPacket()) sent++;
+        }
+      }
+    }
+    if (sent > 0) {
+      status = 200;
+      answer = "{\"wyslano\":" + std::to_string(sent) + "}";
+    } else {
+      answer = "nie udalo sie wyslac pakietu budzacego";
+    }
   }
   cloudClient.sendQnapResult(buildQnapResult(request.id, status, answer));
 }

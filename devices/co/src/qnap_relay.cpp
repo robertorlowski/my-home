@@ -37,13 +37,70 @@ bool parseQnapAddress(const std::string &text, std::string &host, uint16_t &port
   return true;
 }
 
+bool parseMacAddress(const std::string &text, MacAddress &mac)
+{
+  if (text.size() != 17) return false;
+  bool allOnes = true;
+  bool allZeros = true;
+  for (size_t index = 0; index < 6; index++) {
+    unsigned value = 0;
+    for (size_t digit = 0; digit < 2; digit++) {
+      const char character = text[index * 3 + digit];
+      unsigned nibble = 0;
+      if (character >= '0' && character <= '9') nibble = character - '0';
+      else if (character >= 'a' && character <= 'f') nibble = character - 'a' + 10;
+      else if (character >= 'A' && character <= 'F') nibble = character - 'A' + 10;
+      else return false;
+      value = value * 16 + nibble;
+    }
+    if (index < 5 && text[index * 3 + 2] != ':' && text[index * 3 + 2] != '-') return false;
+    mac[index] = static_cast<uint8_t>(value);
+    allOnes = allOnes && value == 0xFF;
+    allZeros = allZeros && value == 0;
+  }
+  return !allOnes && !allZeros;
+}
+
+void buildMagicPacket(const MacAddress &mac, uint8_t packet[QNAP_MAGIC_PACKET_SIZE])
+{
+  for (size_t index = 0; index < 6; index++) packet[index] = 0xFF;
+  for (size_t repeat = 0; repeat < 16; repeat++) {
+    for (size_t index = 0; index < 6; index++) packet[6 + repeat * 6 + index] = mac[index];
+  }
+}
+
+namespace {
+// {"typ":"qnap_wybudz","id":…,"mac":[…]}: od 1 do QNAP_WAKE_MAX_MACS poprawnych adresów MAC
+QnapParse parseWakeRequest(JsonVariantConst message, QnapRequest &out, std::string &error)
+{
+  out.wake = true;
+  JsonArrayConst addresses = message["mac"].as<JsonArrayConst>();
+  if (addresses.isNull() || addresses.size() == 0 || addresses.size() > QNAP_WAKE_MAX_MACS) {
+    error = "oczekiwane od 1 do 4 adresow MAC";
+    return QnapParse::Invalid;
+  }
+  for (JsonVariantConst address : addresses) {
+    MacAddress mac{};
+    if (!parseMacAddress(address | "", mac)) {
+      error = "zly adres MAC";
+      out.macs.clear();
+      return QnapParse::Invalid;
+    }
+    out.macs.push_back(mac);
+  }
+  return QnapParse::Ok;
+}
+}
+
 QnapParse parseQnapRequest(JsonVariantConst message, QnapRequest &out, std::string &error)
 {
   out = QnapRequest();
   error.clear();
-  if (!(message["typ"] == "qnap")) return QnapParse::NotQnap;
+  const bool wake = message["typ"] == "qnap_wybudz";
+  if (!wake && !(message["typ"] == "qnap")) return QnapParse::NotQnap;
   out.id = message["id"] | "";
   if (out.id.empty() || out.id.size() > 64) return QnapParse::NotQnap;
+  if (wake) return parseWakeRequest(message, out, error);
   const std::string address = message["adres"] | "";
   out.body = message["cialo"] | "";
   out.signature = message["podpis"] | "";

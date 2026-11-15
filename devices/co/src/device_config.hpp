@@ -40,7 +40,9 @@ struct DeviceConfig {
 // maile oraz pobiera pogodę): bez mailKey w zgłoszeniu, bez weather_queries / weather i liczników weather_*;
 // próbnie (przegląd ok. 13.12.2026) polecenia dla QNAP-a w sieci domowej: wiadomość WebSocket {typ:"qnap"} → POST
 // do QNAP-a → {typ:"qnap_wynik"} (qnap_relay.hpp), bez danych QNAP-a w hp/add.
-constexpr const char *FW_VERSION = "1.4.0";
+// 1.5.0: budzenie uśpionego QNAP-a: wiadomość WebSocket {typ:"qnap_wybudz"} z adresami MAC → pakiet budzący
+// Wake-on-LAN w sieci domowej (UDP port 9, rozgłoszenie) → {typ:"qnap_wynik"} z liczbą wysłanych pakietów.
+constexpr const char *FW_VERSION = "1.5.0";
 
 // Wspólna przestrzeń NVS; main.cpp trzyma w niej też tryb sterownika ("mode").
 constexpr const char *PREFERENCES_NAMESPACE = "hp";

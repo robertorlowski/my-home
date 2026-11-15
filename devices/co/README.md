@@ -61,6 +61,15 @@ Cały system jest w repozytorium [robertorlowski/my-home](https://github.com/rob
   domowej i odsyła wynik `{"typ":"qnap_wynik"}`. Klucza nie zna, niczego nie
   zapisuje i nie ponawia. Ok. 2026-12-13 sprawdzamy, czy było używane; bez
   użycia funkcja zostanie usunięta. Opis: [dokumentacja techniczna](docs/3-dokumentacja-techniczna.md#polecenia-dla-qnap-a-od-140-próbnie).
+- **Budzenie QNAP-a** (od 1.5.0, 2026-11-15, planowane na stałe). QNAP ma
+  usypiać po bezczynności, a uśpiony nie odpowiada na HTTP. Na wiadomość
+  WebSocket `{"typ":"qnap_wybudz"}` z adresami MAC (od 1 do 4) sterownik wysyła
+  w sieci domowej pakiety budzące Wake-on-LAN (UDP, port 9, rozgłoszenie) i
+  odsyła `{"typ":"qnap_wynik"}` z liczbą wysłanych pakietów. Pakiet niczego nie
+  potwierdza: czy QNAP wstał, widać dopiero po jego ponownym połączeniu.
+  Wysyłka pakietu jest zrobiona; samo budzenie uśpionego QNAP-a czeka na
+  sprawdzenie na sprzęcie. Przegląd ok. 2026-12-13 dotyczy tylko poleceń
+  `stan`, `restart_sieci` i `restart`. Opis: [dokumentacja techniczna](docs/3-dokumentacja-techniczna.md#budzenie-od-150).
 - **Punkt dostępowy** `MyHome-HeatPump-XXXX` (XXXX = ostatnie 4 znaki SN, otwarty, adres `10.10.10.1`; od 2026-10-10, wcześniej `HP-CO-setup`) startuje razem ze sterownikiem i jest
   wyłączany po 3 min stabilnego dostępu do chmury; wraca po 1 min bez Wi-Fi
   albo po 5 min bez odpowiedzi chmury.
@@ -137,7 +146,7 @@ pio test -e native
 | [test_bus_diagnostics](test/test_bus_diagnostics/test_main.cpp) | diagnostyka magistrali na zlecenie z chmury |
 | [test_hp_link_watch](test/test_hp_link_watch/test_main.cpp) | kiedy uznać, że CHPC nie odpowiada |
 | [test_ota](test/test_ota/test_main.cpp) | oferta aktualizacji firmware z odpowiedzi `hp/add` |
-| [test_qnap_relay](test/test_qnap_relay/test_main.cpp) | polecenia dla QNAP-a: adres tylko z sieci prywatnej, ciało do 1 KB, podpis 64 znaki hex, wynik przycięty do 1 KB bez rozcinania znaku UTF-8 |
+| [test_qnap_relay](test/test_qnap_relay/test_main.cpp) | polecenia dla QNAP-a: adres tylko z sieci prywatnej, ciało do 1 KB, podpis 64 znaki hex, wynik przycięty do 1 KB bez rozcinania znaku UTF-8; od 1.5.0 budzenie: odczyt adresu MAC, treść pakietu budzącego, wiadomość `qnap_wybudz` |
 
 **E2E całego łańcucha** (chpc ⇄ RS-485 ⇄ co ⇄ My Home ⇄ przeglądarka) są
 w `test/e2e/` w katalogu głównym My Home; instrukcja w `devices/chpc/test/README.md`.
@@ -153,7 +162,7 @@ lub interfejsów tych plików wymaga poprawki w `test/e2e/build-bridge.sh`.
 |---|---|
 | `main.cpp` | pętla główna: odczyty, przycisk, wymiana z chmurą |
 | `cloud_client` | HTTPS i WebSocket do My Home, rejestracja urządzenia |
-| `qnap_relay` | polecenia dla QNAP-a z WebSocketu: odczyt i sprawdzenie wiadomości, odpowiedź `qnap_wynik` (od 1.4.0) |
+| `qnap_relay` | polecenia dla QNAP-a z WebSocketu: odczyt i sprawdzenie wiadomości, odpowiedź `qnap_wynik` (od 1.4.0); od 1.5.0 także wiadomość `qnap_wybudz`, adresy MAC i pakiet budzący Wake-on-LAN |
 | `operation_parser` | JSON operacji z chmury → struktury domenowe |
 | `operation_controller` | stan z chmury, tryby, efektywne komendy i przekaźniki |
 | `serial_bus`, `modbus_frame` | kolejka RS-485 z priorytetami, kodowanie ramek, CRC |
@@ -173,7 +182,8 @@ lub interfejsów tych plików wymaga poprawki w `test/e2e/build-bridge.sh`.
   obecna architektura, przepływ operacji, tryby, UART, chmura.
 - [docs/propozycja-qnap-2026-11-13.md](docs/propozycja-qnap-2026-11-13.md):
   propozycja dostępu do QNAP-a przez sterownik z wariantami (historia; wdrożono
-  z niej tylko polecenia, inną drogą niż tam opisana).
+  z niej tylko polecenia, inną drogą niż tam opisana, a od 1.5.0 także budzenie
+  pakietem Wake-on-LAN).
 
 ## Licencja
 

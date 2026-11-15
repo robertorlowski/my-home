@@ -31,6 +31,9 @@ const DEFINITIONS = {
   // adres:port QNAP-a w sieci domowej dla poleceń przez sterownik co (od 2026-11-13, próbnie, qnap.service.ts); bez
   // pola w aplikacji (hidden), zapis: --api PUT /settings '{"values":{"QNAP_ADRES":"…"}}' albo zmienna środowiska
   QNAP_ADRES: { group: 'server', kind: 'hostport', hidden: true },
+  // adresy MAC kart sieciowych QNAP-a dla polecenia wybudz (od 2026-11-15, qnap.service.ts): od 1 do 4 adresów
+  // po przecinku; bez pola w aplikacji (hidden), zapis jak QNAP_ADRES. Nie w kodzie, bo repozytorium jest publiczne.
+  QNAP_MAC: { group: 'server', kind: 'macs', hidden: true },
 } as const;
 
 export type SettingKey = keyof typeof DEFINITIONS;
@@ -75,6 +78,18 @@ export function isPrivateHostPort(text: string): boolean {
   return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
 }
 
+/**
+ * Od 1 do 4 adresów MAC po przecinku („aa:bb:cc:dd:ee:ff”, także z myślnikami i wielkimi literami) jako lista
+ * małymi literami z dwukropkami; null przy złym zapisie, adresie rozgłoszeniowym albo zerowym.
+ */
+export function parseMacs(text: string): string[] | null {
+  const parts = text.split(',').map((part) => part.trim().toLowerCase().replace(/-/g, ':'));
+  if (parts.length < 1 || parts.length > 4) return null;
+  const valid = parts.every((part) => /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(part)
+    && part !== 'ff:ff:ff:ff:ff:ff' && part !== '00:00:00:00:00:00');
+  return valid ? parts : null;
+}
+
 const isEmail = (text: string) => /^[^\s@]+@[^\s@]+$/.test(text);
 const isHttpUrl = (text: string) => {
   try {
@@ -91,6 +106,7 @@ const VALIDATORS: Record<string, (text: string) => boolean> = {
   port: (text) => /^\d{1,5}$/.test(text) && Number(text) >= 1 && Number(text) <= 65535,
   jobs: (text) => text === 'on' || text === 'off',
   hostport: isPrivateHostPort,
+  macs: (text) => parseMacs(text) !== null,
   urls: (text) => text.split(',').every((url) => isHttpUrl(url.trim())),
 };
 

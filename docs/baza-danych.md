@@ -37,7 +37,7 @@ Szczegóły serwera, hasła (bez wartości) i procedury są w prywatnym repozyto
 | `sessions` | sesje logowania (skrót tokenu) | 21 | 5 KB | TTL `expiresAt` |
 | `auth_codes` | kody i linki z maila (skróty) | 0 | — | TTL `expiresAt` |
 | `device_shares` | udostępnienia sterowników | 1 | 1 KB | bez limitu |
-| `app_settings` | ustawienia aplikacji (poczta, push, zadania w tle, adres QNAP-a) | 1 | 1 KB | jeden dokument |
+| `app_settings` | ustawienia aplikacji (poczta, push, zadania w tle, adres i adresy MAC QNAP-a) | 1 | 1 KB | jeden dokument |
 | **Sterowniki** | | | | |
 | `devices` | sterowniki, ich ustawienia i harmonogramy pompy | 5 | 3 KB | bez limitu |
 | `operation_log` | dziennik operacji (zakładka „Operacje”) | 110 | 40 KB | TTL 5 dni |
@@ -93,7 +93,7 @@ Udostępnienie sterownika: `rootId`, `ownerId`, `email` osoby zaproszonej, `user
 
 ### `app_settings`
 
-Jeden dokument z ustawieniami zmienianymi na ekranie konta systemowego: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (od 2026-11-13: adres kodów logowania konta `system`), `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`, od 2026-11-13 `QNAP_ADRES` (adres:port QNAP-a w sieci domowej dla próbnych poleceń przez `co`; bez pola na ekranie)) i `updatedAt`. `values.MAIL_RELAY` (wysyłka przez sterowniki) usunięto z kodu 2026-11-13; w bazie do usunięcia po wdrożeniu (niżej), do tego czasu pomijane. `_id` to nazwa bazy, więc kopia produkcji odtworzona jako `hpdb_test` ma dokument `hpdb` i środowisko testowe go nie użyje. Wartości sekretów są w bazie jawnie, ekran ich nie pokazuje. Poza bazą zostaje tylko `MONGODB_URI` (`SYSTEM_PASSWORD` od 2026-11-13 nie jest używane: konto `system` loguje się kodem z maila).
+Jeden dokument z ustawieniami zmienianymi na ekranie konta systemowego: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (od 2026-11-13: adres kodów logowania konta `system`), `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`, od 2026-11-13 `QNAP_ADRES` (adres:port QNAP-a w sieci domowej dla próbnych poleceń przez `co`; bez pola na ekranie), od 2026-11-15 `QNAP_MAC` (od 1 do 4 adresów MAC QNAP-a po przecinku dla polecenia `wybudz`, np. `02:00:00:00:00:01`; bez pola na ekranie)) i `updatedAt`. `values.MAIL_RELAY` (wysyłka przez sterowniki) usunięto z kodu 2026-11-13; w bazie do usunięcia po wdrożeniu (niżej), do tego czasu pomijane. `_id` to nazwa bazy, więc kopia produkcji odtworzona jako `hpdb_test` ma dokument `hpdb` i środowisko testowe go nie użyje. Wartości sekretów są w bazie jawnie, ekran ich nie pokazuje. Poza bazą zostaje tylko `MONGODB_URI` (`SYSTEM_PASSWORD` od 2026-11-13 nie jest używane: konto `system` loguje się kodem z maila).
 
 ## Sterowniki
 
@@ -118,7 +118,7 @@ Indeksy: `{ownerId}`. Stare dokumenty mogą mieć pole `settings` z dawnego mode
 
 ### `operation_log`
 
-Wpis dziennika: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (opis zmiany), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (zlecenia sterownika, których status przepisuje dziennik). Indeksy: `{rootId, at}`, `{refs}` i TTL na `at` po 5 dniach. Próbne polecenia dla QNAP-a (od 2026-11-13) zostawiają tylko wpis przy sterowniku `co`: `action` `QNAP: <polecenie> — HTTP <status>`, `status` `done` albo `error`, źródło „Polecenie na serwerze (--qnap)”; odpowiedzi QNAP-a baza nie zapisuje.
+Wpis dziennika: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (opis zmiany), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (zlecenia sterownika, których status przepisuje dziennik). Indeksy: `{rootId, at}`, `{refs}` i TTL na `at` po 5 dniach. Próbne polecenia dla QNAP-a (od 2026-11-13) zostawiają tylko wpis przy sterowniku `co`: `action` `QNAP: <polecenie> — HTTP <status>`, `status` `done` albo `error`, źródło „Polecenie na serwerze (--qnap)”; odpowiedzi QNAP-a baza nie zapisuje. Polecenie `wybudz` (od 2026-11-15): `action` `QNAP: wybudz — pakiet budzący wysłany` (`done`) albo `QNAP: wybudz — sterownik nie wysłał pakietu budzącego`, `QNAP: wybudz — brak odpowiedzi sterownika w 20 s` (`error`).
 
 ### `firmware_images` i `firmware_offers`
 

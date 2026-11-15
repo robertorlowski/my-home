@@ -37,7 +37,7 @@ Server details, passwords (without values) and procedures are in the private `or
 | `sessions` | login sessions (token hash) | 21 | 5 KB | TTL `expiresAt` |
 | `auth_codes` | codes and links from e-mails (hashes) | 0 | — | TTL `expiresAt` |
 | `device_shares` | controller shares | 1 | 1 KB | unlimited |
-| `app_settings` | application settings (mail, push, background jobs, QNAP address) | 1 | 1 KB | one document |
+| `app_settings` | application settings (mail, push, background jobs, QNAP address and MAC addresses) | 1 | 1 KB | one document |
 | **Controllers** | | | | |
 | `devices` | controllers, their settings and pump schedules | 5 | 3 KB | unlimited |
 | `operation_log` | operation log ("Operacje" tab) | 110 | 40 KB | TTL 5 days |
@@ -93,7 +93,7 @@ A controller share: `rootId`, `ownerId`, the invited person's `email`, `userId` 
 
 ### `app_settings`
 
-One document with the settings changed on the system account screen: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (since 2026-11-13: the address of the `system` account sign-in codes), `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`, since 2026-11-13 `QNAP_ADRES` (the QNAP address:port in the home network for the trial commands through `co`; no field on the screen)) and `updatedAt`. `values.MAIL_RELAY` (sending through controllers) was removed from the code on 2026-11-13; it is to be removed from the database after the deployment (below) and is ignored until then. `_id` is the database name, so a copy of production restored as `hpdb_test` has the `hpdb` document and the test environment does not use it. Secret values are stored in plain form; the screen does not show them. Only `MONGODB_URI` stays outside the database (`SYSTEM_PASSWORD` is not used since 2026-11-13: the `system` account signs in with a code from the e-mail).
+One document with the settings changed on the system account screen: `values` (`SMTP_*`, `MAIL_FROM`, `MAIL_ADMIN`, `SYSTEM_EMAIL` (since 2026-11-13: the address of the `system` account sign-in codes), `CLIENT_URL`, `DEMO_OWNER_EMAIL`, `VAPID_*`, `BACKGROUND_JOBS`, since 2026-11-13 `QNAP_ADRES` (the QNAP address:port in the home network for the trial commands through `co`; no field on the screen), since 2026-11-15 `QNAP_MAC` (1 to 4 QNAP MAC addresses separated by commas for the `wybudz` (wake) command, e.g. `02:00:00:00:00:01`; no field on the screen)) and `updatedAt`. `values.MAIL_RELAY` (sending through controllers) was removed from the code on 2026-11-13; it is to be removed from the database after the deployment (below) and is ignored until then. `_id` is the database name, so a copy of production restored as `hpdb_test` has the `hpdb` document and the test environment does not use it. Secret values are stored in plain form; the screen does not show them. Only `MONGODB_URI` stays outside the database (`SYSTEM_PASSWORD` is not used since 2026-11-13: the `system` account signs in with a code from the e-mail).
 
 ## Controllers
 
@@ -118,7 +118,7 @@ Index: `{ownerId}`. Old documents may have a `settings` field from the former ti
 
 ### `operation_log`
 
-A log entry: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (description of the change), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (controller requests whose status the log copies). Indexes: `{rootId, at}`, `{refs}` and a TTL on `at` after 5 days. The trial QNAP commands (since 2026-11-13) leave only an entry at the `co` controller: `action` `QNAP: <polecenie> — HTTP <status>`, `status` `done` or `error`, source "Polecenie na serwerze (--qnap)"; the database does not store the QNAP answer.
+A log entry: `rootId`, `at`, `actor {type, name, userId}` (`type`: `user`, `system`, `controller`), `source`, `action` (description of the change), `status` (`pending`, `sent`, `delivered`, `done`, `error`, `replaced`), `statusAt`, `error`, `reason`, `conditions`, `refs` (controller requests whose status the log copies). Indexes: `{rootId, at}`, `{refs}` and a TTL on `at` after 5 days. The trial QNAP commands (since 2026-11-13) leave only an entry at the `co` controller: `action` `QNAP: <polecenie> — HTTP <status>`, `status` `done` or `error`, source "Polecenie na serwerze (--qnap)"; the database does not store the QNAP answer. The `wybudz` (wake) command (since 2026-11-15): `action` `QNAP: wybudz — pakiet budzący wysłany` (wake-up packet sent; `done`) or `QNAP: wybudz — sterownik nie wysłał pakietu budzącego` (the controller did not send the wake-up packet), `QNAP: wybudz — brak odpowiedzi sterownika w 20 s` (`error`).
 
 ### `firmware_images` and `firmware_offers`
 

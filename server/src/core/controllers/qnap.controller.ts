@@ -1,8 +1,8 @@
 // Polecenia dla QNAP-a przez sterownik co (od 2026-11-13, próbnie; opis w services/qnap.service.ts). Tylko polecenie
 // na serwerze (--qnap w core/cli.ts, token wewnętrzny), bez przycisku w aplikacji:
-//   POST /qnap/polecenia {polecenie: stan|restart_sieci|restart, rootId?} — 200 z wynikiem po odpowiedzi sterownika
-//   albo po QNAP_CZEKAJ_MS (status 0); 400 nieznane polecenie, 403 bez tokenu wewnętrznego, 404/409 sterownik,
-//   503 brak klucza albo adresu.
+//   POST /qnap/polecenia {polecenie: stan|restart_sieci|restart|wybudz, rootId?} — 200 z wynikiem po odpowiedzi
+//   sterownika albo po QNAP_CZEKAJ_MS (status 0); 400 nieznane polecenie, 403 bez tokenu wewnętrznego, 404/409
+//   sterownik, 503 brak klucza albo adresu (wybudz: brak adresów MAC w QNAP_MAC).
 import { Request, Response } from 'express';
 import { INTERNAL_TOKEN, INTERNAL_TOKEN_HEADER } from '../internal';
 import { metaFromRequest, systemMeta } from '../services/operation-log.service';

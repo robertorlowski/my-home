@@ -175,7 +175,7 @@ WebSocket niczego nie przenosi poza sygnałem „zajrzyj po dane” (wyjątek od
 
 ## Polecenia dla QNAP-a (próbnie, od 2026-11-13)
 
-Gdy QNAP w domu nie jest widoczny z zewnątrz (np. zawiesił się jego tunel do serwera w chmurze), a w sieci domowej działa, polecenie na serwerze wysyła mu przez sterownik `co` jedno z poleceń `stan`, `restart_sieci`, `restart`. Przycisku w aplikacji nie ma. Ok. 2026-12-13 sprawdzamy, czy było używane; bez użycia funkcja zostanie usunięta.
+Gdy QNAP w domu nie jest widoczny z zewnątrz (np. zawiesił się jego tunel do serwera w chmurze), a w sieci domowej działa, polecenie na serwerze wysyła mu przez sterownik `co` jedno z poleceń `stan`, `restart_sieci`, `restart`. Przycisku w aplikacji nie ma. Ok. 2026-12-13 sprawdzamy, czy było używane; bez użycia funkcja zostanie usunięta. Od 2026-11-15 jest też polecenie `wybudz`: QNAP ma usypiać po bezczynności, a uśpiony nie odpowiada na HTTP, więc sterownik zamiast `POST`-u wysyła w sieci domowej pakiet budzący (Wake-on-LAN) do adresów MAC z ustawienia `QNAP_MAC`. To zastosowanie jest planowane na stałe; przegląd dotyczy pozostałych poleceń.
 
 ```mermaid
 sequenceDiagram
@@ -194,7 +194,7 @@ sequenceDiagram
     S-->>K: wynik (JSON), najpóźniej po 20 s
 ```
 
-Sterownik klucza nie zna i przesyła ciało bez zmian, więc nie podrobi polecenia; podpis sprawdza usługa na QNAP-ie. Do bazy trafia tylko wpis w dzienniku operacji `co` (polecenie i status HTTP), a odpowiedź QNAP-a jest tylko wypisywana w terminalu. Gdy karta sieciowa QNAP-a nie ma łącza, żadne polecenie do niego nie dotrze. Szczegóły: [dokumentacja techniczna](3-dokumentacja-techniczna.md#polecenia-dla-qnap-a-przez-sterownik-co-próbnie).
+Sterownik klucza nie zna i przesyła ciało bez zmian, więc nie podrobi polecenia; podpis sprawdza usługa na QNAP-ie. Do bazy trafia tylko wpis w dzienniku operacji `co` (polecenie i status HTTP), a odpowiedź QNAP-a jest tylko wypisywana w terminalu. Gdy karta sieciowa QNAP-a nie ma łącza, żadne polecenie do niego nie dotrze. Polecenie `wybudz` nie ma ciała ani podpisu (pakiet budzący ich nie przewiduje), a jego wynik mówi tylko, że sterownik wysłał pakiet: czy QNAP wstał, widać dopiero po jego ponownym połączeniu. Samo budzenie nie jest jeszcze sprawdzone na sprzęcie (stan 2026-11-15). Szczegóły: [dokumentacja techniczna](3-dokumentacja-techniczna.md#polecenia-dla-qnap-a-przez-sterownik-co-próbnie).
 
 ## Usługi wspólne
 

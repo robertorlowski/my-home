@@ -16,7 +16,8 @@
 //   systemowym (wgrywanie firmware). JSON = treść application/json, --bin = treść ze standardowego wejścia jako
 //   application/octet-stream (plik .bin). W dzienniku operacji sterownika: „system”, źródło „Polecenie na serwerze”.
 //   Odpowiedź serwera na standardowe wyjście, status HTTP na standardowe wyjście błędów; kod wyjścia 0 tylko przy 2xx.
-// --qnap stan|restart_sieci|restart [ROOT_ID]: polecenie dla QNAP-a przez sterownik co (od 2026-11-13, próbnie;
+// --qnap stan|restart_sieci|restart|wybudz [ROOT_ID]: polecenie dla QNAP-a przez sterownik co (od 2026-11-13, próbnie;
+//   wybudz od 2026-11-15: pakiet budzący do adresów MAC z QNAP_MAC, wynik 200 = sterownik wysłał pakiet;
 //   services/qnap.service.ts), np. docker exec my-home-prod node dist/server.js --qnap restart_sieci
 //   Żądanie do serwera działającego obok (jak --api, token wewnętrzny), bo tylko on ma połączenie WebSocket ze
 //   sterownikiem; czeka na wynik do QNAP_CZEKAJ_MS. Wynik (status HTTP QNAP-a i jego odpowiedź) na standardowe

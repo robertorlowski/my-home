@@ -175,7 +175,7 @@ The WebSocket carries nothing but a "come and get the data" signal (an exception
 
 ## QNAP commands (trial, since 2026-11-13)
 
-When the QNAP at home cannot be reached from outside (e.g. its tunnel to the cloud server hangs) but works in the home network, a command on the server sends it one of the commands `stan` (state), `restart_sieci` (network restart), `restart` through the `co` controller. There is no button in the application. Around 2026-12-13 we check whether it was used; if not, the feature will be removed.
+When the QNAP at home cannot be reached from outside (e.g. its tunnel to the cloud server hangs) but works in the home network, a command on the server sends it one of the commands `stan` (state), `restart_sieci` (network restart), `restart` through the `co` controller. There is no button in the application. Around 2026-12-13 we check whether it was used; if not, the feature will be removed. Since 2026-11-15 there is also the `wybudz` (wake) command: the QNAP is to sleep after inactivity, and a sleeping QNAP does not answer HTTP, so instead of the `POST` the controller sends a wake-up packet (Wake-on-LAN) in the home network to the MAC addresses from the `QNAP_MAC` setting. This use is planned as permanent; the review covers the other commands.
 
 ```mermaid
 sequenceDiagram
@@ -194,7 +194,7 @@ sequenceDiagram
     S-->>K: result (JSON), after 20 s at the latest
 ```
 
-The controller does not know the key and passes the body on unchanged, so it cannot forge a command; the service on the QNAP checks the signature. Only an operations log entry of `co` (the command and the HTTP status) goes into the database; the QNAP answer is only printed in the terminal. When the QNAP network card has no link at all, no command reaches it. Details: [technical documentation](3-technical-documentation.md#qnap-commands-through-the-co-controller-trial).
+The controller does not know the key and passes the body on unchanged, so it cannot forge a command; the service on the QNAP checks the signature. Only an operations log entry of `co` (the command and the HTTP status) goes into the database; the QNAP answer is only printed in the terminal. When the QNAP network card has no link at all, no command reaches it. The `wybudz` command has no body and no signature (a wake-up packet has neither), and its result only says that the controller sent the packet: whether the QNAP woke up is visible only when it connects again. Waking itself has not been verified on the hardware yet (state on 2026-11-15). Details: [technical documentation](3-technical-documentation.md#qnap-commands-through-the-co-controller-trial).
 
 ## Shared services
 
