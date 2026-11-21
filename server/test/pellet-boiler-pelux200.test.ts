@@ -870,6 +870,30 @@ describe('Kocioł pelletowy Pellux 200', () => {
     expect((await request(app).get(`/api/pellet-boiler-pelux200/fuel?rootId=${rootId}&period=week&date=2026-10-07`)).status).toBe(400);
   });
 
+  it('start sterownika w dzienniku operacji (firmware 1.11.2): przyczyna, sygnał, jeden wpis na numer startu', async () => {
+    const sn = 'AABBCC00001B';
+    const send = async (version: string, diag?: unknown) => {
+      const res = await request(app).post('/api/devices/register')
+        .send({ deviceId: sn, deviceType: TYPE, name: 'Kocioł', version, ...(diag === undefined ? {} : { diag }) });
+      expect(res.status).toBeLessThan(300);
+      return res.body.rootId as string;
+    };
+    const rootId = await send('1.11.1');                                         // starszy firmware bez diag: bez wpisu
+    await send('1.11.2', { reset: 'task_wdt', boot: 7, rssi: -88, uptimeS: 40 });
+    await send('1.11.2', { reset: 'task_wdt', boot: 7, rssi: -87, uptimeS: 75 }); // ponowione zgłoszenie tego samego startu
+    await send('1.11.3', { reset: 'ota', boot: 8, rssi: -86, uptimeS: 5 });
+    await send('1.11.3', { reset: 'OTA', boot: 'x' });                           // błędne diag: zgłoszenie przyjęte, bez wpisu
+    const day = (await request(app).get(`/api/operations?rootId=${rootId}`).expect(200)).body;
+    const restarts = (day.done as { action: string; reason: string; conditions: string; at: string }[])
+      .filter((entry) => entry.action === 'Restart sterownika')
+      .sort((a, b) => a.conditions.localeCompare(b.conditions));
+    expect(restarts).toHaveLength(2);
+    expect(restarts[0]).toMatchObject({ reason: 'Przyczyna: watchdog zadań.', conditions: 'start nr 7; sygnał Wi-Fi -88 dBm; firmware 1.11.2' });
+    expect(restarts[1]).toMatchObject({ reason: 'Przyczyna: aktualizacja firmware z aplikacji.', conditions: 'start nr 8; sygnał Wi-Fi -86 dBm; firmware 1.11.3' });
+    // chwila wpisu = chwila startu (zgłoszenie minus czas od startu)
+    expect(Date.now() - new Date(restarts[0].at).getTime()).toBeGreaterThanOrEqual(40_000);
+  });
+
   it('powiązanie z pompą ciepła: nowy kocioł bez pompy, walidacja, blokada w trybie pompy, bez pompy tryb Pellet', async () => {
     const sn = 'AABBCC0000F9';
     const { rootId } = (await register(sn)).body;

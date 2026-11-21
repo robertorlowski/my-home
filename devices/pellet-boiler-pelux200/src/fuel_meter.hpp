@@ -16,7 +16,11 @@
 class FuelMeter {
 public:
   static constexpr uint32_t MAX_GAP_MS = 5UL * 60 * 1000;
-  static constexpr uint32_t SAVE_EVERY_MS = 5UL * 60 * 1000;
+  // Od 1.11.2 co minutę (wcześniej co 5 min): restart bez zapisu (watchdog, zanik zasilania) gubi najwyżej zużycie
+  // z ostatniej minuty, ok. 0,06 kg przy pełnej mocy. Zapis tylko po przyroście o co najmniej 1 g (pellet.cpp,
+  // saveFuel), więc NVS dostaje go tylko w czasie palenia: najwyżej ok. 525 tys. wpisów na rok, rozłożonych przez NVS
+  // na strony partycji (bez ryzyka dla trwałości flash).
+  static constexpr uint32_t SAVE_EVERY_MS = 60UL * 1000;
 
   // Stan po starcie (z NVS); pierwszy SensorData tylko ustawia czas odniesienia.
   void begin(double grams) { grams_ = grams < 0 ? 0 : grams; hasLast_ = false; }

@@ -2,7 +2,7 @@
 // odczycie narastający stan licznika fuel_burned_kg (fuel_meter.hpp: zużycie kg/h z regulatora × czas, jak PyPlumIO);
 // zużycie w przedziale to suma przyrostów między kolejnymi odczytami, przypisanych do chwili późniejszego odczytu.
 // Spadek stanu (fuelDelta niżej): mały, do FUEL_RESTART_ROLLBACK_KG, to restart sterownika, który wrócił do stanu
-// z NVS zapisanego do 5 min wcześniej (przyrost 0); większy = nowy licznik (wymiana płytki, skasowane NVS) i przyrostem
+// z NVS zapisanego chwilę wcześniej (przyrost 0); większy = nowy licznik (wymiana płytki, skasowane NVS) i przyrostem
 // jest cały nowy stan. Przedziały: godziny dnia (day), dni miesiąca (month) albo miesiące roku (year) czasu
 // warszawskiego, puste uzupełnione zerami.
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
@@ -33,9 +33,10 @@ export function fuelWindow(period: unknown, date: unknown): { from: Date; to: Da
 
 const round3 = (value: number) => Math.round(value * 1000) / 1000;
 
-// Największy spadek licznika uznawany za restart sterownika. Sterownik zapisuje stan w NVS co 5 min (fuel_meter.hpp,
-// SAVE_EVERY_MS), więc po restarcie bez zapisu (zanik zasilania, zawieszenie) licznik cofa się najwyżej o zużycie
-// z 5 min: przy pełnej mocy kotła 20 kW i 5,2 kWh/kg ok. 3,85 kg/h, czyli ok. 0,32 kg. Do 2026-11-21 każdy spadek
+// Największy spadek licznika uznawany za restart sterownika. Sterownik zapisuje stan w NVS co SAVE_EVERY_MS
+// (fuel_meter.hpp: od firmware 1.11.2 co minutę, wcześniej co 5 min), więc po restarcie bez zapisu (zanik zasilania,
+// zawieszenie) licznik cofa się najwyżej o zużycie z tego czasu: przy pełnej mocy kotła 20 kW i 5,2 kWh/kg
+// ok. 3,85 kg/h, czyli ok. 0,32 kg w 5 min i 0,06 kg w minutę. Do 2026-11-21 każdy spadek
 // liczono jako nowy licznik i jeden restart dopisywał do dnia cały stan (np. 132 kg); w danych od 10.10.2026
 // spadki po restarcie miały 0,04–0,2 kg. Ta sama reguła jest w kliencie (utils/boiler.ts, withFuelDelta).
 export const FUEL_RESTART_ROLLBACK_KG = 1;

@@ -167,8 +167,8 @@ export const readingsToCsv = (readings: PelletBoilerReading[]) => {
   return [header.join(';'), ...rows].join('\n');
 };
 
-// Największy spadek licznika uznawany za restart sterownika pieca (wraca do stanu z NVS zapisanego do 5 min
-// wcześniej); ta sama wartość i reguła co FUEL_RESTART_ROLLBACK_KG i fuelDelta na serwerze
+// Największy spadek licznika uznawany za restart sterownika pieca (wraca do stanu z NVS zapisanego chwilę
+// wcześniej: od firmware 1.11.2 co minutę, wcześniej co 5 min); ta sama wartość i reguła co FUEL_RESTART_ROLLBACK_KG i fuelDelta na serwerze
 // (pellet-boiler-pelux200-fuel.service.ts, tam uzasadnienie).
 const FUEL_RESTART_ROLLBACK_KG = 1;
 

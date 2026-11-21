@@ -29,6 +29,11 @@
 // Przy kotle nikt nie naciśnie resetu, więc sterownik restartuje się sam: watchdog pętli
 // (WATCHDOG_S) i po WIFI_RESTART_AFTER_MS bez Wi-Fi (2026-10-03 płytka raz zawisła bez restartu);
 // wcześniej co 2 min ponowne łączenie bez restartu. Przyczyna restartu programowego w NVS.
+// Od 1.11.2 (2026-11-21: przy sygnale −88 dBm watchdog 30 s restartował płytkę co kilkadziesiąt minut, bo kilka
+// zapytań HTTPS w jednym obiegu pętli stało razem dłużej): uzgodnienie TLS najwyżej TLS_HANDSHAKE_TIMEOUT_S (było
+// 120 s), watchdog kasowany przed każdym zapytaniem, najwyżej jedno zapytanie do chmury na tick(), watchdog 150 s
+// (dłużej niż ponowne łączenie WebSocketu, którego TLS nie da się skrócić), licznik pelletu w NVS co minutę,
+// a zgłoszenie niesie diag: przyczynę i numer startu, sygnał Wi-Fi i czas od startu (dziennik operacji w chmurze).
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <cstdarg>
@@ -80,16 +85,28 @@ constexpr uint32_t AP_ON_AFTER_MS = 60000;
 constexpr uint16_t HTTP_TIMEOUT_MS = 5000;
 constexpr uint16_t REGISTER_TIMEOUT_MS = 8000;
 constexpr uint16_t OTA_TIMEOUT_MS = 15000;
+// Uzgodnienie TLS z chmurą (zapytania i pobieranie OTA, od 1.11.2). WiFiClientSecure z rdzenia 2.0.16 czeka domyślnie
+// do 120 s, a przy słabym sygnale (−88 dBm) uzgodnienie potrafi się ciągnąć; połączenie TCP i odpowiedź mają osobne
+// limity (HTTP_TIMEOUT_MS, REGISTER_TIMEOUT_MS).
+constexpr uint32_t TLS_HANDSHAKE_TIMEOUT_S = 8;
 constexpr uint32_t STATUS_LOG_MS = 30000;
-// pętla stoi dłużej (najdłuższe zapytanie HTTP to 8 s) = zawieszenie, restart układu
-constexpr uint32_t WATCHDOG_S = 30;
+// Pętla stoi dłużej = zawieszenie, restart układu. Do 1.11.2 30 s: przy sygnale −88 dBm kilka zapytań HTTPS w jednym
+// obiegu (każde do 5 s na połączenie i 5 s na odpowiedź, uzgodnienie TLS do 120 s) przekraczało limit i płytka
+// restartowała się co kilkadziesiąt minut (2026-11-21, „watchdog (hang)”). Teraz zapytanie HTTP(S) trwa najwyżej
+// ok. 25 s (połączenie, TLS_HANDSHAKE_TIMEOUT_S, odpowiedź) i kasuje watchdoga przed sobą, ale ponowne łączenie
+// WebSocketu w webSocket.loop() (Links2004/WebSockets 2.7.3) tworzy własnego WiFiClientSecure z uzgodnieniem do 120 s,
+// którego nie da się skrócić z zewnątrz, więc limit jest dłuższy: 5 s TCP + 120 s TLS z zapasem.
+constexpr uint32_t WATCHDOG_S = 150;
 // Brak Wi-Fi: co WIFI_RECONNECT_EVERY_MS ponowne łączenie bez restartu, restart układu dopiero po
 // WIFI_RESTART_AFTER_MS (stos Wi-Fi bywa, że nie wraca sam). Do 2026-10-03 restart był już po 10 min
 // i przerywał pracę na magistrali kotła (11:08:51, w trakcie sterowania ręcznego z panelu).
 constexpr uint32_t WIFI_RECONNECT_EVERY_MS = 2UL * 60 * 1000;
 constexpr uint32_t WIFI_RESTART_AFTER_MS = 30UL * 60 * 1000;
-// przyczyna ostatniego restartu programowego (NVS), pokazywana po starcie
+// przyczyna ostatniego restartu programowego (NVS), pokazywana po starcie; od 1.11.2 także jej kod do zgłoszenia
+// (diag.reset: ota, no_wifi, install) i licznik startów (diag.boot)
 constexpr const char *KEY_RESTART_REASON = "restart";
+constexpr const char *KEY_RESTART_CODE = "restart_code";
+constexpr const char *KEY_BOOTS = "boots";
 // bufor UART (zapas, gdy zadanie magistrali chwilę nie dostanie procesora)
 constexpr size_t RX_BUFFER_BYTES = 4096;
 constexpr size_t MAX_BYTES_PER_LOOP = 512;
@@ -113,6 +130,11 @@ WebServer server(80);
 WiFiClientSecure secureClient;
 WiFiClient plainClient;
 HTTPClient http;
+// zapytania HTTP(S) w bieżącym tick() (post, get): od 1.11.2 najwyżej jedno, reszta w następnym tick()
+uint8_t networkRequestsThisTick = 0;
+// diag w zgłoszeniu (od 1.11.2): kod przyczyny startu (resetReasonName albo kod restartu programowego) i numer startu
+String lastResetCode = "unknown";
+uint32_t bootCount = 0;
 
 // Stan wspólny zadania magistrali i loop(): odczyt, ramki, stan sieci dla ecoNET — zmiany
 // i kopie pod stateLock (sekcja krytyczna, bez wypisywania na konsolę w środku).
@@ -930,38 +952,47 @@ void startWebSocket()
   webSocketStarted = true;
 }
 
+// Wspólny początek zapytania: od 1.11.2 kasuje watchdoga (WATCHDOG_S liczy się od tego miejsca, nie od początku
+// obiegu pętli), liczy zapytanie w tick() i ogranicza uzgodnienie TLS do TLS_HANDSHAKE_TIMEOUT_S.
+bool beginRequest(const String &url, uint16_t timeoutMs)
+{
+  esp_task_wdt_reset();
+  networkRequestsThisTick++;
+  const bool secure = url.startsWith("https://");
+  if (secure) {
+    secureClient.setInsecure();
+    secureClient.setHandshakeTimeout(TLS_HANDSHAKE_TIMEOUT_S);
+  }
+  http.setReuse(true);
+  http.setConnectTimeout(timeoutMs);
+  http.setTimeout(timeoutMs);
+  return secure ? http.begin(secureClient, url) : http.begin(plainClient, url);
+}
+
 // Jedno zapytanie HTTP(S) (certyfikat nie jest sprawdzany, jak w pozostałych sterownikach).
 // lastHttpStatus < 0 oznacza błąd połączenia.
 bool post(const String &url, const String &body, String *response = nullptr, uint16_t timeoutMs = HTTP_TIMEOUT_MS)
 {
   if (WiFi.status() != WL_CONNECTED) return false;
-  const bool secure = url.startsWith("https://");
-  if (secure) secureClient.setInsecure();
-  http.setReuse(true);
-  http.setConnectTimeout(timeoutMs);
-  http.setTimeout(timeoutMs);
-  if (!(secure ? http.begin(secureClient, url) : http.begin(plainClient, url))) return false;
+  if (!beginRequest(url, timeoutMs)) return false;
   http.addHeader("Content-Type", "application/json");
   lastHttpStatus = http.POST(body);
   const bool ok = lastHttpStatus >= 200 && lastHttpStatus < 300;
   if (ok && response) *response = http.getString();
   http.end();
+  esp_task_wdt_reset();
   return ok;
 }
 
 bool get(const String &url, String &response, uint16_t timeoutMs = HTTP_TIMEOUT_MS)
 {
   if (WiFi.status() != WL_CONNECTED) return false;
-  const bool secure = url.startsWith("https://");
-  if (secure) secureClient.setInsecure();
-  http.setReuse(true);
-  http.setConnectTimeout(timeoutMs);
-  http.setTimeout(timeoutMs);
-  if (!(secure ? http.begin(secureClient, url) : http.begin(plainClient, url))) return false;
+  if (!beginRequest(url, timeoutMs)) return false;
   lastHttpStatus = http.GET();
   const bool ok = lastHttpStatus >= 200 && lastHttpStatus < 300;
   if (ok) response = http.getString();
   http.end();
+  esp_task_wdt_reset();
   return ok;
 }
 
@@ -986,6 +1017,13 @@ void registerDevice()
   request["name"] = DEVICE_NAME;
   request["version"] = FW_VERSION;
   request["ip"] = WiFi.localIP().toString();
+  // od 1.11.2: przyczyna i numer startu, sygnał, czas od startu — serwer zapisuje start w dzienniku operacji
+  // (pellet-boiler-pelux200-diagnostics.service.ts), jeden wpis na numer startu mimo ponowień zgłoszenia
+  JsonObject diag = request["diag"].to<JsonObject>();
+  diag["reset"] = lastResetCode;
+  diag["boot"] = bootCount;
+  diag["rssi"] = WiFi.RSSI();
+  diag["uptimeS"] = millis() / 1000;
   String body;
   serializeJson(request, body);
   String response;
@@ -1297,7 +1335,7 @@ void pollCloudCommand(uint32_t nowMs)
 // Pobiera obraz z oferty do nieaktywnej partycji OTA, licząc SHA-256 w locie; obraz jest aktywowany
 // dopiero po zgodnej sumie. Blokuje loop() (kilkanaście sekund, watchdog resetowany przy każdej
 // porcji); magistralę dalej obsługuje busTask, więc regulator nie traci ecoNET.
-void restartWithReason(const char *reason);
+void restartWithReason(const char *code, const char *reason);
 
 bool downloadFirmware(const OtaOffer &offer)
 {
@@ -1306,6 +1344,7 @@ bool downloadFirmware(const OtaOffer &offer)
   secureClient.stop();
   WiFiClientSecure client;
   client.setInsecure();  // integralność daje SHA-256 z odpowiedzi chmury
+  client.setHandshakeTimeout(TLS_HANDSHAKE_TIMEOUT_S);
   HTTPClient download;
   download.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
   download.setConnectTimeout(OTA_TIMEOUT_MS);
@@ -1387,7 +1426,7 @@ void tryFirmwareUpdate()
   otaStatus = "downloading version " + String(otaOffer.version.c_str());
   if (!downloadFirmware(otaOffer)) return;
   preferences.putString(KEY_OTA_TRIED, key.c_str());
-  restartWithReason(("cloud update to " + otaOffer.version).c_str());
+  restartWithReason("ota", ("cloud update to " + otaOffer.version).c_str());
 }
 
 // --- Wi-Fi i AP ---
@@ -1416,23 +1455,48 @@ void applyTxPower()
   WiFi.setTxPower(WIFI_TX_POWER);
 }
 
-// Restart programowy z zapisem przyczyny w NVS (widać ją po starcie na konsoli i stronie /).
+// Restart programowy z zapisem przyczyny w NVS (widać ją po starcie na konsoli i stronie /); od 1.11.2 także kod
+// przyczyny dla zgłoszenia do chmury (diag.reset: ota, no_wifi, install).
 void saveFuel(uint32_t nowMs, bool force);
 
-void restartWithReason(const char *reason)
+void restartWithReason(const char *code, const char *reason)
 {
   logf("restart: %s", reason);
   saveFuel(millis(), true);
   preferences.putString(KEY_RESTART_REASON, reason);
+  preferences.putString(KEY_RESTART_CODE, code);
   delay(100);
   ESP.restart();
 }
 
-// Opis przyczyny poprzedniego startu; programowy restart z zapisaną przyczyną ma pierwszeństwo.
+// Kod przyczyny startu do zgłoszenia (diag.reset, od 1.11.2): nazwy jak w sterowniku włącznika (switch.cpp,
+// resetReasonName), teksty po stronie serwera (core/services/controller-reset.service.ts).
+const char *resetReasonName(esp_reset_reason_t reason)
+{
+  switch (reason) {
+  case ESP_RST_POWERON: return "power_on";
+  case ESP_RST_EXT: return "ext";
+  case ESP_RST_SW: return "software";
+  case ESP_RST_PANIC: return "panic";
+  case ESP_RST_INT_WDT: return "int_wdt";
+  case ESP_RST_TASK_WDT: return "task_wdt";
+  case ESP_RST_WDT: return "wdt";
+  case ESP_RST_DEEPSLEEP: return "deepsleep";
+  case ESP_RST_BROWNOUT: return "brownout";
+  case ESP_RST_SDIO: return "sdio";
+  default: return "unknown";
+  }
+}
+
+// Opis przyczyny poprzedniego startu; programowy restart z zapisaną przyczyną ma pierwszeństwo. Ustawia też
+// lastResetCode: zapisany kod restartu programowego albo nazwę z esp_reset_reason.
 String describeLastReset()
 {
   const String saved = preferences.getString(KEY_RESTART_REASON, "");
-  preferences.remove(KEY_RESTART_REASON);
+  const String savedCode = preferences.isKey(KEY_RESTART_CODE) ? preferences.getString(KEY_RESTART_CODE, "") : String();
+  if (preferences.isKey(KEY_RESTART_REASON)) preferences.remove(KEY_RESTART_REASON);
+  if (preferences.isKey(KEY_RESTART_CODE)) preferences.remove(KEY_RESTART_CODE);
+  lastResetCode = esp_reset_reason() == ESP_RST_SW && savedCode.length() ? savedCode : String(resetReasonName(esp_reset_reason()));
   switch (esp_reset_reason()) {
   case ESP_RST_POWERON: return "power on";
   case ESP_RST_SW: return saved.length() ? "software restart: " + saved : "software restart (upload, /install)";
@@ -1527,7 +1591,7 @@ void updateAccessPoint(uint32_t nowMs)
   // telefonowi stronę /install) ani w trakcie odczytu lub zmiany ustawień kotła.
   if (lostMs >= WIFI_RESTART_AFTER_MS && WiFi.softAPgetStationNum() == 0 && !boilerSettings.busy()
     && !parameterWriter.busy()) {
-    restartWithReason("no Wi-Fi for 30 min");
+    restartWithReason("no_wifi", "no Wi-Fi for 30 min");
   }
 }
 
@@ -1590,15 +1654,25 @@ void updateNetworkInfo()
 
 // Co 1 s: AP, stan sieci dla ecoNET, zgłoszenie (co 30 s do skutku), wysyłka świeżego
 // odczytu co pollSeconds.
+void saveServicePassword(uint32_t nowMs);
+
+// Co TICK_MS. Od 1.11.2 najwyżej jedno zapytanie do chmury na tick() (networkRequestsThisTick): przy słabym sygnale
+// kilka zapytań z rzędu stało w pętli dłużej niż watchdog; następne idzie w kolejnym tick(), sekundę później.
+// Kolejność pierwszeństwa: zgłoszenie, odczyt kotła, ustawienia, alarmy, zlecenia z aplikacji, aktualizacja.
+// Zapis licznika pelletu i hasła serwisowego (bez sieci) idzie przed zapytaniami i także bez Wi-Fi (do 1.11.1 licznik
+// zapisywał się tylko po udanym zgłoszeniu, więc zanik zasilania przy braku Wi-Fi gubił zużycie od ostatniego zapisu).
 void tick(uint32_t nowMs)
 {
+  networkRequestsThisTick = 0;
   updateAccessPoint(nowMs);
   updateNetworkInfo();
   logStatus(nowMs);
+  saveFuel(nowMs, false);
+  saveServicePassword(nowMs);
   if (WiFi.status() != WL_CONNECTED) return;
   if (!registeredThisBoot) {
     if (lastRegisterAttemptMs == 0 || nowMs - lastRegisterAttemptMs >= REGISTER_RETRY_MS) registerDevice();
-    if (!registeredThisBoot) return;
+    return;
   }
   EcomaxSensorData reading;
   const bool fresh = freshReading(reading);
@@ -1611,8 +1685,22 @@ void tick(uint32_t nowMs)
   } else if (fresh && static_cast<int32_t>(nowMs - nextPostMs) >= 0) {
     sendReading(nowMs, reading);
   }
+  if (networkRequestsThisTick > 0) return;
   if (settingsUploadPending && settingsUpload.due(nowMs)) sendSettings(nowMs);
-  saveFuel(nowMs, false);
+  if (networkRequestsThisTick > 0) return;
+  if (!alertsLog.busy() && alertsLog.complete() && alertsLog.revision() != alertsUploadedRevision
+    && static_cast<int32_t>(nowMs - nextAlertsUploadMs) >= 0) {
+    sendAlerts(nowMs);
+  }
+  if (networkRequestsThisTick > 0) return;
+  pollCloudCommand(nowMs);
+  if (networkRequestsThisTick > 0) return;
+  tryFirmwareUpdate();
+}
+
+// Hasło serwisowe regulatora odczytane przez busTask (service_password.hpp) do NVS, tylko gdy się zmieniło.
+void saveServicePassword(uint32_t nowMs)
+{
   if (servicePasswordSavePending) {
     servicePasswordSavePending = false;
     char text[ServicePasswordReader::MAX_LENGTH + 1];
@@ -1626,12 +1714,6 @@ void tick(uint32_t nowMs)
       preferences.putString(KEY_SERVICE_PASSWORD, servicePassword);
     }
   }
-  if (!alertsLog.busy() && alertsLog.complete() && alertsLog.revision() != alertsUploadedRevision
-    && static_cast<int32_t>(nowMs - nextAlertsUploadMs) >= 0) {
-    sendAlerts(nowMs);
-  }
-  pollCloudCommand(nowMs);
-  tryFirmwareUpdate();
 }
 
 // --- strony WWW ---
@@ -1792,6 +1874,7 @@ void handleState()
   state["lastStatus"] = lastPostStatus ? lastPostStatus : lastHttpStatus;
   state["pollSeconds"] = pollSeconds;
   state["lastReset"] = lastResetText;
+  state["boot"] = bootCount;
   state["uptimeS"] = now / 1000;
   String body;
   serializeJson(state, body);
@@ -1919,7 +2002,7 @@ void handleFirmwareDone()
     uploadFinished ? "Firmware uploaded, the controller is restarting." : "Not uploaded: the file is invalid.");
   if (uploadFinished) {
     delay(500);
-    restartWithReason("firmware upload via /install");
+    restartWithReason("install", "firmware upload via /install");
   }
 }
 
@@ -1964,9 +2047,11 @@ void setup()
   parseCloudUrl();
   serial = readSerial();
   lastResetText = describeLastReset();
+  bootCount = preferences.getUInt(KEY_BOOTS, 0) + 1;
+  preferences.putUInt(KEY_BOOTS, bootCount);
   logf("start: firmware %s, SN %s, rootId %s, chmura %s", FW_VERSION, serial.c_str(),
     rootId.length() > 0 ? rootId.c_str() : "brak", CLOUD_URL);
-  logf("start: przyczyna — %s", lastResetText.c_str());
+  logf("start nr %lu: przyczyna — %s (%s)", static_cast<unsigned long>(bootCount), lastResetText.c_str(), lastResetCode.c_str());
   // watchdog pętli i zadania magistrali: brak esp_task_wdt_reset() przez WATCHDOG_S = restart
   esp_task_wdt_init(WATCHDOG_S, true);
   esp_task_wdt_add(nullptr);

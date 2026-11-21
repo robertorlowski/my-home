@@ -5,6 +5,7 @@
 // restartem, jeśli było. Ostatnia diagnostyka jest w pamięci (GET /switch/diagnostics). Po restarcie serwera
 // pierwsze zgłoszenie jest punktem odniesienia: start zapisuje się tylko, gdy sterownik działa krócej niż
 // FRESH_BOOT_S (inaczej start był dawno i mógł już trafić do dziennika).
+import { isResetCode, resetReasonText } from '../../../core/services/controller-reset.service';
 import { controllerMeta, logOperation } from '../../../core/services/operation-log.service';
 import { SwitchActivationModel } from '../models/switch-activation.model';
 import { SwitchRelayModel } from '../models/switch-relay.model';
@@ -16,23 +17,7 @@ export type ControllerDiag = {
   heapFree?: number; heapMin?: number; heapBlock?: number; net?: { http: number; wifi: number };
 };
 
-// nazwy jak esp_reset_reason w firmware (switch.cpp, resetReasonName)
-const RESET_NAMES: Record<string, string> = {
-  power_on: 'włączenie zasilania',
-  ext: 'reset z pinu EN (zewnętrzny)',
-  software: 'restart programowy (np. po aktualizacji)',
-  panic: 'błąd programu (panic)',
-  int_wdt: 'watchdog przerwań',
-  task_wdt: 'watchdog zadań',
-  wdt: 'watchdog',
-  deepsleep: 'wybudzenie z uśpienia',
-  brownout: 'spadek napięcia zasilania (brownout)',
-  sdio: 'reset SDIO',
-  no_cloud: 'restart po braku łączności z serwerem (sterownik, od 1.3.7)',
-  unknown: 'nieznana',
-};
-export const resetReasonText = (reset: string) => RESET_NAMES[reset] ?? reset;
-
+// przyczyny startu (kody z firmware) są w core/services/controller-reset.service.ts, wspólne z piecem
 const FRESH_BOOT_S = 120;
 // włączenie przekaźnika najwyżej tyle przed startem uznajemy za powiązane z restartem
 const SWITCH_ON_WINDOW_S = 60;
@@ -52,7 +37,7 @@ function parseNetDiag(input: unknown): { http: number; wifi: number } | undefine
 export function parseControllerDiag(body: unknown): ControllerDiag | undefined {
   const diag = ((body ?? {}) as { diag?: unknown }).diag as Record<string, unknown> | undefined;
   if (!diag || typeof diag !== 'object') return undefined;
-  if (typeof diag.reset !== 'string' || !/^[a-z_]{1,20}$/.test(diag.reset) || !isCount(diag.boot)) return undefined;
+  if (!isResetCode(diag.reset) || !isCount(diag.boot)) return undefined;
   return {
     reset: diag.reset,
     boot: diag.boot as number,
