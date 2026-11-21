@@ -5,7 +5,8 @@
 // spalone += zużycie × (czas od poprzedniego SensorData / 3600); odcinek MAX_GAP_MS albo dłuższy jest pomijany
 // (nie wiadomo, co się działo w przerwie). Stan w gramach jest narastający: pellet.cpp zapisuje go w NVS co
 // SAVE_EVERY_MS i przed restartem, a wysyła w każdym odczycie jako fuel_burned_kg; zużycie za okres serwer liczy
-// z różnicy stanów (spadek = nowy licznik, np. wymiana płytki).
+// z różnicy stanów: spadek do 1 kg to restart bez zapisu (powrót do stanu z NVS sprzed najwyżej SAVE_EVERY_MS,
+// przyrost 0), większy = nowy licznik, np. wymiana płytki (pellet-boiler-pelux200-fuel.service.ts).
 #pragma once
 
 #include <cstdint>

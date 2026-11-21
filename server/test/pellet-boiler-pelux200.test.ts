@@ -843,7 +843,7 @@ describe('Kocioł pelletowy Pellux 200', () => {
     expect((await request(app).get(`/api/pellet-boiler-pelux200/last?rootId=${rootId}`)).body.alerts_active).toBe(1);
   });
 
-  it('spalony pellet: przyrosty licznika w godzinach i dniach, stan sprzed okresu, nowy licznik po spadku', async () => {
+  it('spalony pellet: przyrosty licznika w godzinach i dniach, stan sprzed okresu, restart i nowy licznik po spadku', async () => {
     const sn = 'AABBCC00001A';
     const { rootId } = (await register(sn)).body;
     const at = (iso: string, fuel_burned_kg: number) => PelletBoilerPelux200Model.create({
@@ -852,18 +852,20 @@ describe('Kocioł pelletowy Pellux 200', () => {
     await at('2026-10-06T21:50:00Z', 100);     // 6.10 23:50 w Warszawie: stan sprzed dnia 7.10
     await at('2026-10-06T22:10:00Z', 101.5);   // 7.10 00:10 → +1,5 kg w godzinie 0
     await at('2026-10-07T05:30:00Z', 103);     // 07:30 → +1,5 kg w godzinie 7
-    await at('2026-10-07T06:00:00Z', 0.4);     // nowy licznik (spadek) → +0,4 kg w godzinie 8
+    await at('2026-10-07T05:45:00Z', 102.8);   // restart sterownika: stan z NVS sprzed kilku minut → +0 (nie +102,8)
+    await at('2026-10-07T05:50:00Z', 103.3);   // 07:50 → +0,5 kg
+    await at('2026-10-07T06:00:00Z', 0.4);     // nowy licznik (spadek o ponad 1 kg) → +0,4 kg w godzinie 8
     await at('2026-10-07T06:30:00Z', 1.2);     // 08:30 → +0,8 kg
     const day = (await request(app).get(`/api/pellet-boiler-pelux200/fuel?rootId=${rootId}&period=day&date=2026-10-07`)).body;
     expect(day.buckets).toHaveLength(24);
     expect(day.buckets[0]).toEqual({ key: 0, kg: 1.5 });
-    expect(day.buckets[7].kg).toBe(1.5);
+    expect(day.buckets[7].kg).toBe(2);
     expect(day.buckets[8].kg).toBe(1.2);
-    expect(day.totalKg).toBe(4.2);
+    expect(day.totalKg).toBe(4.7);
     expect(day.counterKg).toBe(1.2);
     const month = (await request(app).get(`/api/pellet-boiler-pelux200/fuel?rootId=${rootId}&period=month&date=2026-10-07`)).body;
     expect(month.buckets).toHaveLength(31);
-    expect(month.buckets[6]).toEqual({ key: 7, kg: 4.2 });
+    expect(month.buckets[6]).toEqual({ key: 7, kg: 4.7 });
     expect(month.buckets[5].kg).toBe(0);  // 6.10: pierwszy odczyt w miesiącu nie ma poprzedniego
     expect((await request(app).get(`/api/pellet-boiler-pelux200/fuel?rootId=${rootId}&period=week&date=2026-10-07`)).status).toBe(400);
   });

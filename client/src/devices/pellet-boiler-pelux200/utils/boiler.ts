@@ -167,13 +167,21 @@ export const readingsToCsv = (readings: PelletBoilerReading[]) => {
   return [header.join(';'), ...rows].join('\n');
 };
 
-// Przyrost licznika pelletu względem starszego odczytu (lista malejąco po czasie, jak z serwera); spadek licznika
-// (nowa płytka) = cały nowy stan, jak na serwerze. Bez licznika w którymś z odczytów pole zostaje puste.
+// Największy spadek licznika uznawany za restart sterownika pieca (wraca do stanu z NVS zapisanego do 5 min
+// wcześniej); ta sama wartość i reguła co FUEL_RESTART_ROLLBACK_KG i fuelDelta na serwerze
+// (pellet-boiler-pelux200-fuel.service.ts, tam uzasadnienie).
+const FUEL_RESTART_ROLLBACK_KG = 1;
+
+// Przyrost licznika pelletu względem starszego odczytu (lista malejąco po czasie, jak z serwera): mały spadek
+// (restart sterownika) = 0, większy (nowa płytka) = cały nowy stan, jak na serwerze. Bez licznika w którymś
+// z odczytów pole zostaje puste.
 export const withFuelDelta = (readings: PelletBoilerReading[]): PelletBoilerReading[] =>
   readings.map((reading, index) => {
     const older = readings[index + 1];
     if (reading.fuel_burned_kg === undefined || older?.fuel_burned_kg === undefined) return reading;
-    const delta = reading.fuel_burned_kg >= older.fuel_burned_kg ? reading.fuel_burned_kg - older.fuel_burned_kg : reading.fuel_burned_kg;
+    const current = reading.fuel_burned_kg;
+    const previous = older.fuel_burned_kg;
+    const delta = current >= previous ? current - previous : previous - current <= FUEL_RESTART_ROLLBACK_KG ? 0 : current;
     return { ...reading, fuel_delta_kg: Math.round(delta * 1000) / 1000 };
   });
 
